@@ -1,0 +1,22 @@
+{% if records is empty %}
+    <div class="px-3 py-2 text-muted text-sm" data-name="combobox-empty">
+        Nincs a keresésnek megfelelő gép.
+    </div>
+{% else %}
+    {% for record in records %}
+        <button
+            type="button"
+            class="list-group-item list-group-item-action worksheet-combobox-option"
+            role="option"
+            data-select-id="{{ record.id }}"
+            data-select-label="{{ record.title|e('html_attr') }}"
+        >
+            <span class="d-block fw-semibold">{{ record.title }}</span>
+            <span class="d-block text-muted text-xs">
+                {% if record.code %}{{ record.code }}{% endif %}
+                {% if record.category_title %} · {{ record.category_title }}{% endif %}
+                {% if record.category_code %} ({{ record.category_code }}){% endif %}
+            </span>
+        </button>
+    {% endfor %}
+{% endif %}

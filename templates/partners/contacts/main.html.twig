@@ -1,0 +1,140 @@
+<div class="container-fluid p-0" data-name="partner_contacts" data-partner-id="{{ partner.id }}">
+    <div class="card panel-card p-2">
+        <div class="row align-items-center">
+            <div class="col-md-6 col-12">
+                <input type="text" class="form-control" placeholder="Keresés..." data-name="search_partner_contacts_list">
+            </div>
+            <div class="col-md-6 col-12 text-end mt-2 mt-md-0">
+                <div class="btn btn-default btn-sm" data-name="btn_index_partner_contacts_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card panel-card p-2 mt-2">
+        <div data-key="list_partner_contacts"></div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const partnerId = {{ partner.id }};
+        const listTarget = $("[data-name='partner_contacts'][data-partner-id='{{ partner.id }}'] [data-key='list_partner_contacts']");
+        const listFormData = new FormData();
+        listFormData.set('partner_id', partnerId);
+        listFormData.set('filters', '{}');
+
+        new Ajax({
+            url: '{{ path('list_partner_contacts') }}',
+            name: 'list_partner_contacts',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: listTarget,
+            function_success: function (result) {
+                if (!result.success) return;
+                this.target.html(result.content);
+                bindContactListActions();
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a kapcsolattartókat.');
+            }
+        }).send();
+
+
+
+
+        const addFormData = new FormData();
+        addFormData.set('partner_id', partnerId);
+        new Ajax({
+            url: '{{ path('index_partner_contacts_add') }}',
+            name: 'index_partner_contacts_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: addFormData,
+            target: null,
+            function_success: function (result) {
+                if (!result.success) return;
+                const ajaxName = this.name;
+                const footer = `<div class="container-fluid p-0" data-box="${ajaxName}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div></div></div></div>`;
+                alertify.add('Kapcsolattartó', result.content)
+                    .set('movable', false)
+                    .set('resizable', false)
+                    .set('closable', false)
+                    .set('closableByEscape', false)
+                    .resizeTo('80%','80%')
+                    .set({transition: 'zoom'}).setFooter(footer);
+
+                $(`div[data-box="${ajaxName}"] [data-name='alertify-cancel']`).off('click').on('click', function () { alertify.add().close(); });
+                $(`div[data-box="${ajaxName}"] [data-name='alertify-save']`).off('click').on('click', function () {
+                    const form = $("form[data-name='partner_contact']")[0];
+                    if (!form.reportValidity()) return;
+                    new Ajax({
+                        url: '{{ path('save_partner_contact') }}',
+                        name: 'save_partner_contact',
+                        type: 'POST',
+                        dataType: 'json',
+                        formData: new FormData(form),
+                        function_success: function (saveResult) {
+                            if (!saveResult.success) return;
+                            alertify.add().close();
+                            alertify.success('Sikeres mentés');
+                            ajaxquery['list_partner_contacts'].send();
+                        },
+                        function_error: function (xhr) {
+                            alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült menteni a kapcsolattartót.');
+                        }
+                    }).send();
+                });
+            }
+        });
+
+        $("[data-name='partner_contacts'][data-partner-id='{{ partner.id }}'] [data-name='btn_index_partner_contacts_add']").off('click').on('click', function () {
+            ajaxquery['index_partner_contacts_add'].formData.set('partner_id', partnerId);
+            ajaxquery['index_partner_contacts_add'].formData.delete('id');
+            ajaxquery['index_partner_contacts_add'].send();
+        });
+
+        $("[data-name='partner_contacts'][data-partner-id='{{ partner.id }}'] [data-name='search_partner_contacts_list']").off('keyup').on('keyup', function (event) {
+            if (event.key !== 'Enter') return;
+            const filters = JSON.parse(ajaxquery['list_partner_contacts'].formData.get('filters') || '{}');
+            filters.search = $(this).val();
+            ajaxquery['list_partner_contacts'].formData.set('filters', JSON.stringify(filters));
+            ajaxquery['list_partner_contacts'].formData.set('page', 1);
+            ajaxquery['list_partner_contacts'].send();
+        });
+
+        function bindContactListActions() {
+            listTarget.find("[data-name='partner_contact_action']").off('click').on('click', function () {
+                const id = $(this).closest("[data-name='partner_contact_item']").data('key');
+                const mode = $(this).data('mode');
+                if (mode === 'edit') {
+                    ajaxquery['index_partner_contacts_add'].formData.set('partner_id', partnerId);
+                    ajaxquery['index_partner_contacts_add'].formData.set('id', id);
+                    ajaxquery['index_partner_contacts_add'].send();
+                    return;
+                }
+                if (mode === 'delete') {
+                    alertify.confirm('Megerősítés', 'Törlöd a kapcsolattartót?', function () {
+                        const deleteData = new FormData();
+                        deleteData.set('id', id);
+                        new Ajax({
+                            url: '{{ path('delete_partner_contact') }}',
+                            name: 'delete_partner_contact_' + id,
+                            type: 'DELETE',
+                            dataType: 'json',
+                            formData: deleteData,
+                            function_success: function (deleteResult) {
+                                if (deleteResult.success) ajaxquery['list_partner_contacts'].send();
+                            }
+                        }).send();
+                    }, function () {});
+                }
+            });
+
+            listTarget.find("[data-name='partner_contact_page']").off('click').on('click', function () {
+                ajaxquery['list_partner_contacts'].formData.set('page', $(this).data('page'));
+                ajaxquery['list_partner_contacts'].send();
+            });
+        }
+    })();
+</script>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ajánlat / dokumentum" width="64" height="64">
+  <title>Ajánlat / dokumentum</title>
+  <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" color="#0E8B37">
+    <path d="M18 8h21l9 9v39H18V8z"/>
+    <path d="M39 8v11h11"/>
+    <path d="M25 29h16M25 38h16M25 47h10"/>
+    <path d="M44 42l7 7 6-12"/>
+  </g>
+</svg>

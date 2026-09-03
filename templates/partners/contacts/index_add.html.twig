@@ -1,0 +1,37 @@
+<form data-name="partner_contact">
+    <input type="hidden" name="id" value="{{ item ? item.id : '' }}">
+    <input type="hidden" name="partner_id" value="{{ partner.id }}">
+
+    <div class="row">
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Titulus</label>
+            <input type="text" class="form-control" name="title" value="{{ item ? item.title : '' }}">
+        </div>
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Név</label>
+            <input type="text" class="form-control" name="name" value="{{ item ? item.name : '' }}" required>
+        </div>
+        <div class="col-md-12 mb-3">
+            <label class="form-label">E-mail</label>
+            <input type="email" class="form-control" name="email" value="{{ item ? item.email : '' }}"
+                   pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Adj meg egy érvényes e-mail-címet (például nev@pelda.hu)."
+                   autocomplete="email">
+        </div>
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Telefon</label>
+            <input type="text" class="form-control" name="phone" value="{{ item ? item.phone : '' }}">
+        </div>
+        <div class="col-12 mb-3">
+            <label class="form-label">Leírás</label>
+            <textarea class="form-control" name="description" rows="5">{{ item ? item.description : '' }}</textarea>
+        </div>
+
+        <div class="col-12 mb-3">
+            <label class="form-label">
+                <input type="checkbox" value="1" name="default_contact" style="height:20px;width:20px;"
+                       {{ item and item.defaultContact ? 'checked' : '' }}>
+                Alapértelmezett kapcsolattartó</label>
+
+        </div>
+    </div>
+</form>

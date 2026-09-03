@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mínusz körben" width="64" height="64">
+  <title>Mínusz körben</title>
+  <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" color="#F59E0B">
+    <circle cx="32" cy="32" r="24"/>
+    <path d="M21 32h22"/>
+  </g>
+</svg>

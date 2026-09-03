@@ -1,0 +1,158 @@
+/**
+ * AlertifyJS 1.14.0 - Dark theme
+ * Based on the uploaded bootstrap.css theme.
+ */
+:root {
+    --alertify-background: rgba(0,0,0,0.9);
+    --alertify-text: #fff;
+}
+
+body.dark-mode {
+    --alertify-background: rgba(0,0,0,0.9);
+    --alertify-text: #fff;
+}
+
+body.light-mode{
+    --alertify-background: rgba(255,255,255,0.9);
+    --alertify-text: #000;
+}
+
+.alertify .ajs-dimmer {
+	background-color: rgba(0,0,0,0.5);
+}
+
+.alertify .ajs-dialog {
+  max-width: 600px;
+  min-height: 122px;
+  background-color: #151922;
+  color: var(--alertify-text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  -webkit-box-shadow: 0 14px 40px rgba(0, 0, 0, 0.75);
+          box-shadow: 0 14px 40px rgba(0, 0, 0, 0.75);
+  border-radius:15px;
+  background-color: var(--alertify-background);
+
+}
+
+.alertify .ajs-modal{
+	backdrop-filter: blur(3px);
+}
+
+.alertify .ajs-header {
+  color: var(--alertify-text);
+  /*background-color: rgba(0,0,0,0.5);*/
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px 8px 0 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  background: none;
+
+  .alertify .ajs-dialog {
+}
+
+.alertify .ajs-body {
+  font-family: 'Roboto', sans-serif;
+  color: #dbe1ea;
+  /*background-color: #151922;*/
+}
+
+.alertify .ajs-content {
+  color: #dbe1ea;
+  padding-left:5px;
+  padding-right:5px;
+
+    left:0px !important;
+    right:0px !important;
+    top:60px !important;
+    bottom:60px !important;
+}
+
+.alertify.ajs-resizable .ajs-content,
+.alertify.ajs-maximized:not(.ajs-resizable) .ajs-content {
+  top: 58px;
+  bottom: 68px;
+}
+
+.alertify .ajs-footer {
+  background: none;
+  padding: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 8px 8px;
+}
+
+.alertify .ajs-button {
+  color: #e7eaf0;
+  background-color: #2a3242;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+}
+
+.alertify .ajs-button:hover,
+.alertify .ajs-button:focus {
+  background-color: #364154;
+  color: #fff;
+}
+
+.alertify .ajs-button.ajs-ok {
+  background-color: #2f80ed;
+  border-color: #2f80ed;
+  color: #fff;
+}
+
+.alertify .ajs-button.ajs-ok:hover,
+.alertify .ajs-button.ajs-ok:focus {
+  background-color: #1f6fd3;
+  border-color: #1f6fd3;
+}
+
+.alertify .ajs-button.ajs-cancel {
+  background-color: transparent;
+  color: #b7c0ce;
+}
+
+.alertify input,
+.alertify textarea,
+.alertify select {
+  background-color: #0f131b;
+  color: #e7eaf0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.alertify input:focus,
+.alertify textarea:focus,
+.alertify select:focus {
+  border-color: #2f80ed;
+  outline: none;
+  -webkit-box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.22);
+          box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.22);
+}
+
+.alertify-notifier .ajs-message {
+  background: rgba(29, 35, 48, 0.96);
+  color: #e7eaf0;
+  text-align: center;
+  border: solid 1px rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  -webkit-box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.alertify-notifier .ajs-message.ajs-success {
+  color: #fff;
+  background: rgba(46, 160, 67, 0.96);
+  border-color: rgba(46, 160, 67, 0.96);
+  text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.alertify-notifier .ajs-message.ajs-error {
+  color: #fff;
+  background: rgba(218, 54, 51, 0.96);
+  border-color: rgba(218, 54, 51, 0.96);
+  text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.alertify-notifier .ajs-message.ajs-warning {
+  color: #1f1600;
+  background: rgba(245, 179, 1, 0.96);
+  border-color: rgba(245, 179, 1, 0.96);
+}

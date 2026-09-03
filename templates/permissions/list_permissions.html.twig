@@ -1,0 +1,66 @@
+﻿<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr class="pt-2 pb-2">
+                <th class="p-2">Megnevezes</th>
+                <th class="p-2">Kod</th>
+                <!-- <th class="p-2">Szulo</th>-->
+                <th class="p-2">Rogzitette</th>
+                <th class="p-2">Modositotta</th>
+                <th class="p-2">Rogzitve</th>
+                <th class="p-2">Modositva</th>
+                <th class="p-2">Statusz</th>
+                <th class="p-2">#</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                <tr data-name="list_item" data-key="{{ record.id }}">
+                    <td>{{ record.title }}</td>
+                    <td>{{ record.code }}</td>
+                    <!--
+                    <td>
+                        {% if record.parent_id %}
+                            {{ record.parent_title|default('-') }} ({{ record.parent_code|default(record.parent_id) }})
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    -->
+                    <td>{{ record.user_owner_name|default(record.user_owner_username|default('-')) }}</td>
+                    <td>{{ record.user_editor_name|default(record.user_editor_username|default('-')) }}</td>
+                    <td>
+                        {% if record.datetime_add %}
+                            {{ record.datetime_add|date('Y-m-d H:i') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.datetime_last %}
+                            {{ record.datetime_last|date('Y-m-d H:i') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ record.status == 1 ? '<div class="btn btn-sm btn-success">aktív</div>' : '<div class="btn btn-sm btn-danger">inaktív</div>' }}</td>
+                    <td>
+                        <div class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit"><i class="bi bi-pencil-square"></i></div>
+                        <div class="btn btn-default btn-sm text-danger" data-name="list_item_btn" data-mode="delete"><i class="bi bi-trash"></i></div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="9" class="text-center py-4">Nincs megjelenitheto adat.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_permissions',
+    queryParams: app.request.query.all
+} %}

@@ -1,0 +1,474 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <style>
+        .dashboard-overview {
+            --dashboard-blue: #2f80ed;
+            --dashboard-blue-soft: rgba(47, 128, 237, .10);
+            --dashboard-red: #e63946;
+            --dashboard-red-soft: rgba(230, 57, 70, .10);
+            --dashboard-green: #2da44e;
+            --dashboard-green-soft: rgba(45, 164, 78, .10);
+            --dashboard-orange: #f59e0b;
+            --dashboard-card-border: rgba(148, 163, 184, .24);
+            --dashboard-card-shadow: 0 14px 34px rgba(16, 24, 40, .10);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 22px;
+        }
+
+        .dashboard-card {
+            min-height: 330px;
+            padding: 28px 28px 20px;
+            border: 1px solid var(--dashboard-card-border);
+            border-radius: 18px;
+            background: var(--card-bg);
+            box-shadow: var(--dashboard-card-shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .dashboard-card__top {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .dashboard-card__title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 14px;
+        }
+
+        .dashboard-card__value {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .dashboard-card__value strong {
+            font-size: 46px;
+            font-weight: 700;
+            letter-spacing: -.04em;
+        }
+
+        .dashboard-card__value span {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--muted);
+        }
+
+        .dashboard-card__subtitle {
+            font-size: 16px;
+            color: var(--muted);
+        }
+
+        .dashboard-card__icon {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 76px;
+            font-size: 38px;
+        }
+
+        .dashboard-card--blue .dashboard-card__value strong,
+        .dashboard-card--blue .dashboard-card__icon,
+        .dashboard-card--blue .dashboard-button {
+            color: var(--dashboard-blue);
+        }
+
+        .dashboard-card--blue .dashboard-card__icon,
+        .dashboard-card--blue .dashboard-button {
+            background: var(--dashboard-blue-soft);
+        }
+
+        .dashboard-card--red .dashboard-card__value strong,
+        .dashboard-card--red .dashboard-card__icon,
+        .dashboard-card--red .dashboard-button {
+            color: var(--dashboard-red);
+        }
+
+        .dashboard-card--red .dashboard-card__icon,
+        .dashboard-card--red .dashboard-button {
+            background: var(--dashboard-red-soft);
+        }
+
+        .dashboard-card--green .dashboard-card__value strong,
+        .dashboard-card--green .dashboard-card__icon,
+        .dashboard-card--green .dashboard-button {
+            color: var(--dashboard-green);
+        }
+
+        .dashboard-card--green .dashboard-card__icon,
+        .dashboard-card--green .dashboard-button {
+            background: var(--dashboard-green-soft);
+        }
+
+        .dashboard-card__stats {
+            margin: 24px 0;
+            padding-top: 18px;
+            border-top: 1px solid rgba(148, 163, 184, .20);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .dashboard-stat {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            font-size: 15px;
+        }
+
+        .dashboard-stat__label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text);
+        }
+
+        .dashboard-stat__value {
+            color: var(--text);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .dashboard-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex: 0 0 10px;
+        }
+
+        .dashboard-dot--green {
+            background: #22c55e;
+        }
+
+        .dashboard-dot--orange {
+            background: var(--dashboard-orange);
+        }
+
+        .dashboard-dot--red {
+            background: #ef233c;
+        }
+
+        .dashboard-button {
+            width: 100%;
+            min-height: 54px;
+            border: 1px solid rgba(148, 163, 184, .18);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 18px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+        }
+
+        .dashboard-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(16, 24, 40, .10);
+            border-color: rgba(148, 163, 184, .34);
+        }
+
+        .dashboard-button__left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .dashboard-quick {
+            margin-top: 28px;
+            min-height: 86px;
+            border: 1px solid rgba(47, 128, 237, .18);
+            border-radius: 16px;
+            background: rgba(47, 128, 237, .07);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 18px 24px;
+        }
+
+        .dashboard-quick__content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .dashboard-quick__icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--dashboard-blue);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex: 0 0 56px;
+        }
+
+        .dashboard-quick__title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .dashboard-quick__text {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .dashboard-quick__button {
+            min-width: 250px;
+            min-height: 50px;
+            border-radius: 11px;
+            background: var(--card-bg);
+            border: 1px solid rgba(47, 128, 237, .22);
+            color: var(--dashboard-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: transform .16s ease, box-shadow .16s ease;
+        }
+
+        .dashboard-quick__button:hover {
+            color: var(--dashboard-blue);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(16, 24, 40, .10);
+        }
+
+        @media (max-width: 1199px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-card {
+                min-height: auto;
+                padding: 22px;
+            }
+
+            .dashboard-card__value strong {
+                font-size: 40px;
+            }
+
+            .dashboard-card__icon {
+                width: 62px;
+                height: 62px;
+                flex-basis: 62px;
+                font-size: 30px;
+            }
+
+            .dashboard-quick {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .dashboard-quick__button {
+                min-width: 0;
+                width: 100%;
+            }
+        }
+    </style>
+
+    {% set machineFree = dashboard.machines.total - dashboard.machines.issued %}
+
+    <div class="dashboard-overview container-fluid p-0">
+        <div class="dashboard-grid">
+            <section class="dashboard-card dashboard-card--blue">
+                <div>
+                    <div class="dashboard-card__top">
+                        <div>
+                            <div class="dashboard-card__title">Gépnyilvántartás</div>
+                            <div class="dashboard-card__value">
+                                <strong>{{ dashboard.machines.total }}</strong>
+                                <span>db</span>
+                            </div>
+                            <div class="dashboard-card__subtitle">összes gép</div>
+                        </div>
+                        <div class="dashboard-card__icon">
+                            🏗️
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card__stats">
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--green"></span>
+                                <span>Szabad</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ machineFree }} db</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--orange"></span>
+                                <span>Kiadva</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.machines.issued }} db</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--red"></span>
+                                <span>Javítás alatt</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.machines.repair }} db</div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a class="dashboard-button" href="{{ path('index_machines') }}">
+                    <span class="dashboard-button__left">
+                        <i class="bi bi-wrench-adjustable"></i>
+                        <span>Gépek kezelése</span>
+                    </span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                {% endif %}
+
+            </section>
+
+            <section class="dashboard-card dashboard-card--red">
+                <div>
+                    <div class="dashboard-card__top">
+                        <div>
+                            <div class="dashboard-card__title">Hibajegyek</div>
+                            <div class="dashboard-card__value">
+                                <strong>{{ dashboard.errorTickets.total }}</strong>
+                                <span>db</span>
+                            </div>
+                            <div class="dashboard-card__subtitle">utolsó 30 nap hibajegyei</div>
+                        </div>
+                        <div class="dashboard-card__icon">
+                            <i class="bi bi-exclamation-octagon"></i>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card__stats">
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--red"></span>
+                                <span>Új</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.errorTickets.new }} db</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--orange"></span>
+                                <span>Javítás alatt</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.errorTickets.inProgress }} db</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--green"></span>
+                                <span>Lezárt</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.errorTickets.closed }} db</div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <a class="dashboard-button" href="{{ path('index_worksheets') }}?type=ERROR_REPORT">
+                    <span class="dashboard-button__left">
+                        <i class="bi bi-hospital"></i>
+                        <span>Hibajegyek áttekintése</span>
+                    </span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </section>
+
+            <section class="dashboard-card dashboard-card--green">
+                <div>
+                    <div class="dashboard-card__top">
+                        <div>
+                            <div class="dashboard-card__title">Munkalapok</div>
+                            <div class="dashboard-card__value">
+                                <strong>{{ dashboard.worksheets.total }}</strong>
+                                <span>db</span>
+                            </div>
+                            <div class="dashboard-card__subtitle">utolsó 30 nap munkalapjai</div>
+                        </div>
+                        <div class="dashboard-card__icon">
+                            <i class="bi bi-clipboard-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card__stats">
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--red"></span>
+                                <span>Új</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.worksheets.new }} db</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--orange"></span>
+                                <span>Folyamatban lévő</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.worksheets.inProgress }} db</div>
+                        </div>
+                        <div class="dashboard-stat">
+                            <div class="dashboard-stat__label">
+                                <span class="dashboard-dot dashboard-dot--green"></span>
+                                <span>Lezárt</span>
+                            </div>
+                            <div class="dashboard-stat__value">{{ dashboard.worksheets.closed }} db</div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a class="dashboard-button" href="{{ path('index_worksheets') }}">
+                    <span class="dashboard-button__left">
+                        <i class="bi bi-clipboard-check"></i>
+                        <span>Munkalapok kezelése</span>
+                    </span>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                {% endif %}
+            </section>
+        </div>
+
+        <section class="dashboard-quick">
+            <div class="dashboard-quick__content">
+                <div class="dashboard-quick__icon">
+                    <i class="bi bi-lightbulb"></i>
+                </div>
+                <div>
+                    <div class="dashboard-quick__title">Gyors elérés</div>
+                    <div class="dashboard-quick__text">A bal oldali menüből éred el az összes funkciót és riportot.</div>
+                </div>
+            </div>
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+            <a class="dashboard-quick__button" href="{{ path('index_reports') }}">
+                <span>Riportok megnyitása</span>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

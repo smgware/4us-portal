@@ -1,0 +1,197 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+<div class="page-title"><i class="bi bi-bar-chart-line"></i> Riportok</div>
+
+<style>
+    .report-filter-wrap {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+    }
+    .report-kpi { min-height: 112px; }
+    .report-kpi .value { font-size: 28px; font-weight: 700; line-height: 1.1; }
+    .report-kpi .label,
+    .report-muted { color: var(--muted); font-size: 13px; }
+    .report-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--grayblue);
+        color: #4da3ff;
+        font-size: 22px;
+    }
+    .report-bar {
+        height: 9px;
+        border-radius: 999px;
+        background: var(--grayblue);
+        overflow: hidden;
+    }
+    .report-bar span {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: #4da3ff;
+        transform-origin: left center;
+        animation: report-chart-grow-x 700ms cubic-bezier(.22, 1, .36, 1) both;
+        animation-delay: calc(var(--report-chart-index, 0) * 70ms);
+    }
+    .report-bar.danger span { background: #e63946; }
+    .report-bar.warning span { background: #f6b84b; }
+    .report-trend {
+        display: grid;
+        gap: 8px;
+        align-items: end;
+        height: 160px;
+        padding-top: 12px;
+    }
+    .report-trend div {
+        min-height: 8px;
+        border-radius: 8px 8px 0 0;
+        background: #4da3ff;
+        opacity: .9;
+        transform-origin: center bottom;
+        animation: report-chart-grow-y 650ms cubic-bezier(.22, 1, .36, 1) both;
+        animation-delay: calc(var(--report-chart-index, 0) * 70ms);
+    }
+    .report-timeline {
+        display: grid;
+        grid-template-columns: 140px 1fr 70px;
+        gap: 10px;
+        align-items: center;
+    }
+    .report-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: var(--grayblue);
+        color: var(--text);
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    @keyframes report-chart-grow-x {
+        from {
+            transform: scaleX(0);
+            opacity: .35;
+        }
+        to {
+            transform: scaleX(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes report-chart-grow-y {
+        from {
+            transform: scaleY(0);
+            opacity: .25;
+        }
+        to {
+            transform: scaleY(1);
+            opacity: .9;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .report-bar span,
+        .report-trend div {
+            animation: none;
+        }
+    }
+</style>
+
+<div class="container-fluid p-0">
+    <div class="row report-filter-wrap">
+        <div class="col-12">
+            <form id="reports-filter" class="card panel-card p-2" method="post" action="{{ path('index_reports_data') }}">
+                <div class="row g-2 align-items-end">
+                    <div class="col-lg-3 col-md-6 col-12">
+                        <span class="text-xs">Időszak</span>
+                        <select class="form-control" name="period" data-name="period">
+                            <option value="last30" {{ filters.period == 'last30' ? 'selected' : '' }}>Utolsó 30 nap</option>
+                            <option value="current_month" {{ filters.period == 'current_month' ? 'selected' : '' }}>Aktuális hónap</option>
+                            <option value="previous_month" {{ filters.period == 'previous_month' ? 'selected' : '' }}>Előző hónap</option>
+                            <option value="current_year" {{ filters.period == 'current_year' ? 'selected' : '' }}>Aktuális év</option>
+                            <option value="custom" {{ filters.period == 'custom' ? 'selected' : '' }}>Egyedi időszak</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3 col-md-6 col-12">
+                        <span class="text-xs">Géptípus</span>
+                        <select class="form-control" name="machine_category_id">
+                            <option value="">Összes géptípus</option>
+                            {% for category in machineCategories %}
+                                <option value="{{ category.id }}" {{ filters.machine_category_id == category.id ? 'selected' : '' }}>
+                                    {{ category.title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <span class="text-xs">Kezdete</span>
+                        <input type="date" class="form-control" name="date_from" value="{{ filters.date_from }}">
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-6">
+                        <span class="text-xs">Vége</span>
+                        <input type="date" class="form-control" name="date_to" value="{{ filters.date_to }}">
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-12 text-end">
+                        <button type="submit" class="btn btn-default btn-sm w-100"><i class="bi bi-filter-circle-fill"></i> Szures</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="reports-data" class="ajax-content" data-name="reports-data">
+        <div class="card panel-card p-3 mt-2 text-center">
+            <i class="bi bi-arrow-repeat"></i> Adatok betoltese...
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        (function () {
+            const $form = $("#reports-filter");
+            const $target = $("#reports-data");
+
+            function loadReportsData() {
+                new AJAX({
+                    name: "reports_data",
+                    url: $form.attr("action"),
+                    type: "POST",
+                    formData: new FormData($form[0]),
+                    function_prepare: function () {
+                        $target.html('<div class="card panel-card p-3 mt-2 text-center"><i class="bi bi-arrow-repeat"></i> Adatok betoltese...</div>');
+                    },
+                    function_success: function (response) {
+                        $target.html(response.html ?? "");
+                    },
+                    function_error: function () {
+                        $target.html('<div class="card panel-card p-3 mt-2 text-center text-danger">Az adatok betoltese sikertelen.</div>');
+                    }
+                }).send();
+            }
+
+            $form.on("submit", function (event) {
+                event.preventDefault();
+                loadReportsData();
+            });
+
+            $form.find("select, input").on("change", function () {
+                if ($(this).attr("name") === "period" && $(this).val() === "custom") {
+                    return;
+                }
+
+                loadReportsData();
+            });
+
+            loadReportsData();
+        })();
+    </script>
+{% endblock %}

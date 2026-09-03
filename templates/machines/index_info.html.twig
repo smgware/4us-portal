@@ -1,0 +1,212 @@
+<div class="container-fluid p-0">
+    <div class="row g-2">
+        <div class="col-12">
+            <div class="card panel-card p-3">
+                <div class="row g-3 align-items-start">
+                    <div class="col-lg-8 col-12">
+                        <div class="page-title mb-2">Gép információk</div>
+                        <div class="row g-2">
+                            <div class="col-lg-4 col-md-6 col-12">
+                                <span class="small text-muted">Megnevezés</span>
+                                <div class="fw-semibold">{{ machine.title|default('-') }}</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6 col-12">
+                                <span class="small text-muted">Kód</span>
+                                <div class="fw-semibold">{{ machine.code|default('-') }}</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6 col-12">
+                                <span class="small text-muted">Kategória</span>
+                                <div class="fw-semibold">{{ machine.machineCategory ? machine.machineCategory.title : '-' }}</div>
+                            </div>
+                            <div class="col-lg-4 col-md-6 col-12">
+                                <span class="small text-muted">Státusz</span>
+                                <div>
+                                    {% if machine.status == '1' %}
+                                        <span class="btn btn-sm btn-success">aktív</span>
+                                    {% else %}
+                                        <span class="btn btn-sm btn-danger">inaktív</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-6 col-12">
+                                <span class="small text-muted">Kiadva</span>
+                                <div>
+                                    {% if open_machine_rental %}
+                                        <span class="btn btn-sm btn-warning">igen</span>
+                                    {% else %}
+                                        <span class="btn btn-sm btn-success">nem</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-6 col-12">
+                                <span class="small text-muted">Utolsó módositás</span>
+                                <div class="fw-semibold">{{ machine.datetimeLast ? machine.datetimeLast|date('Y-m-d H:i') : '-' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-12">
+                        <div class="page-title mb-2">Aktuális kölcsönzés</div>
+                        {% if open_machine_rental %}
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <span class="small text-muted">Kölcsönzés kód</span>
+                                    <div class="fw-semibold">{{ open_machine_rental.code|default('-') }}</div>
+                                </div>
+                                <div class="col-12">
+                                    <span class="small text-muted">Partner</span>
+                                    <div class="fw-semibold">{{ open_machine_rental.partner_name|default('-') }}</div>
+                                </div>
+                                <div class="col-12">
+                                    <span class="small text-muted">Kezdete</span>
+                                    <div class="fw-semibold">{{ open_machine_rental.datetime_rental_start ? open_machine_rental.datetime_rental_start|date('Y-m-d H:i') : '-' }}</div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-muted">Nincs információ</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-lg-4 col-12">
+                        <div class="btn btn-default btn-sm" data-name="print_qr_code_error_reporting"><i class="bi bi-qr-code"></i> Hibabejelentő QR kód nyomtatása</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="card panel-card p-3">
+                <div class="page-title mb-2">Kölcsönzések</div>
+                <div class="table-responsive">
+                    <table class="table-default w-100">
+                        <thead>
+                            <tr>
+                                <th class="p-2">Kód</th>
+                                <th class="p-2">Partner</th>
+                                <th class="p-2">Kezdete</th>
+                                <th class="p-2">Vége</th>
+                                <th class="p-2">Állapot</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rental in machine_rentals %}
+                                <tr>
+                                    <td>{{ rental.code|default('-') }}</td>
+                                    <td>{{ rental.partner_name|default('-') }}</td>
+                                    <td>{{ rental.datetime_rental_start ? rental.datetime_rental_start|date('Y-m-d H:i') : '-' }}</td>
+                                    <td>{{ rental.datetime_rental_end ? rental.datetime_rental_end|date('Y-m-d H:i') : '-' }}</td>
+                                    <td>
+                                        {% if rental.datetime_rental_end is empty %}
+                                            <span class="btn btn-sm btn-success">nyitott</span>
+                                        {% else %}
+                                            <span class="btn btn-sm btn-danger">lezárt</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3 text-muted">Nincsenek előzmények</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="card panel-card p-3">
+                <div class="page-title mb-2">Hibajegyek</div>
+                <div class="table-responsive">
+                    <table class="table-default w-100">
+                        <thead>
+                            <tr>
+                                <th class="p-2">Kód</th>
+                                <th class="p-2">Megnevezés</th>
+                                <th class="p-2">Partner</th>
+                                <th class="p-2">Létrehozva</th>
+                                <th class="p-2">Állapot</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for worksheet in worksheets_error_reporting %}
+                                <tr>
+                                    <td>{{ worksheet.code|default('-') }}</td>
+                                    <td>{{ worksheet.title|default('-') }}</td>
+                                    <td>{{ worksheet.partner_name|default('-') }}</td>
+                                    <td>{{ worksheet.datetime_add ? worksheet.datetime_add|date('Y-m-d H:i') : '-' }}</td>
+                                    <td>
+                                        {% include 'worksheets/_status_badge.html.twig' with {
+                                            statusCode: worksheet.worksheet_status_type_code,
+                                            statusTitle: worksheet.worksheet_status_type_title
+                                        } only %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-3 text-muted">Nincsenek előzmények</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 col-12">
+            <div class="card panel-card p-3">
+                <div class="page-title mb-2">Átadási munkalapok</div>
+                {% include 'machines/_info_worksheet_table.html.twig' with { records: worksheets_handover } only %}
+            </div>
+        </div>
+
+        <div class="col-lg-6 col-12">
+            <div class="card panel-card p-3">
+                <div class="page-title mb-2">Visszaveteli munkalapok</div>
+                {% include 'machines/_info_worksheet_table.html.twig' with { records: worksheets_machine_return } only %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card panel-card p-3">
+                <div class="row">
+                    <div class="col-12" data-name="ajax-content" data-key="main_machines_attachments">betöltés...</div>
+                </div>
+
+             </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    $("[data-name='print_qr_code_error_reporting']").unbind("click").click(function (event) {
+
+        window.open("{{ path('print_qr_code_error_reporting', {id: machine.id}) }}", '_blank');
+
+    });
+
+    //load attachmetns main
+    var formData = new FormData();
+
+    formData.append("machine_id", "{{ machine.id }}");
+
+    new Ajax({
+        url: '{{ path('main_machines_attachments') }}',
+        name: 'main_machines_attachments',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        target: $("[data-key='main_machines_attachments']"),
+        function_success: function (result) {
+            this.target.html(result.content);
+        },
+        function_error: function (xhr) {
+            alertify.error(errorMessage(xhr, ''));
+        }
+    }).send();
+
+
+
+</script>

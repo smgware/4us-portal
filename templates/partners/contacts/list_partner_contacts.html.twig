@@ -1,0 +1,41 @@
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr>
+                <th class="p-2">Név</th>
+                <th class="p-2">Titulus</th>
+                <th class="p-2">E-mail</th>
+                <th class="p-2">Telefon</th>
+                <th class="p-2">Alapért. kapcsolattartó</th>
+                <th class="p-2">Leírás</th>
+                <th class="p-2">#</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                <tr data-name="partner_contact_item" data-key="{{ record.id }}">
+                    <td class="p-2">{{ record.name }}</td>
+                    <td class="p-2">{{ record.title|default('-') }}</td>
+                    <td class="p-2">{{ record.email|default('-') }}</td>
+                    <td class="p-2">{{ record.phone|default('-') }}</td>
+                    <td class="p-2">{{ record.defaultContact ? 'Igen' : 'Nem' }}</td>
+                    <td class="p-2">{{ record.description|default('-') }}</td>
+                    <td class="p-2 text-nowrap">
+                        <div class="btn btn-default btn-sm" data-name="partner_contact_action" data-mode="edit"><i class="bi bi-pencil-square"></i></div>
+                        <div class="btn btn-default btn-sm text-danger" data-name="partner_contact_action" data-mode="delete"><i class="bi bi-trash"></i></div>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="text-center py-4">Nincs megjeleníthető kapcsolattartó.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if totalPages > 1 %}
+    <nav class="pagination mt-3" aria-label="Lapozó">
+        {% for paginationPage in 1..totalPages %}
+            <button type="button" class="pagination__item {{ page == paginationPage ? 'pagination__item--active' }}" data-name="partner_contact_page" data-page="{{ paginationPage }}">{{ paginationPage }}</button>
+        {% endfor %}
+    </nav>
+{% endif %}

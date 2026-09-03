@@ -1,0 +1,242 @@
+<div class="container-fluid" data-name="machineAttachmentUploader">
+    <div class="row">
+        <div class="col-12">
+            <button type="button" class="btn btn-sm btn-default" data-name="btnSelectUploadFiles">
+                <i class="bi bi-search"></i> Tallózás
+            </button>
+            <input type="file" multiple data-name="inputSelectedFiles" style="display:none;">
+            <span class="text-muted text-xs ms-2">Maximum {{ (max_attachment_file_size / 1024 / 1024)|round }} MB / fájl</span>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12" style="height:500px;overflow-y:auto;" data-name="listSelectedUploadFiles"></div>
+    </div>
+</div>
+
+<script>
+    window.initializeMachineAttachmentUploader = function () {
+        const root = $("[data-name='machineAttachmentUploader']");
+        const maxAttachmentFileSize = {{ max_attachment_file_size }};
+        var selectedFiles = [];
+        window.selectedFiles = selectedFiles;
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, function (character) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#039;',
+                    '"': '&quot;'
+                }[character];
+            });
+        }
+
+        function formatFileSize(bytes) {
+            const size = Number(bytes) || 0;
+            if (size >= 1048576) {
+                return (size / 1048576).toFixed(1) + ' MB';
+            }
+            if (size >= 1024) {
+                return (size / 1024).toFixed(1) + ' KB';
+            }
+
+            return size + ' B';
+        }
+
+        function isImageFile(file) {
+            return String(file?.type || '').startsWith('image/')
+                || /\.(jpg|jpeg|png|gif|bmp|webp|svg|avif|ico|tiff?)$/i.test(file?.name || '');
+        }
+
+        function attachmentElement(attachmentId) {
+            return root.find("[data-name='attachment-item']").filter(function () {
+                return $(this).attr('data-id') === String(attachmentId);
+            });
+        }
+
+        function updatePercentage(item, percentage) {
+            percentage = Math.max(0, Math.min(100, Math.round(Number(percentage) || 0)));
+            item.percentage = percentage;
+
+            const element = attachmentElement(item.id);
+            element.find("[data-name='percentageIndicator']").text(percentage + '%');
+            element.find("[data-name='percentageBar']")
+                .css('width', percentage + '%')
+                .attr('aria-valuenow', percentage);
+        }
+
+        function renderSelectedFiles() {
+            const target = root.find("[data-name='listSelectedUploadFiles']");
+            target.empty();
+
+            selectedFiles.forEach(function (item) {
+                const preview = item.isImage
+                    ? `<img src="${escapeHtml(item.previewUrl)}" alt="${escapeHtml(item.name)}" class="rounded-3" style="width:80px;height:80px;object-fit:cover;">`
+                    : `<span class="d-flex align-items-center justify-content-center text-muted" style="width:80px;height:80px;background:#f5f6f8;"><i class="bi bi-file-earmark" style="font-size:3rem;"></i></span>`;
+                const successBadge = item.uploaded
+                    ? '<span class="badge bg-success ms-2">Feltöltve</span>'
+                    : '';
+
+                target.append(`
+                    <div class="row g-2 row-select mb-2 rounded-3 align-items-center" data-name="attachment-item" data-id="${escapeHtml(item.id)}">
+                        <div class="col-2">${preview}</div>
+                        <div class="col-4">
+                            <div class="text-truncate fw-semibold" title="${escapeHtml(item.name)}">${escapeHtml(item.name)} ${successBadge}</div>
+                            <span class="text-xs">Méret: ${formatFileSize(item.file.size)}</span>
+                        </div>
+                        <div class="col-4">
+                            <input type="text" class="form-control" data-name="attachmentDescription" value="${escapeHtml(item.description)}" placeholder="Leírás" ${item.uploaded ? 'disabled' : ''}>
+                        </div>
+                        <div class="col-2 text-end">
+                            <button type="button" class="btn btn-danger btn-sm" data-name="btnRemoveAttachment" ${item.uploaded ? 'disabled' : ''}>
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-end text-xs mb-1">
+                                <span data-name="percentageIndicator">${item.percentage || 0}%</span>
+                            </div>
+                            <div class="progress" style="height:6px;">
+                                <div data-name="percentageBar" class="progress-bar bg-success" role="progressbar" style="width:${item.percentage || 0}%;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${item.percentage || 0}"></div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+
+            if (selectedFiles.length === 0) {
+                target.html('<div class="text-muted text-center p-4">Nincs kiválasztott csatolmány.</div>');
+            }
+
+            target.find("[data-name='btnRemoveAttachment']")
+                .off('click.machineAttachmentUpload')
+                .on('click.machineAttachmentUpload', function () {
+                    const attachmentId = String($(this).closest("[data-name='attachment-item']").attr('data-id') || '');
+                    const index = selectedFiles.findIndex(item => item.id === attachmentId);
+                    if (index < 0 || selectedFiles[index].uploaded) {
+                        return;
+                    }
+
+                    alertify.confirm('Megerősítés', 'Eltávolítod a csatolmányok közül?', function () {
+                        if (selectedFiles[index].previewUrl) {
+                            URL.revokeObjectURL(selectedFiles[index].previewUrl);
+                        }
+                        selectedFiles.splice(index, 1);
+                        renderSelectedFiles();
+                    }, function () {});
+                });
+
+            target.find("input[data-name='attachmentDescription']")
+                .off('change.machineAttachmentUpload input.machineAttachmentUpload')
+                .on('change.machineAttachmentUpload input.machineAttachmentUpload', function () {
+                    const attachmentId = String($(this).closest("[data-name='attachment-item']").attr('data-id') || '');
+                    const item = selectedFiles.find(attachment => attachment.id === attachmentId);
+                    if (item && !item.uploaded) {
+                        item.description = String($(this).val() || '');
+                    }
+                });
+        }
+
+        root.find("[data-name='btnSelectUploadFiles']")
+            .off('click.machineAttachmentUpload')
+            .on('click.machineAttachmentUpload', function () {
+                root.find("[data-name='inputSelectedFiles']").trigger('click');
+            });
+
+        root.find("[data-name='inputSelectedFiles']")
+            .off('change.machineAttachmentUpload')
+            .on('change.machineAttachmentUpload', function () {
+                Array.from(this.files || []).forEach(function (file) {
+                    if (file.size > maxAttachmentFileSize) {
+                        alertify.error(file.name + ' túl nagy. A maximális méret ' + formatFileSize(maxAttachmentFileSize) + '.');
+                        return;
+                    }
+
+                    const image = isImageFile(file);
+                    selectedFiles.push({
+                        id: 'machine-attachment-' + randomString(12),
+                        name: file.name,
+                        description: '',
+                        file: file,
+                        isImage: image,
+                        previewUrl: image ? URL.createObjectURL(file) : '',
+                        percentage: 0,
+                        uploaded: false
+                    });
+                });
+
+                this.value = '';
+                renderSelectedFiles();
+            });
+
+        window.cleanupMachineAttachmentPreviews = function () {
+            selectedFiles.forEach(function (item) {
+                if (item.previewUrl) {
+                    URL.revokeObjectURL(item.previewUrl);
+                    item.previewUrl = '';
+                }
+            });
+        };
+
+        window.uploadAttachmentsFunction = function () {
+            const pendingFiles = selectedFiles.filter(item => !item.uploaded);
+
+            return Promise.all(pendingFiles.map(function (item) {
+                return new Promise(function (resolve, reject) {
+                    const formData = new FormData();
+                    formData.set('machine_id', '{{ machine_id }}');
+                    formData.set('function', 'add');
+                    formData.set('name', item.name);
+                    formData.set('description', item.description || '');
+                    formData.set('file_id', item.id);
+                    formData.append('file', item.file, item.name);
+
+                    new Ajax({
+                        url: '{{ path('save_machine_attachments') }}',
+                        name: 'save_machine_attachment_' + item.id,
+                        type: 'POST',
+                        dataType: 'json',
+                        timeout: 800000,
+                        formData: formData,
+                        target: null,
+                        function_xhr: function () {
+                            const xhr = $.ajaxSettings.xhr();
+
+                            if (xhr.upload) {
+                                xhr.upload.addEventListener('progress', function (event) {
+                                    if (!event.lengthComputable) {
+                                        return;
+                                    }
+
+                                    const percentage = Math.min(99, Math.round((event.loaded / event.total) * 100));
+                                    updatePercentage(item, percentage);
+                                });
+                            }
+
+                            return xhr;
+                        },
+                        function_success: function (result) {
+                            if (!result.success) {
+                                reject(new Error(result.data?.error || 'Nem sikerült feltölteni: ' + item.name));
+                                return;
+                            }
+
+                            item.uploaded = true;
+                            item.serverData = result.data?.attachment || null;
+                            updatePercentage(item, 100);
+                            renderSelectedFiles();
+                            resolve(result);
+                        },
+                        function_error: function (xhr) {
+                            reject(new Error(errorMessage(xhr, 'Nem sikerült feltölteni: ' + item.name)));
+                        }
+                    }).send();
+                });
+            }));
+        };
+
+        renderSelectedFiles();
+    };
+</script>

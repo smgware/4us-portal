@@ -1,0 +1,36 @@
+<h2 class="login-title mb-1">Bejelentkezés</h2>
+<p class="login-subtitle">Add meg az adataidat a belépéshez.</p>
+
+{% if error %}
+    <div id="loginAlert" class="alert alert-danger">Hibás felhasználónév vagy jelszó.</div>
+{% else %}
+    <div id="loginAlert" class="alert d-none"></div>
+{% endif %}
+
+<form id="loginForm" method="post" action="{{ path('login_auth') }}">
+    <div class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            <input type="text" class="form-control" id="username" name="_username" placeholder="Felhasználónév / e-mail cím" value="{{ last_username }}" required autofocus>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" class="form-control" id="password" name="_password" placeholder="••••••••" required>
+            <span class="input-group-text"><i class="bi bi-eye"></i></span>
+        </div>
+    </div>
+
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+
+        <a href="#" class="forgot-link" data-auth-page="password-recovery">Elfelejtetted a jelszavad?</a>
+    </div>
+
+    <button type="submit" class="btn btn-login w-100" id="loginBtn">Bejelentkezés</button>
+
+    <div class="divider"></div>
+</form>

@@ -1,0 +1,128 @@
+<div class="page-title"><i class="bi bi-envelope"></i> E-mail napló</div>
+
+<div class="card panel-card p-2">
+    <div class="row g-2">
+        <div class="col-xl-3 col-md-6 col-12">
+            <label class="form-label mb-1">E-mail cím</label>
+            <input type="text" class="form-control" data-name="filter_email_logs_email" placeholder="Keresés e-mail címre...">
+        </div>
+        <div class="col-xl-3 col-md-6 col-12">
+            <label class="form-label mb-1">Címzett neve</label>
+            <input type="text" class="form-control" data-name="filter_email_logs_name" placeholder="Keresés névre...">
+        </div>
+        <div class="col-xl-3 col-md-6 col-12">
+            <label class="form-label mb-1">Esemény neve</label>
+            <input type="text" class="form-control" data-name="filter_email_logs_event_name" placeholder="Keresés eseménynévre...">
+        </div>
+        <div class="col-xl-3 col-md-6 col-12">
+            <label class="form-label mb-1">Esemény kódja</label>
+            <input type="text" class="form-control" data-name="filter_email_logs_event_code" placeholder="Keresés kódra...">
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_email_logs"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const listTarget = $("[data-key='list_email_logs']");
+        const listFormData = new FormData();
+        let searchTimer = null;
+
+        const previousListRequest = ajaxquery?.['list_email_logs']?.ajax;
+        if (previousListRequest && previousListRequest.readyState !== 4) {
+            previousListRequest.abort();
+        }
+
+        const listRequest = new Ajax({
+            url: '{{ path('list_email_logs') }}',
+            name: 'list_email_logs',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: listTarget,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni az e-mail naplót.');
+                    return;
+                }
+
+                this.target.html(result.content);
+                bindListActions();
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni az e-mail naplót.');
+            }
+        });
+
+        const viewFormData = new FormData();
+        const viewRequest = new Ajax({
+            url: '{{ path('view_email_log') }}',
+            name: 'view_email_log',
+            type: 'GET',
+            dataType: 'json',
+            formData: viewFormData,
+            target: null,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni az e-mailt.');
+                    return;
+                }
+
+                alertify.alert('Elküldött e-mail', result.content)
+                    .set('resizable', true)
+                    .set('maximizable', true)
+                    .resizeTo('80%', '80%');
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni az e-mailt.');
+            }
+        });
+
+        function filters() {
+            return {
+                email: $(`[data-name='filter_email_logs_email']`).val() || '',
+                name: $(`[data-name='filter_email_logs_name']`).val() || '',
+                event_name: $(`[data-name='filter_email_logs_event_name']`).val() || '',
+                event_code: $(`[data-name='filter_email_logs_event_code']`).val() || ''
+            };
+        }
+
+        function reloadList(page = 1) {
+            listFormData.set('page', String(page));
+            listFormData.set('filters', JSON.stringify(filters()));
+            listRequest.send();
+        }
+
+        function bindListActions() {
+            listTarget.find(".pagination__item[href]")
+                .off('click.emailLogs')
+                .on('click.emailLogs', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const pageUrl = new URL(this.href, window.location.origin);
+                    reloadList(pageUrl.searchParams.get('page') || 1);
+                });
+
+            listTarget.find("[data-name='view_email_log']")
+                .off('click.emailLogs')
+                .on('click.emailLogs', function () {
+                    viewFormData.set('id', String($(this).data('id') || ''));
+                    viewRequest.send();
+                });
+        }
+
+        $("[data-name^='filter_email_logs_']")
+            .off('input.emailLogs')
+            .on('input.emailLogs', function () {
+                window.clearTimeout(searchTimer);
+                searchTimer = window.setTimeout(() => reloadList(1), 300);
+            });
+
+        reloadList();
+    })();
+</script>

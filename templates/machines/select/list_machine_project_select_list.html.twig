@@ -1,0 +1,25 @@
+{% if records is empty %}
+    <div class="px-3 py-2 text-muted text-sm" data-name="combobox-empty">
+        Nincs a keresésnek megfelelő projekt.
+    </div>
+{% else %}
+    {% for record in records %}
+        <button
+            type="button"
+            class="list-group-item list-group-item-action machine-project-combobox-option"
+            data-select-id="{{ record.id }}"
+            data-select-label="{{ record.name }}"
+            role="option"
+        >
+            <span class="d-flex justify-content-between gap-2">
+                <strong>{{ record.name }}</strong>
+                {% if record.code %}
+                    <span class="text-muted">{{ record.code }}</span>
+                {% endif %}
+            </span>
+            {% if record.description %}
+                <small class="d-block text-muted">{{ record.description }}</small>
+            {% endif %}
+        </button>
+    {% endfor %}
+{% endif %}

@@ -1,0 +1,242 @@
+<div class="page-title"><i class="bi bi-bell"></i> Értesítési események</div>
+
+<div class="card panel-card p-2">
+    <div class="row g-2 align-items-end">
+        <div class="col-lg-6 col-12">
+            <label class="form-label mb-1">Keresés</label>
+            <input type="text" class="form-control" placeholder="Név vagy kód..." data-name="search_notification_events_list">
+        </div>
+        <div class="col-lg-3 col-6">
+            <label class="form-label mb-1">Státusz</label>
+            <select class="form-control" data-name="filter_notification_events_status">
+                <option value="">Mind</option>
+                <option value="1">Aktív</option>
+                <option value="0">Inaktív</option>
+            </select>
+        </div>
+        <div class="col-lg-3 col-6 text-end">
+            <button type="button" class="btn btn-default btn-sm" data-name="btn_index_notification_events_add">
+                <i class="bi bi-plus-circle-fill"></i> Új hozzáadása
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_notification_events"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const listTarget = $("[data-key='list_notification_events']");
+        const listFormData = new FormData();
+        let searchTimer = null;
+
+        const previousListRequest = ajaxquery?.['list_notification_events']?.ajax;
+        if (previousListRequest && previousListRequest.readyState !== 4) {
+            previousListRequest.abort();
+        }
+
+        const editorFormData = new FormData();
+        const editorRequest = new Ajax({
+            url: '{{ path('index_notification_events_add') }}',
+            name: 'index_notification_events_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: editorFormData,
+            target: null,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni az értesítési eseményt.');
+                    return;
+                }
+
+                const dialogTitle = result.data?.mode === 'update'
+                    ? 'Értesítési esemény szerkesztése'
+                    : 'Értesítési esemény hozzáadása';
+                const footer = `
+                    <div class="container-fluid p-0" data-box="${this.name}">
+                        <div class="row">
+                            <div class="col-12 text-end">
+                                <button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</button>
+                                <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                alertify.add(dialogTitle, result.content)
+                    .set('movable', false)
+                    .set('resizable', false)
+                    .set('closable', false)
+                    .set('closableByEscape', false)
+                    .resizeTo('50%', '50%')
+                    .set({transition: 'zoom'})
+                    .setFooter(footer);
+
+                const dialogBox = $(`div[data-box="${this.name}"]`);
+                const codeInput = $("form[data-name='notification_event'] [data-name='code']");
+                codeInput
+                    .off('input.notificationEvent')
+                    .on('input.notificationEvent', function () {
+                        this.value = this.value.toLocaleUpperCase('hu-HU');
+                    });
+
+                dialogBox.find("[data-name='alertify-cancel']")
+                    .off('click.notificationEvent')
+                    .on('click.notificationEvent', function () {
+                        alertify.confirm('Megerősítés', 'Bezárod az ablakot?', function () {
+                            alertify.add().close();
+                        }, function () {});
+                    });
+
+                dialogBox.find("[data-name='alertify-save']")
+                    .off('click.notificationEvent')
+                    .on('click.notificationEvent', function () {
+                        const form = $("form[data-name='notification_event']");
+                        const name = String(form.find("[data-name='name']").val() ?? '').trim();
+                        const code = String(form.find("[data-name='code']").val() ?? '').trim();
+
+                        if (name === '' || code === '') {
+                            alertify.alert('Hiányzó adatok', 'A név és a kód megadása kötelező.');
+                            return;
+                        }
+
+                        alertify.confirm('Megerősítés', 'Mented az adatokat?', function () {
+                            const saveFormData = new FormData(form[0]);
+
+                            new Ajax({
+                                url: '{{ path('save_notification_events') }}',
+                                name: 'save_notification_events',
+                                type: 'POST',
+                                dataType: 'json',
+                                formData: saveFormData,
+                                function_success: function (saveResult) {
+                                    if (!saveResult.success) {
+                                        alertify.error(saveResult.data?.error || 'Nem sikerült menteni az értesítési eseményt.');
+                                        return;
+                                    }
+
+                                    alertify.add().close();
+                                    alertify.success('Sikeres mentés');
+                                    listRequest.send();
+                                },
+                                function_error: function (xhr) {
+                                    alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült menteni az értesítési eseményt.');
+                                }
+                            }).send();
+                        }, function () {});
+                    });
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni az értesítési eseményt.');
+            }
+        });
+
+        function bindListActions() {
+            listTarget.find(".pagination__item[href]")
+                .off('click.notificationEvent')
+                .on('click.notificationEvent', function (event) {
+                    event.preventDefault();
+
+                    const pageUrl = new URL(this.href, window.location.origin);
+                    listFormData.set('page', pageUrl.searchParams.get('page') || '1');
+                    listRequest.send();
+                });
+
+            listTarget.find("[data-name='list_item_btn']")
+                .off('click.notificationEvent')
+                .on('click.notificationEvent', function () {
+                    const button = $(this);
+                    const mode = button.attr('data-mode');
+                    const id = button.closest("[data-name='list_item']").attr('data-key');
+
+                    if (mode === 'edit') {
+                        editorRequest.formData.set('id', id);
+                        editorRequest.send();
+                        return;
+                    }
+
+                    if (mode === 'delete') {
+                        alertify.confirm('Megerősítés', 'Biztosan törlöd az értesítési eseményt?', function () {
+                            const deleteFormData = new FormData();
+                            deleteFormData.set('id', id);
+
+                            new Ajax({
+                                url: '{{ path('delete_notification_events') }}',
+                                name: 'delete_notification_events',
+                                type: 'POST',
+                                dataType: 'json',
+                                formData: deleteFormData,
+                                function_success: function (deleteResult) {
+                                    if (!deleteResult.success) {
+                                        alertify.error(deleteResult.data?.error || 'Nem sikerült törölni az értesítési eseményt.');
+                                        return;
+                                    }
+
+                                    alertify.success('Sikeres törlés');
+                                    listRequest.send();
+                                },
+                                function_error: function (xhr) {
+                                    alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült törölni az értesítési eseményt.');
+                                }
+                            }).send();
+                        }, function () {});
+                    }
+                });
+        }
+
+        const listRequest = new Ajax({
+            url: '{{ path('list_notification_events') }}',
+            name: 'list_notification_events',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: listTarget,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni az értesítési eseményeket.');
+                    return;
+                }
+
+                this.target.html(result.content);
+                bindListActions();
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni az értesítési eseményeket.');
+            }
+        });
+
+        function reloadList() {
+            listRequest.url = '{{ path('list_notification_events') }}';
+            listFormData.delete('page');
+            listFormData.set('filters', JSON.stringify({
+                search: $("[data-name='search_notification_events_list']").val() || '',
+                status: $("[data-name='filter_notification_events_status']").val() || ''
+            }));
+            listRequest.send();
+        }
+
+        $("[data-name='btn_index_notification_events_add']")
+            .off('click.notificationEvent')
+            .on('click.notificationEvent', function () {
+                editorRequest.formData.set('id', '');
+                editorRequest.send();
+            });
+
+        $("[data-name='search_notification_events_list']")
+            .off('keyup.notificationEvent')
+            .on('keyup.notificationEvent', function () {
+                window.clearTimeout(searchTimer);
+                searchTimer = window.setTimeout(reloadList, 300);
+            });
+
+        $("[data-name='filter_notification_events_status']")
+            .off('change.notificationEvent')
+            .on('change.notificationEvent', reloadList);
+
+        reloadList();
+    })();
+</script>

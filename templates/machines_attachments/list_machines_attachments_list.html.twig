@@ -1,0 +1,64 @@
+<div class="container-fluid">
+    {% for attachment in attachments %}
+        {% set imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico', 'tif', 'tiff'] %}
+        {% set extension = attachment.name|split('.')|last|lower %}
+        {% set mimeType = attachment.data.type|default('') %}
+        {% set isImage = (mimeType starts with 'image/') or extension in imageExtensions %}
+        {% set attachmentUrl = path('get_machine_attachment', {id: attachment.id}) %}
+        {% set attachmentDownloadUrl = path('get_machine_attachment', {id: attachment.id, download: 1}) %}
+
+        <div class="row g-2 mt-2 bg-light rounded-3 align-items-center" data-name="machine-attachment-item" data-id="{{ attachment.id }}">
+            <div class="col-md-2 col-4">
+                <span class="m-2 d-flex align-items-center justify-content-center text-muted text-decoration-none" style="width:80px;height:80px;background:#f5f6f8;">
+                    {% if isImage %}
+                        <img src="{{ attachmentUrl }}" alt="{{ attachment.name }}" class="rounded-3" style="width:80px;height:80px;object-fit:cover;">
+                    {% else %}
+                        <i class="bi bi-file-earmark" style="font-size:3rem;"></i>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="col-md-8 col-8">
+                <div class="fw-semibold text-truncate" title="{{ attachment.name }}">{{ attachment.name }}</div>
+                {% if attachment.description %}
+                    <div class="text-muted text-xs">{{ attachment.description }}</div>
+                {% endif %}
+                <div class="text-muted text-xs">
+                    {{ attachment.formatted_size }}
+                    {% if attachment.datetime_add %}
+                        – {{ attachment.datetime_add|date('Y-m-d H:i') }}
+                    {% endif %}
+                </div>
+                {% if attachment.user_owner_name or attachment.user_owner_username %}
+                    <div class="text-muted text-xs">
+                        Feltöltötte: {{ attachment.user_owner_name|default(attachment.user_owner_username) }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-2 col-12 text-end">
+                <button type="button" class="btn btn-default btn-sm" data-name="btnDownloadMachineAttachment" data-url="{{ attachmentDownloadUrl }}" title="Letöltés">
+                    <i class="bi bi-download"></i>
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" data-name="btnDeleteMachineAttachment" data-id="{{ attachment.id }}" title="Törlés">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    {% else %}
+        <div class="row mt-2">
+            <div class="col-12 text-center text-muted p-3">Nincsenek feltöltött csatolmányok.</div>
+        </div>
+    {% endfor %}
+
+    <div class="row mt-2">
+        <div class="col-12">
+            {% include 'partials/_pagination.html.twig' with {
+                currentPage: page,
+                totalPages: totalPages,
+                routeName: 'list_machines_attachments_list',
+                queryParams: {}
+            } %}
+        </div>
+    </div>
+</div>

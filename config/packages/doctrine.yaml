@@ -1,0 +1,36 @@
+doctrine:
+    dbal:
+        default_connection: default
+        connections:
+            default:
+                driver: '%env(DEFAULT_DATABASE_DRIVER)%'
+                host: '%env(DEFAULT_DATABASE_HOST)%'
+                port: '%env(int:DEFAULT_DATABASE_PORT)%'
+                dbname: '%env(DEFAULT_DATABASE_NAME)%'
+                user: '%env(DEFAULT_DATABASE_USER)%'
+                password: '%env(DEFAULT_DATABASE_PASSWORD)%'
+                charset: '%env(DEFAULT_DATABASE_CHARSET)%'
+                server_version: '%env(DEFAULT_DATABASE_SERVER_VERSION)%'
+            everlink:
+                driver: '%env(EVERLINK_DATABASE_DRIVER)%'
+                host: '%env(EVERLINK_DATABASE_HOST)%'
+                port: '%env(int:EVERLINK_DATABASE_PORT)%'
+                dbname: '%env(EVERLINK_DATABASE_NAME)%'
+                user: '%env(EVERLINK_DATABASE_USER)%'
+                password: '%env(EVERLINK_DATABASE_PASSWORD)%'
+                charset: '%env(EVERLINK_DATABASE_CHARSET)%'
+                server_version: '%env(EVERLINK_DATABASE_SERVER_VERSION)%'
+    orm:
+        auto_generate_proxy_classes: true
+        enable_lazy_ghost_objects: true
+        report_fields_where_declared: true
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        auto_mapping: true
+        mappings:
+            App:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Entity'
+                prefix: 'App\Entity'
+                alias: App

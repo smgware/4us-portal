@@ -1,0 +1,23 @@
+{% if records is empty %}
+    <div class="px-3 py-2 text-muted text-sm" data-name="combobox-empty">
+        Nincs a keresésnek megfelelő partner.
+    </div>
+{% else %}
+    {% for record in records %}
+        <button
+            type="button"
+            class="list-group-item list-group-item-action machine-rental-combobox-option"
+            role="option"
+            data-select-id="{{ record.id }}"
+            data-select-label="{{ record.name|e('html_attr') }}"
+        >
+            <span class="d-block fw-semibold">{{ record.name }}</span>
+            <span class="d-block text-muted text-xs">
+                {% if record.code %}{{ record.code }}{% endif %}
+                {% if record.tax_number %} · Adószám: {{ record.tax_number }}{% endif %}
+                {% if record.city %} · {{ record.city }}{% endif %}
+                {% if record.address %}, {{ record.address }}{% endif %}
+            </span>
+        </button>
+    {% endfor %}
+{% endif %}

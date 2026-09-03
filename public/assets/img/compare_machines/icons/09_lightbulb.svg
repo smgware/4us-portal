@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ötlet / információ" width="64" height="64">
+  <title>Ötlet / információ</title>
+  <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" color="#0E8B37">
+    <path d="M32 8a18 18 0 0 0-11 32c3 2.6 4 5.4 4 8h14c0-2.6 1-5.4 4-8A18 18 0 0 0 32 8z"/>
+    <path d="M25 55h14M27 48h10"/>
+  </g>
+</svg>

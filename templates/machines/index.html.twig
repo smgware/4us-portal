@@ -1,0 +1,542 @@
+﻿{% extends 'base.html.twig' %}
+{% block body %}
+<style>
+    .machine-project-combobox {
+        position: relative;
+    }
+
+    .machine-project-combobox-results {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        z-index: 1080;
+        width: 100%;
+        max-height: 260px;
+        overflow-y: auto;
+        background: #fff;
+    }
+
+    .machine-project-combobox-option {
+        text-align: left;
+        white-space: normal;
+    }
+</style>
+
+<div class="page-title"><i class="bi bi-gear-wide-connected"></i> Gépnyilvántartás</div>
+
+<div class="container-fluid p-0">
+    <div class="row">
+        <div class="col-12">
+            <div class="card panel-card p-2">
+                <div class="row">
+                    <div class="col-12 text-end">
+                        <div class="btn btn-default btn-sm mb-2" data-name="btn_index_machines_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card panel-card p-2">
+                <div class="row">
+
+                    <div class="col col-lg-3 col-12">
+                        <span class="text-xs">Keresés</span>
+                        <input type="text" class="form-control" placeholder="Kereses..." data-name="search_machines_list" />
+                    </div>
+
+                    <div class="col col-lg-3 col-12">
+                        <span class="text-xs">Gép kategória</span>
+                        <select class="form-control" data-name="filter_machines_category" id="filter_machines_category">
+                            <option value="">Mind</option>
+                            {% for machineCategory in machineCategories %}
+                                <option value="{{ machineCategory.id }}">{{ machineCategory.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col col-lg-3 col-12">
+                        <span class="text-xs">Típus</span>
+                        <select class="form-control" data-name="filter_machines_type" id="filter_machines_type">
+                            <option value="">Mind</option>
+                            <option value="free">Szabad</option>
+                            <option value="issued">Kiadva</option>
+                            <option value="repair">Javítás alatt</option>
+                        </select>
+                    </div>
+
+                    <div class="col col-lg-3 col-12">
+                        <span class="text-xs">Projekt</span>
+                        <div class="machine-project-combobox" data-machine-project-combobox="filter">
+                            <div class="input-group">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    data-name="filter_machines_project_search"
+                                    placeholder="Projekt keresése..."
+                                    autocomplete="off"
+                                    role="combobox"
+                                    aria-autocomplete="list"
+                                    aria-controls="machine_filter_project_results"
+                                    aria-expanded="false"
+                                >
+                                <button type="button" class="btn btn-outline-secondary" data-name="combobox-clear" aria-label="Projektszűrő törlése">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" data-name="filter_machines_project_id" value="">
+                            <div id="machine_filter_project_results" class="machine-project-combobox-results list-group shadow-sm d-none" data-name="combobox-results" role="listbox"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row mt-2">
+        <div class="col-12 ajax-content" data-name="index_machines_content" data-key="list_machines"></div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        function initMachineProjectCombobox(options) {
+            const root = $(options.root).first();
+            if (!root.length) {
+                return null;
+            }
+
+            const searchInput = root.find("[data-name='" + options.searchName + "']");
+            const idInput = root.find("[data-name='" + options.idName + "']");
+            const results = root.find("[data-name='combobox-results']");
+            const clearButton = root.find("[data-name='combobox-clear']");
+            const formData = new FormData();
+            const eventNamespace = '.machineProject' + options.key + 'Combobox';
+            const trimValue = value => String(value ?? '').trim();
+            let selectedLabel = trimValue(searchInput.val());
+            let searchTimer = null;
+
+            function openResults() {
+                results.removeClass('d-none');
+                searchInput.attr('aria-expanded', 'true');
+            }
+
+            function closeResults() {
+                results.addClass('d-none');
+                searchInput.attr('aria-expanded', 'false');
+            }
+
+            function showMessage(message) {
+                results
+                    .empty()
+                    .append($('<div>', {
+                        class: 'px-3 py-2 text-muted text-sm',
+                        text: message
+                    }));
+                openResults();
+            }
+
+            if (typeof ajaxquery !== 'undefined') {
+                const previousRequest = ajaxquery[options.requestName]?.ajax;
+                if (previousRequest && previousRequest.readyState !== 4) {
+                    previousRequest.abort();
+                }
+            }
+
+            const request = new Ajax({
+                url: '{{ path('list_machine_project_select_list') }}',
+                name: options.requestName,
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                function_prepare: function () {
+                    showMessage('Keresés...');
+                },
+                function_success: function (result) {
+                    if (!result.success) {
+                        showMessage(result.data?.error || 'A projektek nem tölthetők be.');
+                        return;
+                    }
+
+                    results.html(result.content || '');
+                    if (!trimValue(results.html())) {
+                        showMessage('Nincs találat.');
+                        return;
+                    }
+
+                    openResults();
+                },
+                function_error: function (xhr, status) {
+                    if (status === 'abort') {
+                        return;
+                    }
+
+                    showMessage(xhr.responseJSON?.data?.error || 'A projektkeresés nem sikerült.');
+                }
+            });
+
+            function sendSearch() {
+                if (request.ajax && request.ajax.readyState !== 4) {
+                    request.ajax.abort();
+                }
+
+                formData.set('filters', JSON.stringify({
+                    search: trimValue(searchInput.val())
+                }));
+                request.send();
+            }
+
+            function queueSearch(delay) {
+                window.clearTimeout(searchTimer);
+                searchTimer = window.setTimeout(sendSearch, delay ?? 250);
+            }
+
+            function notifyChange() {
+                if (typeof options.onChange === 'function') {
+                    options.onChange(idInput.val() || '');
+                }
+            }
+
+            function setValue(id, label) {
+                window.clearTimeout(searchTimer);
+                if (request.ajax && request.ajax.readyState !== 4) {
+                    request.ajax.abort();
+                }
+
+                const previousId = String(idInput.val() ?? '');
+                const normalizedId = String(id ?? '');
+                const normalizedLabel = String(label ?? '');
+                idInput.val(normalizedId);
+                searchInput.val(normalizedLabel);
+                selectedLabel = normalizedLabel;
+                closeResults();
+
+                if (previousId !== normalizedId) {
+                    notifyChange();
+                }
+            }
+
+            function selectOption(option) {
+                setValue(
+                    option.attr('data-select-id'),
+                    option.attr('data-select-label')
+                );
+            }
+
+            searchInput
+                .off(eventNamespace)
+                .on('focus' + eventNamespace, function () {
+                    queueSearch(0);
+                })
+                .on('keyup' + eventNamespace, function (event) {
+                    if (event.key === 'Escape') {
+                        closeResults();
+                        return;
+                    }
+
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const firstOption = results.find('[data-select-id]').first();
+                        if (firstOption.length) {
+                            selectOption(firstOption);
+                        }
+                        return;
+                    }
+
+                    if (['ArrowDown', 'ArrowUp', 'Tab', 'Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) {
+                        return;
+                    }
+
+                    if (trimValue(searchInput.val()) !== selectedLabel && idInput.val() !== '') {
+                        idInput.val('');
+                        selectedLabel = '';
+                        notifyChange();
+                    }
+
+                    queueSearch(250);
+                })
+                .on('keydown' + eventNamespace, function (event) {
+                    if (event.key !== 'ArrowDown') {
+                        return;
+                    }
+
+                    const firstOption = results.find('[data-select-id]').first();
+                    if (firstOption.length) {
+                        event.preventDefault();
+                        firstOption.trigger('focus');
+                    }
+                });
+
+            results
+                .off(eventNamespace)
+                .on('mousedown' + eventNamespace, '[data-select-id]', function (event) {
+                    event.preventDefault();
+                    selectOption($(this));
+                })
+                .on('keydown' + eventNamespace, '[data-select-id]', function (event) {
+                    const optionsList = results.find('[data-select-id]');
+                    const currentIndex = optionsList.index(this);
+
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        selectOption($(this));
+                    } else if (event.key === 'ArrowDown' && currentIndex < optionsList.length - 1) {
+                        event.preventDefault();
+                        optionsList.eq(currentIndex + 1).trigger('focus');
+                    } else if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        if (currentIndex > 0) {
+                            optionsList.eq(currentIndex - 1).trigger('focus');
+                        } else {
+                            searchInput.trigger('focus');
+                        }
+                    } else if (event.key === 'Escape') {
+                        closeResults();
+                        searchInput.trigger('focus');
+                    }
+                });
+
+            clearButton
+                .off(eventNamespace)
+                .on('click' + eventNamespace, function () {
+                    setValue('', '');
+                    searchInput.trigger('focus');
+                    queueSearch(0);
+                });
+
+            $(document)
+                .off('mousedown' + eventNamespace)
+                .on('mousedown' + eventNamespace, function (event) {
+                    if (!$(event.target).closest(root).length) {
+                        closeResults();
+                    }
+                });
+
+            return {
+                setValue: setValue,
+                search: sendSearch,
+                close: closeResults
+            };
+        }
+
+        var listFormData = new FormData();
+        listFormData.set('filters', '{}');
+
+        new Ajax({
+            url: '{{ path('list_machines') }}',
+            name: 'list_machines',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: $('[data-name="index_machines_content"]'),
+            function_success: function (result) {
+                if (result.success) {
+                    this.target.html(result.content);
+                    bindMachineListButtons(this.target);
+                }
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerult betolteni a gepeket.');
+            }
+        }).send();
+
+        var addFormData = new FormData();
+
+        new Ajax({
+            url: '{{ path('index_machines_add') }}',
+            name: 'index_machines_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: addFormData,
+            target: null,
+            function_success: function (result) {
+                var html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentes</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Megse</div></div></div></div>`;
+
+                alertify.add("Gép hozzáadása / módosítása", result.content)
+                    .set("movable", false)
+                    .set("resizable", false)
+                    .set("closable", false)
+                    .set('closableByEscape', false)
+                    .resizeTo("50%", "70%")
+                    .set({transition: 'zoom'})
+                    .setFooter(html_footer);
+
+                initMachineProjectCombobox({
+                    root: "form[data-name='machine'] [data-machine-project-combobox='form']",
+                    searchName: 'project_search',
+                    idName: 'project_id',
+                    key: 'Form',
+                    requestName: 'list_machine_project_select_form'
+                });
+
+                $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function () {
+                    alertify.confirm("Megerosites", "Bezarod az ablakot?", () => {
+                        alertify.add().close();
+                    }, () => {});
+                });
+
+                $(`div[data-box="${this.name}"] .btn[data-name='alertify-save']`).unbind("click").click(function () {
+                    var errors = [];
+                    var form = $("form[data-name='machine']")[0];
+                    var formData = new FormData(form);
+
+                    if (($("form[data-name='machine'] [data-name='name']").val() || '').trim() === '') {
+                        errors.push('A nev megadasa kotelezo.');
+                    }
+
+                    if (($("form[data-name='machine'] [data-name='machine_category_id']").val() || '').trim() === '') {
+                        errors.push('A gep kategoria megadasa kotelezo.');
+                    }
+
+                    if (errors.length > 0) {
+                        alertify.alert('Hianyzo adatok', errors.join('<br>'));
+                        return;
+                    }
+
+                    alertify.confirm("Megerosites", "Mented az adatokat?", () => {
+                        formData.set('id', $("form[data-name='machine'] [data-name='id']").val());
+                        formData.set('name', $("form[data-name='machine'] [data-name='name']").val());
+                        formData.set('code', $("form[data-name='machine'] [data-name='code']").val());
+                        formData.set('project_id', $("form[data-name='machine'] [data-name='project_id']").val());
+                        formData.set('machine_category_id', $("form[data-name='machine'] [data-name='machine_category_id']").val());
+                        formData.set('status', $("form[data-name='machine'] [data-name='status']").val());
+
+                        new Ajax({
+                            url: '{{ path('save_machines') }}',
+                            name: 'save_machines',
+                            type: 'POST',
+                            dataType: 'json',
+                            formData: formData,
+                            function_success: function (result) {
+                                if (result.success) {
+                                    alertify.add().close();
+                                    alertify.success("Sikeres mentes");
+                                    ajaxquery['list_machines'].send();
+                                }
+                            },
+                            function_error: function (xhr) {
+                                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerult menteni a gepet.');
+                            }
+                        }).send();
+                    }, () => {});
+                });
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseText || 'Nem sikerult betolteni az urlapot.');
+            }
+        });
+
+        initMachineProjectCombobox({
+            root: "[data-machine-project-combobox='filter']",
+            searchName: 'filter_machines_project_search',
+            idName: 'filter_machines_project_id',
+            key: 'Filter',
+            requestName: 'list_machine_project_select_filter',
+            onChange: function () {
+                refreshMachinesList();
+            }
+        });
+
+        function bindMachineListButtons(target) {
+            target.find("[data-name='list_item_btn']").unbind("click").click(function () {
+                var mode = $(this).attr("data-mode");
+                var key = $(this).closest("[data-name='list_item']").attr("data-key");
+
+                if (mode === "edit") {
+                    ajaxquery['index_machines_add'].formData.set("id", key);
+                    ajaxquery['index_machines_add'].send();
+                }
+
+                if (mode === "delete") {
+                    alertify.confirm("Megerosites", "Torolni szeretned az adatot?", () => {
+                        var formData = new FormData();
+                        formData.set('id', key);
+
+                        new Ajax({
+                            url: '{{ path('delete_machines') }}',
+                            type: 'DELETE',
+                            dataType: 'json',
+                            formData: formData,
+                            function_success: function (result) {
+                                if (result.success) {
+                                    alertify.message("Sikeres torles");
+                                    ajaxquery['list_machines'].send();
+                                }
+                            },
+                            function_error: function (xhr) {
+                                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerult torolni a gepet.');
+                            }
+                        }).send();
+                    }, () => {});
+                }
+
+                if (mode === "info") {
+                    var formData = new FormData();
+                    formData.set('id', key);
+                    new Ajax({
+                        url: '{{ path('index_machine_info') }}',
+                        type: 'POST',
+                        dataType: 'json',
+                        formData: formData,
+                        function_success: function (result) {
+                            if (result.success) {
+                                html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success d-none" data-name="alertify-save">Mentés</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div> </div></div></div>`;
+
+                                alertify.popup("Információ", result.content).
+                                set("movable",false).
+                                set("resizable",false).
+                                set("closable",false).
+                                set('closableByEscape', false).
+                                maximize().
+                                set({transition:'zoom'}).
+                                setFooter(html_footer);
+
+                                $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function(){
+
+                                    alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
+                                        alertify.popup().close();
+                                    },()=>{});
+                                });
+                            }
+                        },
+                        function_error: function (xhr) {
+                            alertify.error(xhr.responseJSON?.data?.error || 'Hiba');
+                        }
+                    }).send();
+                }
+
+            });
+        }
+
+        $("[data-name='btn_index_machines_add']").unbind("click").click(function () {
+            ajaxquery['index_machines_add'].formData.set("id", "");
+            ajaxquery['index_machines_add'].send();
+        });
+
+        function refreshMachinesList() {
+            var filters = JSON.parse(ajaxquery['list_machines'].formData.get("filters") || '{}');
+            filters.search = $("[data-name='search_machines_list']").val();
+            filters.type = $("[data-name='filter_machines_type']").val();
+            filters.machines_category = $("[data-name='filter_machines_category']").val();
+            filters.project_id = $("[data-name='filter_machines_project_id']").val();
+            ajaxquery['list_machines'].formData.set("filters", JSON.stringify(filters));
+            ajaxquery['list_machines'].url = '{{ path('list_machines') }}';
+            ajaxquery['list_machines'].send();
+        }
+
+        $("[data-name='filter_machines_type'], [data-name='filter_machines_category']").unbind("change").change(function () {
+            refreshMachinesList();
+        });
+
+        $("[data-name='search_machines_list']").unbind("keyup").keyup(function (event) {
+            if (event.keyCode === 13) {
+                refreshMachinesList();
+            }
+        });
+    })();
+</script>
+{% endblock %}

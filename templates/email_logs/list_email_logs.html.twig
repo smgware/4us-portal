@@ -1,0 +1,43 @@
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr>
+                <th class="p-2">Kiküldve</th>
+                <th class="p-2">Címzett neve</th>
+                <th class="p-2">E-mail cím</th>
+                <th class="p-2">Esemény neve</th>
+                <th class="p-2">Esemény kódja</th>
+                <th class="p-2 text-end">Műveletek</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                <tr>
+                    <td class="p-2 text-nowrap">{{ record.datetime_add ? record.datetime_add|date('Y-m-d H:i:s') : '-' }}</td>
+                    <td class="p-2">{{ record.recipient_name }}</td>
+                    <td class="p-2">{{ record.recipient_email }}</td>
+                    <td class="p-2">{{ record.event_name }}</td>
+                    <td class="p-2"><code>{{ record.event_code }}</code></td>
+                    <td class="p-2 text-end">
+                        <button type="button" class="btn btn-default btn-sm" data-name="view_email_log" data-id="{{ record.id }}" title="E-mail megtekintése">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="6" class="p-3 text-center">Nincs megjeleníthető e-mail naplóbejegyzés.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="text-xs mt-2">Találatok: {{ totalRecords }}</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_email_logs',
+    queryParams: {}
+} %}

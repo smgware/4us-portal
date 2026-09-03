@@ -1,0 +1,283 @@
+{% extends 'base_login.html.twig' %}
+{% block title %}Belépés{% endblock %}
+{% block body %}
+
+    <main class="page">
+        <div class="container-fluid">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-5 brand-block mb-0 pb-0">
+                    <img src="{{ asset('img/logo_4us.png') }}" alt="Portal logó" class="portal-logo">
+                    <h1 class="welcome-title">Üdvözlünk újra!</h1>
+                </div>
+
+                <div class="col-lg-7 mt-2 d-flex justify-content-center">
+                    <section class="login-card">
+                        <div data-name="container-auth">
+                            <div class="text-center py-5">
+                                <span class="spinner-border spinner-border-sm me-2"></span>Betöltés...
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ asset('js/vanta/three.min.js') }}"></script>
+    <script src="{{ asset('js/vanta/vanta.fog.min.js') }}"></script>
+    <script>
+        if (window.VANTA && window.VANTA.FOG) {
+            window.VANTA.FOG({
+                el: '#app',
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200.00,
+                minWidth: 200.00,
+                highlightColor: 0x13345d,
+                midtoneColor: 0x333333,
+                lowlightColor: 0x888888,
+                baseColor: 0x0,
+                blurFactor: 0.95,
+                zoom: 0.8,
+                speed: 5
+            });
+        }
+
+        (function () {
+            const authContainer = $('[data-name="container-auth"]');
+            const routes = {
+                loginForm: '{{ path('login_form') }}',
+                passwordRecoveryForm: '{{ path('password_recovery_form') }}',
+                passwordResetForm: '{{ path('password_reset_form') }}',
+                passwordResetCheck: '{{ path('password_reset_token_check') }}',
+                passwordResetSave: '{{ path('password_reset_save') }}',
+                loginIndex: '{{ path('app_login_index') }}',
+                loginAuth: '{{ path('login_auth') }}'
+            };
+
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+            }
+
+            function setLoading() {
+                authContainer.html('<div class="text-center py-5"><span class="spinner-border spinner-border-sm me-2"></span>Betöltés...</div>');
+            }
+
+            function showAlert(selector, type, message) {
+                const alert = $(selector);
+                if (!alert.length) {
+                    return;
+                }
+
+                alert.removeClass('d-none alert-danger alert-success alert-warning')
+                    .addClass('alert-' + type)
+                    .text(message || 'Ismeretlen hiba történt.');
+            }
+
+            function hideAlert(selector) {
+                const alert = $(selector);
+                if (!alert.length) {
+                    return;
+                }
+
+                alert.addClass('d-none')
+                    .removeClass('alert-danger alert-success alert-warning')
+                    .text('');
+            }
+
+            function loadHtml(url) {
+                setLoading();
+                new Ajax({
+                    url: url,
+                    name: 'auth_content_load_' + Date.now(),
+                    type: 'GET',
+                    dataType: 'html',
+                    formData: new FormData(),
+                    target: authContainer,
+                    function_success: function (result) {
+                        this.target.html(result);
+                    },
+                    function_error: function (xhr) {
+                        const message = xhr.responseText || 'Nem sikerült betölteni az oldalt.';
+                        this.target.html('<div class="alert alert-danger">' + escapeHtml(message) + '</div><a href="#" class="forgot-link" data-auth-page="login">Vissza a bejelentkezéshez</a>');
+                    }
+                }).send();
+            }
+
+            function loadLogin(pushUrl = true) {
+                if (pushUrl) {
+                    window.history.pushState({}, '', routes.loginIndex);
+                }
+                loadHtml(routes.loginForm);
+            }
+
+            function loadPasswordRecovery() {
+                window.history.pushState({}, '', routes.loginIndex);
+                loadHtml(routes.passwordRecoveryForm);
+            }
+
+            function loadPasswordReset(token) {
+                loadHtml(routes.passwordResetForm + '?token=' + encodeURIComponent(token));
+            }
+
+            function checkTokenAndLoad(token) {
+                if (!token) {
+                    loadLogin(false);
+                    return;
+                }
+
+                setLoading();
+                const formData = new FormData();
+                formData.append('token', token);
+
+                new Ajax({
+                    url: routes.passwordResetCheck,
+                    name: 'password_reset_token_check_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    function_success: function (result) {
+                        if (result.success) {
+                            loadPasswordReset(token);
+                            return;
+                        }
+
+                        authContainer.html('<div class="alert alert-danger">' + escapeHtml(result.message || 'Érvénytelen token.') + '</div><a href="#" class="forgot-link" data-auth-page="login">Vissza a bejelentkezéshez</a>');
+                    },
+                    function_error: function (xhr) {
+                        const message = xhr.responseJSON?.message || 'Érvénytelen vagy lejárt visszaállító token.';
+                        authContainer.html('<div class="alert alert-danger">' + escapeHtml(message) + '</div><a href="#" class="forgot-link" data-auth-page="login">Vissza a bejelentkezéshez</a>');
+                    }
+                }).send();
+            }
+
+            $(document).on('click', '[data-auth-page]', function (event) {
+                event.preventDefault();
+                const page = $(this).data('auth-page');
+
+                if (page === 'password-recovery') {
+                    loadPasswordRecovery();
+                    return;
+                }
+
+                loadLogin();
+            });
+
+
+            $(document).on('submit', '#loginForm', function (event) {
+                event.preventDefault();
+                hideAlert('#loginAlert');
+
+                const btn = $('#loginBtn');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Belépés...');
+
+                new Ajax({
+                    url: routes.loginAuth,
+                    name: 'login_auth_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: new FormData(this),
+                    function_success: function (result) {
+                        showAlert('#loginAlert', result.success ? 'success' : 'danger', result.message);
+                        if (result.success && result.redirect) {
+                            window.location.href = result.redirect;
+                        } else if (result.success) {
+                            window.location.reload();
+                        }
+                    },
+                    function_error: function (xhr) {
+                        showAlert('#loginAlert', 'danger', xhr.responseJSON?.message || 'Hibás email/felhasználó vagy jelszó.');
+                    },
+                    function_complete: function () {
+                        btn.prop('disabled', false).text('Bejelentkezés');
+                    }
+                }).send();
+            });
+
+            $(document).on('submit', '#passwordResetRequestForm', function (event) {
+                event.preventDefault();
+                hideAlert('#passwordResetAlert');
+
+                const btn = $('#passwordResetRequestBtn');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Küldés...');
+
+                new Ajax({
+                    url: routes.passwordResetSave,
+                    name: 'password_reset_request_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: new FormData(this),
+                    function_success: function (result) {
+                        showAlert('#passwordResetAlert', result.success ? 'success' : 'danger', result.message);
+                    },
+                    function_error: function (xhr) {
+                        showAlert('#passwordResetAlert', 'danger', xhr.responseJSON?.message || 'Nem sikerült elküldeni a visszaállító emailt.');
+                    },
+                    function_complete: function () {
+                        btn.prop('disabled', false).text('Visszaállító link küldése');
+                    }
+                }).send();
+            });
+
+            $(document).on('submit', '#passwordResetNewPasswordForm', function (event) {
+                event.preventDefault();
+                hideAlert('#passwordResetAlert');
+
+                const password = $('#newPassword').val() || '';
+                const passwordConfirm = $('#newPasswordConfirm').val() || '';
+
+                if (password.length < 5) {
+                    showAlert('#passwordResetAlert', 'danger', 'Az új jelszónak legalább 5 karakter hosszúnak kell lennie.');
+                    return;
+                }
+
+                if (password !== passwordConfirm) {
+                    showAlert('#passwordResetAlert', 'danger', 'A két jelszó nem egyezik.');
+                    return;
+                }
+
+                const btn = $('#passwordResetSaveBtn');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Mentés...');
+
+                new Ajax({
+                    url: routes.passwordResetSave,
+                    name: 'password_reset_save_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: new FormData(this),
+                    function_success: function (result) {
+                        showAlert('#passwordResetAlert', result.success ? 'success' : 'danger', result.message);
+                        if (result.success) {
+                            setTimeout(function () {
+                                loadLogin();
+                            }, 1200);
+                        }
+                    },
+                    function_error: function (xhr) {
+                        showAlert('#passwordResetAlert', 'danger', xhr.responseJSON?.message || 'Nem sikerült menteni az új jelszót.');
+                    },
+                    function_complete: function () {
+                        btn.prop('disabled', false).text('Jelszó mentése');
+                    }
+                }).send();
+            });
+
+            window.addEventListener('popstate', function () {
+                const params = new URLSearchParams(window.location.search);
+                const token = params.get('token') || '';
+                token ? checkTokenAndLoad(token) : loadLogin(false);
+            });
+
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token') || '';
+            token ? checkTokenAndLoad(token) : loadLogin(false);
+        })();
+    </script>
+
+{% endblock %}

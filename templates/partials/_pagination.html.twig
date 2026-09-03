@@ -1,0 +1,53 @@
+{% set currentPage = currentPage|default(page|default(1)) %}
+{% set queryParams = queryParams|default(app.request.query.all) %}
+{% set routeParams = routeParams|default(app.request.attributes.get('_route_params')|default({})) %}
+{% set routeName = routeName|default(app.request.attributes.get('_route')) %}
+
+{% if totalPages > 1 %}
+    <nav class="pagination" aria-label="Lapozó">
+        {% if currentPage > 1 %}
+            <a class="pagination__item" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: 1})) }}">&lt;&lt;</a>
+            <a class="pagination__item" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: currentPage - 1})) }}">&lt;</a>
+        {% endif %}
+
+        <a class="pagination__item {{ currentPage == 1 ? 'pagination__item--active' }}" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: 1})) }}">1</a>
+
+        {% if totalPages >= 2 %}
+            <a class="pagination__item {{ currentPage == 2 ? 'pagination__item--active' }}" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: 2})) }}">2</a>
+        {% endif %}
+
+        {% if currentPage > 5 %}
+            <span class="pagination__item pagination__item--dots">...</span>
+        {% endif %}
+
+        {% set startPage = currentPage > 5 ? currentPage - 2 : 3 %}
+        {% set endPage = currentPage > 5 ? currentPage + 2 : 9 %}
+
+        {% for paginationPage in startPage..endPage %}
+            {% if paginationPage > 2 and paginationPage < totalPages - 1 %}
+                <a class="pagination__item {{ currentPage == paginationPage ? 'pagination__item--active' }}" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: paginationPage})) }}">
+                    {{ paginationPage }}
+                </a>
+            {% endif %}
+        {% endfor %}
+
+        {% if currentPage < totalPages - 4 %}
+            <span class="pagination__item pagination__item--dots">...</span>
+        {% endif %}
+
+        {% if totalPages > 3 %}
+            <a class="pagination__item {{ currentPage == totalPages - 1 ? 'pagination__item--active' }}" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: totalPages - 1})) }}">
+                {{ totalPages - 1 }}
+            </a>
+        {% endif %}
+
+        {% if totalPages > 2 %}
+            <a class="pagination__item {{ currentPage == totalPages ? 'pagination__item--active' }}" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: totalPages})) }}">
+                {{ totalPages }}
+            </a>
+        {% endif %}
+
+        <a class="pagination__item" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: currentPage < totalPages ? currentPage + 1 : totalPages})) }}">&gt;</a>
+        <a class="pagination__item" href="{{ path(routeName, routeParams|merge(queryParams)|merge({page: totalPages})) }}">&gt;&gt;</a>
+    </nav>
+{% endif %}

@@ -1,0 +1,159 @@
+<div class="page-title"><i class="bi bi-collection"></i> Projektek</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5">
+            <input type="text" class="form-control" placeholder="Keresés..." data-name="search_projects_list">
+        </div>
+        <div class="col-7 text-end">
+            <button type="button" class="btn btn-default btn-sm" data-name="btn_index_projects_add">
+                <i class="bi bi-plus-circle-fill"></i> Új hozzáadása
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_projects"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const errorMessage = (xhr, fallback) =>
+            xhr.responseJSON?.data?.error || xhr.responseJSON?.message || fallback;
+
+        const listFormData = new FormData();
+        listFormData.set('filters', '{}');
+
+        new Ajax({
+            url: '{{ path('list_projects') }}',
+            name: 'list_projects',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: $("[data-key='list_projects']"),
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni a projekteket.');
+                    return;
+                }
+
+                this.target.html(result.content);
+                this.target.find("[data-name='list_item_btn'][data-mode='edit']")
+                    .off('click.projects')
+                    .on('click.projects', function () {
+                        const id = $(this).closest("[data-name='list_item']").attr('data-key');
+                        ajaxquery['index_projects_add'].formData.set('id', id);
+                        ajaxquery['index_projects_add'].send();
+                    });
+            },
+            function_error: function (xhr) {
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni a projekteket.'));
+            }
+        }).send();
+
+        const formData = new FormData();
+
+        new Ajax({
+            url: '{{ path('index_projects_add') }}',
+            name: 'index_projects_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: formData,
+            target: null,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni az adatlapot.');
+                    return;
+                }
+
+                const dialogTitle = result.data?.mode === 'update'
+                    ? 'Projekt szerkesztése'
+                    : 'Projekt hozzáadása';
+                const footer = `<div class="container-fluid p-0" data-box="${this.name}">
+                    <div class="row"><div class="col-12 text-end">
+                        <button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</button>
+                        <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</button>
+                    </div></div>
+                </div>`;
+
+                alertify.add(dialogTitle, result.content)
+                    .set('movable', false)
+                    .set('resizable', false)
+                    .set('closable', false)
+                    .set('closableByEscape', false)
+                    .resizeTo('60%', '60%')
+                    .set({transition: 'zoom'})
+                    .setFooter(footer);
+
+                const dialogSelector = `div[data-box="${this.name}"]`;
+
+                $(`${dialogSelector} [data-name='alertify-cancel']`)
+                    .off('click.projects')
+                    .on('click.projects', function () {
+                        alertify.confirm('Megerősítés', 'Bezárod az ablakot?', () => {
+                            alertify.add().close();
+                        }, () => {});
+                    });
+
+                $(`${dialogSelector} [data-name='alertify-save']`)
+                    .off('click.projects')
+                    .on('click.projects', function () {
+                        const form = $("form[data-name='project']")[0];
+                        if (!form || !form.reportValidity()) {
+                            return;
+                        }
+
+                        alertify.confirm('Megerősítés', 'Mented az adatokat?', () => {
+                            new Ajax({
+                                url: '{{ path('save_projects') }}',
+                                name: 'save_projects',
+                                type: 'POST',
+                                dataType: 'json',
+                                formData: new FormData(form),
+                                target: null,
+                                function_success: function (saveResult) {
+                                    if (!saveResult.success) {
+                                        alertify.error(saveResult.data?.error || 'Nem sikerült menteni a projektet.');
+                                        return;
+                                    }
+
+                                    alertify.add().close();
+                                    alertify.success('Sikeres mentés');
+                                    ajaxquery['list_projects'].send();
+                                },
+                                function_error: function (xhr) {
+                                    alertify.error(errorMessage(xhr, 'Nem sikerült menteni a projektet.'));
+                                }
+                            }).send();
+                        }, () => {});
+                    });
+            },
+            function_error: function (xhr) {
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni az adatlapot.'));
+            }
+        });
+
+        $("[data-name='btn_index_projects_add']")
+            .off('click.projects')
+            .on('click.projects', function () {
+                ajaxquery['index_projects_add'].formData.set('id', '');
+                ajaxquery['index_projects_add'].send();
+            });
+
+        $("[data-name='search_projects_list']")
+            .off('keyup.projects')
+            .on('keyup.projects', function (event) {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                const filters = JSON.parse(ajaxquery['list_projects'].formData.get('filters'));
+                filters.search = $(this).val();
+                ajaxquery['list_projects'].formData.set('filters', JSON.stringify(filters));
+                ajaxquery['list_projects'].send();
+            });
+    })();
+</script>

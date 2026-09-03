@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Portal{% endblock %}</title>
+
+    <link rel="apple-touch-icon" sizes="57x57" href="{{ asset('img/favicon/apple-icon-57x57.png') }}">
+    <link rel="apple-touch-icon" sizes="60x60" href="{{ asset('img/favicon/apple-icon-60x60.png') }}">
+    <link rel="apple-touch-icon" sizes="72x72" href="{{ asset('img/favicon/apple-icon-72x72.png') }}">
+    <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('img/favicon/apple-icon-76x76.png') }}">
+    <link rel="apple-touch-icon" sizes="114x114" href="{{ asset('img/favicon/apple-icon-114x114.png') }}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('img/favicon/apple-icon-120x120.png') }}">
+    <link rel="apple-touch-icon" sizes="144x144" href="{{ asset('img/favicon/apple-icon-144x144.png') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('img/favicon/apple-icon-152x152.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/favicon/apple-icon-180x180.png') }}">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('img/favicon/android-icon-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('img/favicon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ asset('img/favicon/favicon-96x96.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('img/favicon/favicon-16x16.png') }}">
+
+    <link rel="manifest" href="{{ asset('img/favicon/manifest.json') }}">
+
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="{{ asset('img/favicon/ms-icon-144x144.png') }}">
+    <meta name="theme-color" content="#ffffff">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ asset('js/alertify/css/alertify.css') }}" rel="stylesheet">
+    <link href="{{ asset('js/alertify/css/themes/bootstrap.css') }}" rel="stylesheet">
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="{{ asset('js/alertify/alertify.js') }}"></script>
+
+    <script src="{{ asset('js/ajax.js') }}"></script>
+
+    <style>
+        :root {
+            --card-bg: rgba(13, 18, 32, .72);
+            --card-border: rgba(255, 255, 255, .16);
+            --input-bg: rgba(255, 255, 255, .045);
+            --input-border: rgba(255, 255, 255, .14);
+            --text-muted-custom: rgba(255, 255, 255, .68);
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: #fff;
+            font-family:  system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:  #000;
+            overflow-x: hidden;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 56px 0;
+        }
+
+        .brand-block {
+            padding-left: clamp(24px, 7vw, 130px);
+        }
+
+        .portal-logo {
+            width: min(430px, 80%);
+            height: auto;
+            filter: drop-shadow(0 12px 28px rgba(255,255,255,.45));
+            margin-bottom: 52px;
+        }
+
+        .welcome-title {
+            font-size: clamp(30px, 3vw, 48px);
+            font-weight: 400;
+            letter-spacing: -.03em;
+            margin-bottom: 14px;
+
+            background: linear-gradient(
+                180deg,
+                #ffffff 0%,
+                #e5e7eb 45%,
+                #9ca3af 100%
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-text {
+            color: var(--text-muted-custom);
+            font-size: clamp(16px, 1.4vw, 22px);
+
+            font-weight: 400;
+            letter-spacing: -.03em;
+            margin-bottom: 14px;
+
+            background: linear-gradient(
+                180deg,
+                #ffffff 0%,
+                #e5e7eb 45%,
+                #9ca3af 100%
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-card {
+            width: min(100%, 720px);
+            padding: clamp(30px, 4vw, 72px);
+            border: 1px solid var(--card-border);
+            border-radius: 22px;
+            background: var(--card-bg);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 28px 90px rgba(0, 0, 0, .35);
+        }
+
+        .login-title {
+            font-size: clamp(32px, 3vw, 46px);
+            font-weight: 400;
+            letter-spacing: -.035em;
+
+            color: var(--text-muted-custom);
+
+            font-weight: 400;
+            letter-spacing: -.03em;
+            margin-bottom: 14px;
+
+            background: linear-gradient(
+                180deg,
+                #ffffff 0%,
+                #e5e7eb 45%,
+                #9ca3af 100%
+            );
+
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+
+        }
+
+        .login-subtitle {
+            color: var(--text-muted-custom);
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            font-weight: 650;
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .input-group {
+            height: 66px;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            overflow: hidden;
+        }
+
+        .input-group-text,
+        .form-control {
+            border: 0;
+            background: transparent;
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .input-group-text {
+            color: rgba(255,255,255,.62);
+            padding-left: 22px;
+            padding-right: 14px;
+        }
+
+        .form-control::placeholder {
+            color: rgba(255,255,255,.42);
+        }
+
+        .form-control:focus {
+            background: transparent;
+            color: #fff;
+            box-shadow: none;
+        }
+
+        .form-check-input {
+            width: 24px;
+            height: 24px;
+            background-color: transparent;
+            border-color: rgba(255,255,255,.28);
+        }
+
+        .form-check-label {
+            padding-left: 8px;
+            color: #fff;
+            font-size: 17px;
+        }
+
+        .forgot-link,
+        .register-link {
+            color: #6fa0ff;
+            text-decoration: none;
+            font-size: 17px;
+        }
+
+        .forgot-link:hover,
+        .register-link:hover {
+            color: #9bbcff;
+            text-decoration: underline;
+        }
+
+        .btn-login {
+            height: 68px;
+            border: 0;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 21px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #13345d 0%, #131e7d 100%);
+            box-shadow: 0 14px 32px rgba(78, 91, 255, .25);
+        }
+
+        .btn-login:hover {
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 18px 42px rgba(78, 91, 255, .34);
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255,255,255,.12);
+            margin: 34px 0 24px;
+        }
+
+        @media (max-width: 991.98px) {
+            .brand-block {
+                text-align: center;
+                padding-left: 0;
+                margin-bottom: 38px;
+            }
+
+            .portal-logo {
+                max-width: 250px;
+                margin-bottom: 22px;
+            }
+
+            .page {
+                padding: 32px 16px;
+            }
+        }
+    </style>
+
+</head>
+<body id="app">
+    <main>{% block body %}{% endblock %}</main>
+</body>
+</html>

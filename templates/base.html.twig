@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Portal{% endblock %}</title>
+
+    <link rel="apple-touch-icon" sizes="57x57" href="{{ asset('img/favicon/apple-icon-57x57.png') }}">
+    <link rel="apple-touch-icon" sizes="60x60" href="{{ asset('img/favicon/apple-icon-60x60.png') }}">
+    <link rel="apple-touch-icon" sizes="72x72" href="{{ asset('img/favicon/apple-icon-72x72.png') }}">
+    <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('img/favicon/apple-icon-76x76.png') }}">
+    <link rel="apple-touch-icon" sizes="114x114" href="{{ asset('img/favicon/apple-icon-114x114.png') }}">
+    <link rel="apple-touch-icon" sizes="120x120" href="{{ asset('img/favicon/apple-icon-120x120.png') }}">
+    <link rel="apple-touch-icon" sizes="144x144" href="{{ asset('img/favicon/apple-icon-144x144.png') }}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{{ asset('img/favicon/apple-icon-152x152.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/favicon/apple-icon-180x180.png') }}">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('img/favicon/android-icon-192x192.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('img/favicon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="96x96" href="{{ asset('img/favicon/favicon-96x96.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('img/favicon/favicon-16x16.png') }}">
+
+    <link rel="manifest" href="{{ asset('img/favicon/manifest.json') }}">
+
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="{{ asset('img/favicon/ms-icon-144x144.png') }}">
+    <meta name="theme-color" content="#ffffff">
+
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <link href="{{ asset('css/base.css') }}" rel="stylesheet">
+
+    <link href="{{ asset('js/alertify/css/alertify.css') }}" rel="stylesheet">
+    <link href="{{ asset('js/alertify/css/themes/bootstrap-dark.css') }}" rel="stylesheet">
+
+    <script src="https://code.jquery.com/jquery-4.0.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('js/alertify/alertify.js') }}"></script>
+
+    <script src="{{ asset('js/base.js') }}"></script>
+    <script src="{{ asset('js/ajax.js') }}"></script>
+</head>
+<body>
+    <div class="overlay" id="menuOverlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="logo mt-3">
+            <img src="{{ asset('img/logo_4us.png') }}" alt="" />
+        </div>
+
+        <nav class="menu">
+            <a href="{{ path('index_dashboard') }}" class="{{ app.request.attributes.get('_route') == 'index_dashboard' ? 'active' : '' }}">
+                <i class="bi bi-microsoft"></i>
+                <span class="menu-text">Áttekintés</span>
+            </a>
+
+            <a href="{{ path('index_worksheets') }}" class="{{ app.request.attributes.get('_route') == 'index_worksheets' ? 'active' : '' }}">
+                <i class="bi bi-clipboard-check"></i>
+                <span class="menu-text">Munkalapok</span>
+            </a>
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a href="{{ path('index_partners') }}" class="{{ app.request.attributes.get('_route') == 'index_partners' ? 'active' : '' }}">
+                    <i class="bi bi-people-fill"></i>
+                    <span class="menu-text">Partnerek</span>
+                </a>
+            {% endif %}
+
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a href="{{ path('index_projects') }}" class="{{ app.request.attributes.get('_route') == 'index_projects' ? 'active' : '' }}">
+                    <i class="bi bi-collection"></i>
+                    <span class="menu-text">Projektek</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+            <a href="{{ path('index_machines') }}" class="{{ app.request.attributes.get('_route') == 'index_machines' ? 'active' : '' }}">
+                <i class="bi bi-gear-wide-connected"></i>
+                <span class="menu-text">Gépnyilvántartás</span>
+            </a>
+            {% endif %}
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+            <a href="{{ path('index_machine_rentals') }}" class="{{ app.request.attributes.get('_route') == 'index_machine_rentals' ? 'active' : '' }}">
+                <i class="bi bi-repeat"></i>
+                <span class="menu-text">Gépkölcsönzés</span>
+            </a>
+            {% endif %}
+
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a href="{{ path('index_quotes') }}" class="{{ app.request.attributes.get('_route') == 'index_quotes' ? 'active' : '' }}">
+                    <i class="bi bi-file-ruled-fill"></i>
+                    <span class="menu-text">Árajánlatok</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+            <a href="{{ path('index_reports') }}" class="{{ app.request.attributes.get('_route') == 'index_reports' ? 'active' : '' }}">
+                <i class="bi bi-bar-chart-line"></i>
+                <span class="menu-text">Riportok</span>
+            </a>
+            {% endif %}
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+            <a href="{{ path('index_settings') }}" class="{{ app.request.attributes.get('_route') == 'index_settings' ? 'active' : '' }}">
+                <i class="bi bi-gear"></i>
+                <span class="menu-text">Beállítások</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <button class="toggle-btn" id="toggleSidebar">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <!--
+        <button class="theme-toggle" id="themeToggle" type="button" title="Világos / sötét mód" aria-label="Világos / sötét mód váltása">
+            <i class="bi bi-sun"></i>
+        </button>
+        -->
+
+    </aside>
+
+    <main class="main" id="main">
+        {% set currentUser = app.user %}
+        {% set currentUserData = data.user|default(null) %}
+        {% set fullName = currentUserData ? currentUserData.name|default(currentUserData.username|default('Felhasználó')) : (currentUser ? currentUser.name|default(currentUser.userIdentifier|default('Felhasználó')) : user_name|default('Felhasználó')) %}
+        {% set nameParts = fullName|trim|split(' ') %}
+        {% set initials = '' %}
+        {% if nameParts|length >= 2 %}
+            {% set initials = (nameParts[0]|slice(0, 1) ~ nameParts[1]|slice(0, 1))|upper %}
+        {% else %}
+            {% set initials = fullName|slice(0, 2)|upper %}
+        {% endif %}
+        {% set permissionTitle = currentUserData and currentUserData.permission ? currentUserData.permission.title : (currentUser and currentUser.permission ? currentUser.permission.title : '-') %}
+        {% set userImage = currentUserData and currentUserData.image ? currentUserData.image : (currentUser and currentUser.image ? currentUser.image : null) %}
+
+        <header class="topbar">
+            <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="bi bi-list"></i></button>
+            <!--
+            <div class="notification">
+                <i class="bi bi-bell"></i>
+                <span class="badge rounded-pill">0</span>
+            </div>
+            -->
+
+
+            <div class="user-info" id="userInfo">
+                <div>
+                    <div class="user-name">{{ fullName }}</div>
+                    <div class="user-role">{{ permissionTitle }}</div>
+                </div>
+                <div class="avatar">
+                    {% if userImage %}
+                        <img src="{{ userImage }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                    {% else %}
+                        {{ initials }}
+                    {% endif %}
+                </div>
+                <i class="bi bi-chevron-down"></i>
+                <div class="user-menu" id="userMenu">
+                    <a href="{{ path('profile') }}"><i class="bi bi-person"></i> Adatlap</a>
+                    <a href="{{ path('app_logout') }}"><i class="bi bi-box-arrow-right"></i> Kilépés</a>
+                </div>
+            </div>
+        </header>
+
+        <section class="content">
+            {% block body %}{% endblock %}
+        </section>
+    </main>
+
+    <script>
+        function applyTheme(mode){
+            const isLight = mode === 'light';
+            const isDark = mode === 'dark';
+            $('body').toggleClass('light-mode', isLight);
+            $('body').toggleClass('dark-mode', isDark);
+            $('#themeToggle i').toggleClass('bi-sun', !isLight).toggleClass('bi-moon-stars', isLight);
+            $('#themeToggle').attr('title', isLight ? 'Sötét mód' : 'Világos mód');
+        }
+        const savedTheme = localStorage.getItem('portalTheme') || 'light';
+        applyTheme(savedTheme);
+        $('#themeToggle').on('click', function(e){
+            e.stopPropagation();
+            const nextTheme = $('body').hasClass('light-mode') ? 'dark' : 'light';
+            localStorage.setItem('portalTheme', nextTheme);
+            applyTheme(nextTheme);
+        });
+
+        $('#toggleSidebar').on('click', function () {
+            $('#sidebar').toggleClass('collapsed');
+            $('#main').toggleClass('expanded');
+
+            const icon = $(this).find('i');
+            icon.toggleClass('bi-chevron-left bi-chevron-right');
+        });
+
+        $('#userInfo').on('click', function(e){ e.stopPropagation(); $('#userMenu').toggleClass('show'); });
+        $(document).on('click', function(){ $('#userMenu').removeClass('show'); });
+        $('#mobileMenuBtn').on('click', function(){ $('#sidebar').addClass('mobile-open'); $('#menuOverlay').addClass('show'); });
+        $('#menuOverlay').on('click', function(){ $('#sidebar').removeClass('mobile-open'); $(this).removeClass('show'); });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,184 @@
+[
+    {
+        "név": "CTT91-5",
+        "eszköz": "Toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 30,
+                "gém_végi_teherbírás_t": 2.65,
+                "maximális_teherbírás_t": 5,
+                "maximális_teherbírás_kinyúlása_m": 17.3
+            },
+            {
+                "gémhossz_m": 35,
+                "gém_végi_teherbírás_t": 2.25,
+                "maximális_teherbírás_t": 5,
+                "maximális_teherbírás_kinyúlása_m": 17
+            }
+        ],
+        "alap_tervezés": 300000,
+        "alap_kivitelezés": 3500000,
+        "elektromos_csatlakozás_kiépítése": 2000000,
+        "telepítés": 4500000,
+        "beüzemelés": 350000,
+        "veszélymentes_üzemmód_szabály": 300000,
+        "havi_díj": 1500000,
+        "kezelő_díja": 1700000,
+        "bontás": 4500000,
+        "alap_elbontása": 700000
+    },
+    {
+        "név": "AT-3",
+        "eszköz": "Mobil toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 33,
+                "gém_végi_teherbírás_t": 1.9,
+                "maximális_teherbírás_t": 7.5,
+                "maximális_teherbírás_kinyúlása_m": 10.4
+            }
+        ],
+        "alap_tervezés": "380000/nap",
+        "alap_kivitelezés": "20 nap/10óra",
+        "elektromos_csatlakozás_kiépítése": null,
+        "telepítés": null,
+        "beüzemelés": null,
+        "veszélymentes_üzemmód_szabály": "2700 Ft/km egy út",
+        "havi_díj": 7600000,
+        "kezelő_díja": null,
+        "bontás": 0,
+        "alap_elbontása": null
+    },
+    {
+        "név": "110EC-B6",
+        "eszköz": "Toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 45,
+                "gém_végi_teherbírás_t": 1.8,
+                "maximális_teherbírás_t": 5,
+                "maximális_teherbírás_kinyúlása_m": 17.88
+            }
+        ],
+        "alap_tervezés": 300000,
+        "alap_kivitelezés": 3500000,
+        "elektromos_csatlakozás_kiépítése": 2000000,
+        "telepítés": 4800000,
+        "beüzemelés": 350000,
+        "veszélymentes_üzemmód_szabály": 300000,
+        "havi_díj": 1450000,
+        "kezelő_díja": 1460000,
+        "bontás": 4800000,
+        "alap_elbontása": 700000
+    },
+    {
+        "név": "AT-4",
+        "eszköz": "Mobil toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 44,
+                "gém_végi_teherbírás_t": 1.9,
+                "maximális_teherbírás_t": 8,
+                "maximális_teherbírás_kinyúlása_m": 12.85
+            }
+        ],
+        "alap_tervezés": "400000 Ft/nap",
+        "alap_kivitelezés": "20 nap/10óra",
+        "elektromos_csatlakozás_kiépítése": null,
+        "telepítés": null,
+        "beüzemelés": null,
+        "veszélymentes_üzemmód_szabály": "2800 Ft/km egy út",
+        "havi_díj": 8000000,
+        "kezelő_díja": null,
+        "bontás": 0,
+        "alap_elbontása": null
+    },
+    {
+        "név": "CTT132-6",
+        "eszköz": "Toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 50,
+                "gém_végi_teherbírás_t": 2.25,
+                "maximális_teherbírás_t": 5,
+                "maximális_teherbírás_kinyúlása_m": 23.9
+            }
+        ],
+        "alap_tervezés": 300000,
+        "alap_kivitelezés": 3500000,
+        "elektromos_csatlakozás_kiépítése": 2000000,
+        "telepítés": 5200000,
+        "beüzemelés": 350000,
+        "veszélymentes_üzemmód_szabály": 300000,
+        "havi_díj": 1550000,
+        "kezelő_díja": 1460000,
+        "bontás": 5200000,
+        "alap_elbontása": 700000
+    },
+    {
+        "név": "AT-5",
+        "eszköz": "Mobil toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 50,
+                "gém_végi_teherbírás_t": 1.9,
+                "maximális_teherbírás_t": 9,
+                "maximális_teherbírás_kinyúlása_m": 13
+            }
+        ],
+        "alap_tervezés": "420000 Ft/nap",
+        "alap_kivitelezés": "20 nap/10óra",
+        "elektromos_csatlakozás_kiépítése": null,
+        "telepítés": null,
+        "beüzemelés": null,
+        "veszélymentes_üzemmód_szabály": "2900 Ft/km egy út",
+        "havi_díj": 8400000,
+        "kezelő_díja": null,
+        "bontás": 0,
+        "alap_elbontása": null
+    },
+    {
+        "név": "CTT162-8",
+        "eszköz": "Toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 60,
+                "gém_végi_teherbírás_t": 1.4,
+                "maximális_teherbírás_t": 6,
+                "maximális_teherbírás_kinyúlása_m": 16.03
+            }
+        ],
+        "alap_tervezés": 900000,
+        "alap_kivitelezés": 10500000,
+        "elektromos_csatlakozás_kiépítése": 2000000,
+        "telepítés": 5800000,
+        "beüzemelés": 350000,
+        "veszélymentes_üzemmód_szabály": 300000,
+        "havi_díj": 1850000,
+        "kezelő_díja": 1460000,
+        "bontás": 5800000,
+        "alap_elbontása": 700000
+    },
+    {
+        "név": "AT-6",
+        "eszköz": "Mobil toronydaru",
+        "teherbírási_adatok": [
+            {
+                "gémhossz_m": 60,
+                "gém_végi_teherbírás_t": 1.7,
+                "maximális_teherbírás_t": 10,
+                "maximális_teherbírás_kinyúlása_m": 13.2
+            }
+        ],
+        "alap_tervezés": "450000 Ft/nap",
+        "alap_kivitelezés": "20 nap/10óra",
+        "elektromos_csatlakozás_kiépítése": null,
+        "telepítés": null,
+        "beüzemelés": null,
+        "veszélymentes_üzemmód_szabály": "3000 Ft/km",
+        "havi_díj": 9000000,
+        "kezelő_díja": null,
+        "bontás": null,
+        "alap_elbontása": null
+    }
+]

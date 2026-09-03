@@ -1,0 +1,102 @@
+<form action="" data-name="partner">
+    <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
+
+    <div class="row">
+        <!--
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Kód</label>
+            <input type="text" class="form-control" name="code" data-name="code" value="{{ item ? item.code : '' }}">
+        </div>
+        -->
+        <div class="col-md-8 mb-3">
+            <label class="form-label">Név</label>
+            <input type="text" class="form-control" name="name" data-name="name" value="{{ item ? item.name : '' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Típus</label>
+            <select name="type" id="" class="form-control">
+                <option value="0" {{ item and item.type == '0' ? 'selected' }}>Cég</option>
+                <option value="1" {{ item and item.type == '1' ? 'selected' }}>Magánszemély</option>
+            </select>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Adószám</label>
+            <input type="text" class="form-control" name="tax_number" data-name="tax_number" value="{{ item ? item.taxNumber : '' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">E-mail</label>
+            <input type="email" class="form-control" name="email" data-name="email" value="{{ item ? item.email : '' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Telefon</label>
+            <input type="text" class="form-control" name="phone" data-name="phone" value="{{ item ? item.phone : '' }}">
+        </div>
+
+        <!--
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Weboldal</label>
+            <input type="text" class="form-control" name="website" data-name="website" value="{{ item ? item.website : '' }}">
+        </div>
+
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Ország</label>
+            <select name="country" class="form-control">
+                <option value="">-- Válassz országot --</option>
+                {% for code, name in countries %}
+                    <option value="{{ code }}" {{ item and item.country == code ? 'selected' : '' }}>
+                        {{ name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        -->
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Irányítószám</label>
+            <input type="text" class="form-control" name="zip" data-name="zip" value="{{ item ? item.zip : '' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Város</label>
+            <input type="text" class="form-control" name="city" data-name="city" value="{{ item ? item.city : '' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Cím</label>
+            <input type="text" class="form-control" name="address" data-name="address" value="{{ item ? item.address : '' }}">
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label class="form-label">Státusz</label>
+            <select class="form-control" name="status" data-name="status">
+                <option value="1" {{ item and item.status == '1' ? 'selected' }}>Aktív</option>
+                <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
+            </select>
+        </div>
+
+        {% if item is null %}
+        <div class="col-12"><strong>Alapértelmezett kapcsolattartó</strong></div>
+
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Titulus</label>
+            <input type="text" class="form-control" name="contact_title" data-name="contact_title">
+        </div>
+
+        <div class="col-md-12 mb-3">
+            <label class="form-label">Neve</label>
+            <input type="text" class="form-control" name="contact_name" data-name="contact_name">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Telefon</label>
+            <input type="text" class="form-control" name="contact_phone" data-name="contact_phone">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">E-mail</label>
+            <input type="email" class="form-control" name="contact_email" data-name="contact_email"
+                   pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" autocomplete="email">
+        </div>
+        <div class="col-12 mb-3">
+            <label class="form-label">Leírás</label>
+            <textarea class="form-control" name="contact_description" data-name="contact_description" rows="2"></textarea>
+        </div>
+        {% endif %}
+
+    </div>
+</form>

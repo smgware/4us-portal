@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Figyelmeztetés" width="64" height="64">
+  <title>Figyelmeztetés</title>
+  <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" color="#F59E0B">
+    <path d="M32 8l25 45H7L32 8z"/>
+    <path d="M32 24v14M32 47h.1"/>
+  </g>
+</svg>

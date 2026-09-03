@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page { margin: 13mm 11mm; }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            color: #1f2933;
+            font-family: "DejaVu Sans", sans-serif;
+            font-size: 11px;
+            line-height: 1.45;
+            background: #ffffff;
+        }
+
+        h1, h2, h3, p { margin: 0; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            vertical-align: top;
+        }
+
+        .document {
+            width: 100%;
+        }
+
+        .header {
+            background: #f4f7fb;
+            border: 1px solid #dbe4ef;
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+
+        .header-table td {
+            border: 0;
+            padding: 0;
+        }
+
+        .title {
+            color: #102a43;
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.3px;
+        }
+
+        .code {
+            color: #52616f;
+            font-size: 11px;
+            margin-top: 6px;
+        }
+
+        .brand {
+            color: #52616f;
+            font-size: 10px;
+            line-height: 1.45;
+            text-align: right;
+        }
+
+        .brand strong {
+            color: #102a43;
+            font-size: 13px;
+        }
+
+        .badge {
+            display: inline-block;
+            margin-top: 8px;
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 4px 10px;
+            text-transform: uppercase;
+        }
+
+        .badge-open { background: #16a34a; }
+        .badge-progress { background: #f59e0b; color: #111827; }
+        .badge-closed { background: #dc2626; }
+
+        .section {
+            margin-top: 10px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            background: #102a43;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            padding: 7px 9px;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .info-table {
+            border: 1px solid #dbe4ef;
+            border-top: 0;
+        }
+
+        .info-table th {
+            width: 22%;
+            background: #f8fafc;
+            border: 1px solid #dbe4ef;
+            color: #52616f;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 7px 8px;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        .info-table td {
+            width: 28%;
+            border: 1px solid #dbe4ef;
+            color: #1f2933;
+            padding: 7px 8px;
+        }
+
+        .preline {
+            min-height: 52px;
+            white-space: pre-line;
+        }
+
+        .muted {
+            color: #7b8794;
+        }
+
+        .note-box {
+            background: #f8fafc;
+            border: 1px solid #dbe4ef;
+            border-top: 0;
+            padding: 9px;
+        }
+
+        .signature-table {
+            border: 1px solid #dbe4ef;
+            border-top: 0;
+        }
+
+        .signature-table td {
+            width: 50%;
+            height: 120px;
+            border: 1px solid #dbe4ef;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .signature-role {
+            color: #52616f;
+            font-size: 10px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .signature-image {
+            max-height: 56px;
+            max-width: 230px;
+        }
+
+        .signature-name {
+            display: inline-block;
+            min-width: 190px;
+            margin-top: 14px;
+            border-top: 1px solid #1f2933;
+            padding-top: 5px;
+            color: #1f2933;
+        }
+
+        .footer {
+            color: #7b8794;
+            font-size: 9px;
+            margin-top: 12px;
+            text-align: right;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .attachment-title {
+            color: #102a43;
+            border-bottom: 2px solid #102a43;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+        }
+
+        .attachment-name {
+            color: #52616f;
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .attachment-image {
+            max-height: 245mm;
+            max-width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+{% set typeCode = item.worksheetType ? item.worksheetType.code : data.worksheet_type_code|default('') %}
+{% set isErrorTicket = typeCode in ['ERROR_REPORT', 'ERROR_REPORTING'] %}
+{% set isTransferWorksheet = typeCode in ['MACHINE_HANDOVER', 'MACHINE_RETURN'] %}
+{% set statusCode = item.worksheetStatusType ? item.worksheetStatusType.code : '' %}
+{% set statusTitle = item.worksheetStatusType ? item.worksheetStatusType.title : '-' %}
+{% set machine = item.machineRental and item.machineRental.machine ? item.machineRental.machine : null %}
+{% set partner = item.partner %}
+{% set machineData = machine ? machine.data|default({}) : {} %}
+
+<div class="document">
+
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td style="width:64%;">
+                    <h1 class="title">
+                        {% if isErrorTicket %}
+                            Hibajegy
+                        {% elseif typeCode == 'MACHINE_RETURN' %}
+                            Átvételi munkalap
+                        {% elseif typeCode == 'MACHINE_HANDOVER' %}
+                            Átadási munkalap
+                        {% else %}
+                            Munkalap
+                        {% endif %}
+                    </h1>
+
+                    <div class="code">
+                        {{ item.code|default('-') }}
+                        {% if item.worksheetType %} | {{ item.worksheetType.title }}{% endif %}
+                    </div>
+                </td>
+
+                <td class="brand" style="width:36%;">
+                    <strong>4US Zrt.</strong><br>
+                    2051 Biatorbágy, Flórián u.<br>
+                    Tel.: 06-30-200-0000<br>
+
+                    {% if statusCode in ['CLOSED', 'RETURNED', 'REPAIRED_ISSUED'] %}
+                        <span class="badge badge-closed">{{ statusTitle }}</span>
+                    {% elseif statusCode == 'UNDER_REPAIR' %}
+                        <span class="badge badge-progress">{{ statusTitle }}</span>
+                    {% else %}
+                        <span class="badge badge-open">{{ statusTitle }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+
+    <div class="section">
+        <div class="section-title">Munkalap adatai</div>
+        <table class="info-table">
+            <tr>
+                <th>Megnevezés</th>
+                <td>{{ item.title|default('-') }}</td>
+                <th>Típus</th>
+                <td>{{ item.worksheetType ? item.worksheetType.title : '-' }}</td>
+            </tr>
+            <tr>
+                <th>Rögzítve</th>
+                <td>{{ item.datetimeAdd ? item.datetimeAdd|date('Y-m-d H:i') : '-' }}</td>
+                <th>Lezárva</th>
+                <td>{{ item.datetimeClosed ? item.datetimeClosed|date('Y-m-d H:i') : '-' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Partner adatai</div>
+        <table class="info-table">
+            <tr>
+                <th>Név</th>
+                <td>{{ partner ? partner.name : data.company_name|default('-') }}</td>
+                <th>Kód</th>
+                <td>{{ partner ? partner.code : '-' }}</td>
+            </tr>
+            <tr>
+                <th>Adószám</th>
+                <td>{{ partner ? partner.taxNumber : data.tax_number|default('-') }}</td>
+                <th>Telefon</th>
+                <td>{{ partner ? partner.phone : data.phone|default('-') }}</td>
+            </tr>
+            <tr>
+                <th>E-mail</th>
+                <td>{{ partner ? partner.email : data.email|default('-') }}</td>
+                <th>Cím</th>
+                <td>
+                    {% if partner %}
+                        {{ partner.country|default('') }}
+                        {{ partner.zip|default('') }}
+                        {{ partner.city|default('') }}
+                        {{ partner.address|default('') }}
+                    {% else %}
+                        {{ data.address|default('-') }}
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+
+    {% if isErrorTicket %}
+        <div class="section">
+            <div class="section-title">Hibajegy információk</div>
+            <table class="info-table">
+                <tr>
+                    <th>Gép száma</th>
+                    <td>{{ data.machine_code|default(machine ? machine.code : '-') }}</td>
+                    <th>Helyszín</th>
+                    <td>{{ data.address|default('-') }}</td>
+                </tr>
+                <tr>
+                    <th>Cégnév</th>
+                    <td>{{ data.company_name|default(partner ? partner.name : '-') }}</td>
+                    <th>Adószám</th>
+                    <td>{{ data.tax_number|default(partner ? partner.taxNumber : '-') }}</td>
+                </tr>
+                <tr>
+                    <th>Bejelentő neve</th>
+                    <td>{{ data.name|default('-') }}</td>
+                    <th>Telefon</th>
+                    <td>{{ data.phone|default('-') }}</td>
+                </tr>
+                <tr>
+                    <th>E-mail</th>
+                    <td colspan="3">{{ data.email|default('-') }}</td>
+                </tr>
+                <tr>
+                    <th>Hiba leírása</th>
+                    <td colspan="3" class="preline">{{ data.error_description|default('-') }}</td>
+                </tr>
+            </table>
+        </div>
+    {% endif %}
+
+
+    <div class="section">
+        <div class="section-title">
+            {% if isTransferWorksheet %}
+                Átadott gép adatai
+            {% else %}
+                Hozzárendelt gép adatai
+            {% endif %}
+        </div>
+
+        <table class="info-table">
+            <tr>
+                <th>Megnevezés</th>
+                <td>{{ machine ? machine.title : data.machine_title|default('-') }}</td>
+                <th>Gépkód</th>
+                <td>{{ machine ? machine.code : data.machine_code|default('-') }}</td>
+            </tr>
+            <tr>
+                <th>Kategória</th>
+                <td>{{ machine and machine.machineCategory ? machine.machineCategory.title : '-' }}</td>
+                <th>Kölcsönzés</th>
+                <td>{{ item.machineRental ? item.machineRental.code : data.machine_rental_code|default('-') }}</td>
+            </tr>
+            <tr>
+                <th>Kilométeróra állása</th>
+                <td>{{ data.km|default('-') }}</td>
+                <th>Üzemóra</th>
+                <td>{{ data.operating_hours|default('-') }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Megjegyzések</div>
+        <table class="info-table">
+            <tr>
+                <th>Átadó megjegyzése</th>
+                <td colspan="3" class="preline">{{ data.lessor_comment|default('-') }}</td>
+            </tr>
+            <tr>
+                <th>Átvevő megjegyzése</th>
+                <td colspan="3" class="preline">{{ data.renter_comment|default('-') }}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if not isErrorTicket %}
+        <div class="section">
+            <div class="section-title">Aláírások</div>
+
+            <table class="signature-table">
+                <tr>
+                    <td>
+                        <div class="signature-role">Átadó</div>
+
+                        {% if signatures.handed.image %}
+                            <img src="{{ signatures.handed.image }}" class="signature-image" alt="Átadó aláírás">
+                        {% else %}
+                            <div class="muted">Nincs rögzített aláírás</div>
+                        {% endif %}
+
+                        <div class="signature-name">
+                            {{ signatures.handed.name|default('') }}
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="signature-role">Átvevő</div>
+
+                        {% if signatures.received.image %}
+                            <img src="{{ signatures.received.image }}" class="signature-image" alt="Átvevő aláírás">
+                        {% else %}
+                            <div class="muted">Nincs rögzített aláírás</div>
+                        {% endif %}
+
+                        <div class="signature-name">
+                            {{ signatures.received.name|default('') }}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    {% endif %}
+
+    <div class="footer">
+        Generálva: {{ "now"|date('Y-m-d H:i') }}
+    </div>
+
+    {% for attachment in image_attachments %}
+        <div class="page-break">
+            <div class="attachment-title">Kép csatolmány</div>
+            <div class="attachment-name">{{ attachment.name }}</div>
+
+            <div style="text-align:center;">
+                <img src="{{ attachment.src }}" class="attachment-image" alt="{{ attachment.name }}">
+            </div>
+        </div>
+    {% endfor %}
+
+</div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<div class="container-fluid p-0">
+    <div class="row g-2 mb-2 text-sm">
+        <div class="col-md-6"><strong>Címzett:</strong> {{ item.recipientName }} &lt;{{ item.recipientEmail }}&gt;</div>
+        <div class="col-md-6"><strong>Kiküldve:</strong> {{ item.datetimeAdd|date('Y-m-d H:i:s') }}</div>
+        <div class="col-md-6"><strong>Esemény:</strong> {{ item.eventName }}</div>
+        <div class="col-md-6"><strong>Kód:</strong> <code>{{ item.eventCode }}</code></div>
+    </div>
+    <iframe
+        title="Elküldött e-mail tartalma"
+        sandbox=""
+        srcdoc="{{ item.emailHtml|e('html_attr') }}"
+        style="display:block;width:100%;height:55vh;border:1px solid #ddd;background:#fff;"
+    ></iframe>
+</div>

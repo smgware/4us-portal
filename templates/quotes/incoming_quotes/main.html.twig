@@ -1,0 +1,94 @@
+<div class="page-title"><i class="bi bi-inbox-fill"></i> Beérkezett ajánlatkérések</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5">
+            <input type="text" class="form-control" placeholder="Keresés kód vagy cím alapján..." data-name="search_incoming_quotes_list"/>
+        </div>
+        <div class="col-7 text-end">
+            <div class="btn btn-default btn-sm" data-name="btn_index_incoming_quotes_refresh"><i class="bi bi-arrow-clockwise"></i> Frissítés</div>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_incoming_quotes"></div>
+    </div>
+</div>
+
+<script>
+    function bindIncomingQuoteActions(container) {
+        container.find("[data-name='quote_view_btn']").unbind("click").click(function () {
+            const id = $(this).closest("[data-name='list_item']").attr("data-key");
+            const formData = new FormData();
+            formData.set('id', id);
+
+            new Ajax({
+                url: '{{ path('detail_incoming_quote') }}',
+                name: 'detail_incoming_quote',
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                function_success: function (result) {
+                    if (!result.success) {
+                        alertify.error('Nem sikerült betölteni az ajánlatkérést.');
+                        return;
+                    }
+
+                    if (typeof alertify.sheet === 'function') {
+                        alertify.sheet('Ajánlatkérés adatai', result.content)
+                            .set('movable', false)
+                            .set('resizable', false)
+                            .set({transition: 'zoom'});
+                    } else {
+                        alertify.alert('Ajánlatkérés adatai', result.content);
+                    }
+                },
+                function_error: function (xhr) {
+                    const message = xhr.responseJSON?.data?.error || xhr.responseText || 'Nem sikerült betölteni az ajánlatkérést.';
+                    alertify.error(message);
+                }
+            }).send();
+        });
+    }
+
+    function loadIncomingQuotes() {
+        const formData = new FormData();
+        formData.set('filters', ajaxquery?.list_incoming_quotes?.formData?.get('filters') || '{}');
+
+        new Ajax({
+            url: '{{ path('list_incoming_quotes') }}',
+            name: 'list_incoming_quotes',
+            type: 'POST',
+            dataType: 'json',
+            formData: formData,
+            target: $("[data-key='list_incoming_quotes']"),
+            function_success: function (result) {
+                if (result.success) {
+                    this.target.html(result.content);
+                    bindIncomingQuoteActions(this.target);
+                }
+            },
+            function_error: function (xhr) {
+                const message = xhr.responseText || 'Nem sikerült betölteni a listát.';
+                alertify.error(message);
+            }
+        }).send();
+    }
+
+    loadIncomingQuotes();
+
+    $("[data-name='btn_index_incoming_quotes_refresh']").unbind("click").click(function () {
+        loadIncomingQuotes();
+    });
+
+    $("[data-name='search_incoming_quotes_list']").unbind("keyup").keyup(function (e) {
+        if (e.keyCode === 13) {
+            const filters = JSON.parse(ajaxquery?.list_incoming_quotes?.formData?.get("filters") || '{}');
+            filters.search = $(this).val();
+            ajaxquery['list_incoming_quotes'].formData.set("filters", JSON.stringify(filters));
+            ajaxquery['list_incoming_quotes'].send();
+        }
+    });
+</script>

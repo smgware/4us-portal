@@ -1,0 +1,68 @@
+{% for attachment in attachments %}
+        {% set imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'avif', 'ico', 'tif', 'tiff'] %}
+        {% set extension = attachment.name|split('.')|last|lower %}
+        {% set isImage = extension in imageExtensions %}
+        {% set attachmentUrl = path('getdata_attachment') ~ '?id=' ~ attachment.id %}
+        {% set attachmentDownloadUrl = path('getdata_attachment') ~ '?download=1&id=' ~ attachment.id %}
+        <div class="row g-2 mt-2 bg-light rounded-3" data-name="attachment-item" data-id="{{ attachment.id }}" data-filename="{{ attachment.name }}" data-is-image="{{ isImage ? '1' : '0' }}" data-url="{{ isImage ? attachmentUrl : '' }}" data-download-url="{{ attachmentDownloadUrl }}" data-isconditionimage="{{ attachment.data.idconditionimage ?? null }}">
+            <div class="col-4">
+                {% if isImage %}
+                    <span class="m-2 d-flex align-items-center justify-content-center text-muted text-decoration-none" style="width:60px;aspect-ratio:4/3;background:#f5f6f8;">
+                        <img src="{{ attachmentUrl }}" alt="{{ attachment.name }}" class="rounded-3" style="width:100%;aspect-ratio:1/1;object-fit:cover;">
+                    </span>
+                {% else %}
+                    <span class="m-2 d-flex align-items-center justify-content-center text-muted text-decoration-none" style="width:80px;aspect-ratio:4/3;background:#f5f6f8;">
+                        <i class="bi bi-file-earmark" style="font-size:4rem;"></i>
+                    </span>
+                {% endif %}
+            </div>
+            <div class="col-8">
+                <div class="row">
+                    <div class="col-12"><div class="fw-semibold text-truncate" title="{{ attachment.name }}"><span data-name="name">{{ attachment.name }}</span></div></div>
+
+                    <div class="col-12"><div class="text-muted text-xs" data-name="description">{{ attachment.description ?? null }}</div></div>
+
+                    <div class="col-12">
+                        <div class="text-muted text-xs">
+                            {{ attachment.data.size ?? null }}
+                            {% if attachment.datetime_add %}
+                                - {{ attachment.datetime_add|date('Y-m-d H:i') }}
+                            {% endif %}
+
+                            {% if attachment.user_owner_username %}
+                                <div class="text-muted text-xs">
+                                    Feltoltotte: {{ attachment.user_owner_username }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-12">
+                            <div class="text-end mt-2">
+                                <div class="btn btn-default btn-sm" data-name="btnDownloadAttachment"><i class="bi bi-download"></i></div>
+                                <div class="btn btn-default btn-sm" data-name="btnEditAttachment"><i class="bi bi-pencil-square"></i></div>
+                                <div class="btn btn-danger btn-sm" data-name="btnDeleteAttachment"><i class="bi bi-trash"></i></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+
+        <div class="row mt-2">
+            <div class="col-12"><span class="text-xs">Nincsenek feltöltött csatolmányok</span></div>
+        </div>
+
+    {% endfor %}
+
+<div class="row">
+    <div class="col-12">
+        {% include 'partials/_pagination.html.twig' with {
+            currentPage: page,
+            totalPages: totalPages,
+            routeName: 'list_users',
+            queryParams: app.request.query.all
+        } %}
+    </div>
+</div>

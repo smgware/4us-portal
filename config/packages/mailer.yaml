@@ -1,0 +1,9 @@
+parameters:
+    app.mail.host: '%env(MAIL_HOST)%'
+    app.mail.port: '%env(int:MAIL_PORT)%'
+    app.mail.username: '%env(MAIL_USERNAME)%'
+    app.mail.password: '%env(MAIL_PASSWORD)%'
+    app.mail.encryption: '%env(MAIL_ENCRYPTION)%'
+    app.mail.smtp_auth: '%env(bool:MAIL_SMTP_AUTH)%'
+    app.mail.from: '%env(MAIL_FROM)%'
+    app.mail.from_name: '%env(MAIL_FROM_NAME)%'

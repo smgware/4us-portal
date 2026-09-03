@@ -1,0 +1,161 @@
+<div class="page-title"><i class="bi bi-share"></i> Gép kategóriák</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5"><input type="text" class="form-control" placeholder="Keresés..." data-name="search_machine_categories_list"/></div>
+        <div class="col-7">
+            <div class="row">
+                <div class="col-12 text-end">
+                    <div class="btn btn-default btn-sm" data-name="btn_index_machine_categories_list_filters"><i class="bi bi-filter-circle-fill"></i> Szűrők</div>
+                    <div class="btn btn-default btn-sm" data-name="btn_index_machine_categories_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_machines_categories"></div>
+    </div>
+</div>
+
+<script>
+
+    var formData = new FormData();
+    formData.set('filters', '{}');
+
+    new Ajax({
+        url: '{{ path('list_machines_categories') }}',
+        name: 'list_machines_categories',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        target: $("[data-key='list_machines_categories']"),
+        function_success: function (result) {
+            if(result.success){
+                if(result.success){
+                    this.target.html(result.content);
+
+                    //list btns
+                    this.target.find("[data-name='list_item_btn']").unbind("click").click(function(){
+                        mode = $(this).attr("data-mode");
+                        key = $(this).closest("[data-name='list_item']").attr("data-key");
+
+                        if(mode == "edit"){
+                            let filters = JSON.parse(ajaxquery['index_machine_categories_add'].formData.get("filters"));
+                            ajaxquery['index_machine_categories_add'].formData.set("id", key);
+                            ajaxquery['index_machine_categories_add'].send();
+                        }
+                        if(mode == "delete"){
+                            alertify.confirm("Megerősítés","Mented az adatokat?", ()=> {
+                                var formData = new FormData();
+                                formData.set('id', key);
+                                new Ajax({
+                                    url: '{{ path('delete_machines_category') }}',
+                                    type: 'DELETE',
+                                    dataType: 'json',
+                                    formData: formData,
+                                    target: $("[data-name='list_machines_categories']"),
+                                    function_success: function (result) {
+                                        if (result.success) {
+                                            alertify.message("Sikeres törlés");
+                                            ajaxquery['list_machines_categories'].send();
+                                        }
+                                    }
+                                }).send();
+                            },()=>{});
+                        }
+                    })
+
+                }
+            }
+        }
+    }).send();
+
+    var formData = new FormData();
+    formData.set('filters', '{}');
+
+    new Ajax({
+        url: '{{ path('index_machine_categories_add') }}',
+        name: 'index_machine_categories_add',
+        type: 'GET',
+        dataType: 'json',
+        formData: formData,
+        target: null,
+        function_success: function (result) {
+            //this.target.html(result.content);
+
+            html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div> </div></div></div>`;
+
+            alertify.add("Hozzáadás", result.content).
+            set("movable",false).
+            set("resizable",false).
+            set("closable",false).
+            set('closableByEscape', false).
+            resizeTo("50%", "50%").
+                //maximize().//
+                set({transition:'zoom'}).
+            setFooter(html_footer);
+
+            $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function(){
+                alertify.success("Mégse");
+                alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
+                    alertify.add().close();
+                },()=>{});
+
+            });
+            $(`div[data-box="${this.name}"] .btn[data-name='alertify-save']`).unbind("click").click(function(){
+                alertify.confirm("Megerősítés","Mented az adatokat?", ()=>{
+
+                    const form = $("form[data-name='machine_category']")[0];
+                    var formData = new FormData(form);
+
+                    for (const [key, value] of formData.entries()) {
+                        console.log(key, value);
+                    }
+
+                    formData.set('id', $("form[data-name='machine_category'] [data-name='id']").val() );
+                    formData.set('name', $("form[data-name='machine_category'] [data-name='name']").val());
+                    formData.set('status', $("form[data-name='machine_category'] [data-name='status']").val());
+
+                    new Ajax({
+                        url: '{{ path('save_machine_categories') }}',
+                        name: 'save_machine_categories',
+                        type: 'POST',
+                        dataType: 'json',
+                        formData: formData,
+                        target: $("[data-name='index_settings_content']"),
+                        function_success: function (result) {
+                            if(result.success){
+                                alertify.add().close();
+                                alertify.success("Sikeres mentés");
+                                ajaxquery['list_machines_categories'].send();
+                            }
+                        }
+                    }).send();
+
+                },()=>{});
+            });
+        },
+        function_error: function (xhr) {
+            const message = xhr.responseText || 'Nem sikerült betölteni az oldalt.';
+            alertify.error(message);
+        }
+    });
+
+    $("[data-name='btn_index_machine_categories_add']").unbind("click").click(function () {
+        ajaxquery['index_machine_categories_add'].formData.set("id", null);
+        ajaxquery['index_machine_categories_add'].send();
+    });
+
+    $("[data-name='search_machine_categories_list']").unbind("keyup").keyup(function (e) {
+        if(e.keyCode == 13){
+            var filters = JSON.parse(ajaxquery['list_machines_categories'].formData.get("filters"));
+            filters.search = $(this).val();
+            ajaxquery['list_machines_categories'].formData.set("filters", JSON.stringify(filters));
+            ajaxquery['list_machines_categories'].send();
+        }
+    });
+
+</script>

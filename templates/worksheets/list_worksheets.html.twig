@@ -1,0 +1,91 @@
+<div class="card panel-card w-100 overflow-auto p-2">
+    <div class="table-responsive">
+        <table class="table-default w-100">
+            <thead>
+                <tr class="pt-2 pb-2">
+                    <th class="p-2" style="width:150px;">Típus</th>
+                    <th class="p-2" style="width:150px;">Kód</th>
+                    <th class="p-2">Megnevezés</th>
+                    <th class="p-2">Partner</th>
+                    <th class="p-2">Rögzítette</th>
+                    <th class="p-2">Rögzítve</th>
+                    <th class="p-2">Módosítva</th>
+                    <th class="p-2">Állapot</th>
+                    <th class="p-2">#</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                    <tr data-name="list_item" data-key="{{ record.id }}" data-code="{{ record.code }}" data-status="{{ record.status_code }}">
+                        <td>{{ record.worksheet_type_title|default('-') }}</td>
+                        <td>{{ record.code }}</td>
+                        <td>{{ record.title }}</td>
+                        <td>{{ record.partner_name|default(record.data.company_name|default('')) }}</td>
+                        <td>{{ record.user_owner_name|default(record.user_owner_username|default('-')) }}</td>
+                        <td>
+                            {% if record.datetime_add %}
+                                {{ record.datetime_add|date('Y-m-d H:i') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.datetime_last %}
+                                {{ record.datetime_last|date('Y-m-d H:i') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% include 'worksheets/_status_badge.html.twig' with {
+                                statusCode: record.worksheet_status_type_code,
+                                statusTitle: record.worksheet_status_type_title
+                            } only %}
+                        </td>
+                        <td>
+                           <!--  <div class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="info"><i class="bi bi-info-circle-fill"></i></div>-->
+                            <div class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit"><i class="bi bi-pencil-square"></i></div>
+                            <div class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="pdf"><i class="bi bi-printer-fill"></i></div>
+                            <!-- <div class="btn btn-default btn-sm text-danger" data-name="list_item_btn" data-mode="delete"><i class="bi bi-trash"></i></div>-->
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">Nincs megjeleneníthető adat.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'partials/_pagination.html.twig' with {
+        currentPage: page,
+        totalPages: totalPages,
+        routeName: 'list_worksheets',
+        queryParams: app.request.query.all
+    } %}
+</div>
+
+
+<script>
+    (function () {
+
+
+        $("[data-name='list_item_btn']").unbind("click").click(function () {
+            var mode = $(this).attr("data-mode");
+            var key = $(this).closest("[data-name='list_item']").attr("data-key");
+
+            if (mode === "pdf") {
+                window.open("{{ path('index_worksheet_pdf', {id: 'WORKSHEET_ID'}) }}".replace('WORKSHEET_ID', encodeURIComponent(key)), "_blank");
+            }
+
+            if (mode === "edit") {
+                ajaxquery['index_worksheets_add'].formData.set("id", key);
+                ajaxquery['index_worksheets_add'].send();
+            }
+
+        });
+
+    })();
+</script>

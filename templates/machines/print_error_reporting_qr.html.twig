@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hibabejelentő QR-kód – {{ machine.code }}</title>
+    <style>
+        @page {
+            margin: 10mm;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+
+        .qr-code {
+            display: block;
+            width: 10cm;
+            height: 10cm;
+        }
+
+        @media screen {
+            body {
+                display: flex;
+                min-height: 100vh;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img class="qr-code" src="{{ qr_code_data_uri }}" alt="Hibabejelentő QR-kód a(z) {{ machine.code }} géphez">
+
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+</body>
+</html>

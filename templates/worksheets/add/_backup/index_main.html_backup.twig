@@ -1,0 +1,1143 @@
+<div class="container-fluid">
+    <div class="row">
+            <div class="col-lg-9 col-12" data-name="main_data">
+
+                <div class="card panel-card p-2 mb-2">
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">Munkalap címe</span></div>
+                        <div class="col-12">
+                            <input type="text" class="form-control" data-name="worksheet_title" value="{{ item.title }}" placeholder="Munkalap címe">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card panel-card p-2 mb-2" >
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">Feladatlap típusa</span></div>
+
+                        <div class="col-12">
+                            <select class="form-control" data-name="filter_worksheets_type" {{ isNew ? '' : 'disabled' }}>
+
+
+                                {% for worksheetType in worksheetTypes %}
+                                    {% if (is_granted('ROLE_SERVICE') and worksheetType.code == 'ERROR_REPORT') %}
+                                        <option value="{{ worksheetType.id }}" data-code="{{ worksheetType.code }}" {{ item.worksheetType and item.worksheetType.id == worksheetType.id ? 'selected' : '' }}>{{ worksheetType.title }}</option>
+                                    {% else %}
+                                        <option value="{{ worksheetType.id }}" data-code="{{ worksheetType.code }}" {{ item.worksheetType and item.worksheetType.id == worksheetType.id ? 'selected' : '' }}>{{ worksheetType.title }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {% set errorReportCodes = ['ERROR_REPORT', 'ERROR_REPORTING'] %}
+                {% set worksheetTypeCode = item.worksheetType ? item.worksheetType.code : item.data.worksheet_type_code|default('') %}
+                {% set isErrorReport = worksheetTypeCode in errorReportCodes %}
+                {% if isErrorReport and item.id is not null%}
+                    {% set errorReportFields = {
+                        'machine_code': 'Gép száma',
+                        'error_description': 'Hiba leírása',
+                        'company_name': 'Cégnév',
+                        'tax_number': 'Adószám',
+                        'name': 'Bejelentő neve',
+                        'email': 'E-mail cim',
+                        'phone': 'Telefonszám',
+                        'address': 'Helyszín'
+                    } %}
+                    <div class="card panel-card p-2 mb-2">
+                        <div class="row mt-2">
+                            <div class="col-12"><span>Hibajegy információk</span></div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="text-xs text-muted">Azonosító</div>
+                                <div>{{ item.code }}</div>
+                            </div>
+
+                        </div>
+                        <div class="row mt-2">
+                            {% for fieldKey, fieldLabel in errorReportFields %}
+                                <div class="col-md-6 col-12 mb-2">
+                                    <div class="text-xs text-muted">{{ fieldLabel }}</div>
+                                    <div>{{ item.data[fieldKey]|default('-') }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="card panel-card p-2 mb-2">
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">Partner</span></div>
+                        <div class="col-12">
+                            <select name="" id="" class="form-control" data-name="partner_id" data-worksheet-field="partner_id">
+                                <option value="">Nincs kiválasztva</option>
+                                {% for partner in partners %}
+                                    <option value="{{ partner.id }}" {{ item.partner and item.partner.id == partner.id ? 'selected' : '' }}>{{ partner.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">Gép</span></div>
+                        <div class="col-12">
+                            {% set selectedMachineId = item.data.machine_id|default(item.machineRental and item.machineRental.machine ? item.machineRental.machine.id : '') %}
+                            <select name="" id="" class="form-control" data-name="machine_id" data-worksheet-field="machine_id">
+                                <option value="">Nincs kiválasztva</option>
+                                {% for machine in machines %}
+                                    <option value="{{ machine.id }}" {{ selectedMachineId == machine.id ? 'selected' : '' }}>{{ machine.title }} ({{ machine.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">Megjegyzés (Bérbeadó)</span></div>
+                        <div class="col-12">
+                            <textarea name="" id="" rows="5" class="form-control" data-name="lessor_comment" data-worksheet-field="lessor_comment" placeholder="felhasznált alkatrészek, feltárt hibák, egyéb megjegyzések">{{ item.data.lessor_comment|default('') }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">Megjegyzés (Bérlő)</span></div>
+                        <div class="col-12">
+                            <textarea name="" id="" rows="5" class="form-control" data-name="renter_comment" data-worksheet-field="renter_comment" >{{ item.data.renter_comment|default('') }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">KM óra állás</span></div>
+                        <div class="col-12">
+                            <input type="text" class="form-control" data-name="km" data-worksheet-field="km" value="{{ item.data.km|default('') }}">
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-12"><span class="text-xs">Üzemóra</span></div>
+                        <div class="col-12">
+                            <input type="text"  class="form-control" data-name="operating_hours" data-worksheet-field="operating_hours" value="{{ item.data.operating_hours|default('') }}">
+                        </div>
+                    </div>
+
+                    {% set conditionImageDescriptions = ['Elölről', 'Hátulról', 'Jobbról', 'Balról', 'Üzem / KM óra'] %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card panel-card p-2">
+                                <div class="row g-2">
+                                    <div class="col-12">Állapot képek</div>
+                                    {% for description in conditionImageDescriptions %}
+                                        <div class="col-xl col-md-4 col-6">
+                                            <div class="card panel-card p-2 h-100" data-name="condition_image_slot" data-description="{{ description }}">
+                                                <div class="text-xs mb-2">{{ description }}</div>
+                                                <button type="button" class="condition-image-preview border rounded bg-light w-100 mb-2" data-name="condition_image_browse" aria-label="{{ description }} kép tallózása">
+                                                    <i class="bi bi-image condition-image-placeholder"></i>
+                                                    <img class="d-none" src="" alt="{{ description }}">
+                                                </button>
+                                                <button type="button" class="btn btn-default btn-sm w-100" data-name="condition_image_browse">
+                                                    <i class="bi bi-folder2-open"></i> Tallózás
+                                                </button>
+                                                <input type="file" class="d-none" accept="image/*" data-name="condition_image_file">
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if false %}
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card panel-card p-2">
+                                    <div class="row">
+                                        <div class="col-12">Állapot képek</div>
+
+                                        <div class="col-12">
+                                            <div class="row">
+                                    <!--
+                                     előlről, hátulról, balról, jobbról + Üzem/kilométeróra
+                                    -->
+                                                <div class="col-2">
+                                                    <div class="card panel-card p-2">
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="text-xs">Elölről</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="img-item">
+                                                                    <img src="" alt="">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="btn btn-sm"><i class="bi bi-file"></i> tallózás</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                <div class="col-2">
+                                                    <div class="card panel-card p-2">
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="text-xs">Hátulról</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="img-item">
+                                                                    <img src="" alt="">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="btn btn-sm"><i class="bi bi-file"></i> tallózás</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-2">
+                                                    <div class="card panel-card p-2">
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="text-xs">Jobbról</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="img-item">
+                                                                    <img src="" alt="">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="btn btn-sm"><i class="bi bi-file"></i> tallózás</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                <div class="col-2">
+                                                    <div class="card panel-card p-2">
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="text-xs">Balról</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="img-item">
+                                                                    <img src="" alt="">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="btn btn-sm"><i class="bi bi-file"></i> tallózás</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                <div class="col-2">
+                                                    <div class="card panel-card p-2">
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="text-xs">Üzem/KM óra</div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="img-item">
+                                                                    <img src="" alt="">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-12">
+                                                                <div class="btn btn-sm"><i class="bi bi-file"></i> tallózás</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                           </div>
+                        </div>
+
+                    </div>
+                    {% endif %}
+
+               </div>
+
+            </div>
+
+
+
+            <div class="col-lg-3 col-12">
+                <div class="card panel-card p-2">
+                    <div class="row">
+                        <div class="col-12">Státusz</div>
+                        <div class="col-12">
+                            <select data-name="status" id="" class="form-control">
+                                {% if isErrorReport %}
+                                    <option value="1" {{ item.status == '1' ? 'selected' : '' }}>Új</option>
+                                    <option value="2" {{ item.status == '2' ? 'selected' : '' }}>Javítás alatt</option>
+                                    <option value="-1" {{ item.status == '-1' ? 'selected' : '' }}>Visszavéve</option>
+                                    <option value="-2" {{ item.status == '-2' or item.status == '0' ? 'selected' : '' }}>Javítva, kiadva</option>
+                                {% else %}
+                                    <option value="1" {{ item.status == '1' ? 'selected' : '' }}>Nyitott</option>
+                                    <option value="0" {{ item.status == '0' ? 'selected' : '' }}>Lezárt</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="card panel-card p-2 mt-3">
+                    <div class="row">
+                            <div class="col-7">Csatolmányok</div>
+                            <div class="col-5 text-end">
+                                <div class="btn btn-default btn-sm" data-name="btn_index_worksheet_attachments_add"><i class="bi bi-plus-circle-fill"></i> Hozzáadás</div>
+                                <input type="file" data-name="index_worksheet_attachments_file" id="" class="form-control d-none">
+                            </div>
+
+                    </div>
+
+
+
+                    <div class="row mt-2">
+                        <div class="col-12" data-name="index_worksheet_attachments_add_list"></div>
+                        <div class="col-12" data-name="index_worksheet_attachments_list"></div>
+                    </div>
+                </div>
+
+
+                <div class="card panel-card p-2 mt-3">
+                    <div class="row">
+                        <div class="col-12">Funkciók</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 text-end">
+                            <div class="btn btn-sm btn-default" data-name="btn_print_pdf"><i class="bi bi-file-pdf"></i> Nyomtatási nézet</div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+
+
+            </div>
+
+            <div class="col-12 mt-2" data-name="signatures" style="display:noned">
+                <div class="card panel-card p-2">
+                    <div class="row">
+                        <div class="col-12"><span>Aláírások</span></div>
+
+                        <div class="row">
+                            <div class="col-lg-6 col-12 mb-2">
+                                <div class="row">
+                                    <div class="col-12"><span class="text-xs">Átadó</span></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">Név</div>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" data-name="signature_name" data-type="handed" value="{{ item.data.signatures.handed.name|default('') }}">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-8" data-name="signature_preview" data-type="handed">
+                                            <div class="btn btn-light">Nincs rögzített aláírás</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="btn btn-default btn-sm" data-name="btn_index_worksheet_signature_add" data-type="handed"><i class="bi bi-pencil-square"></i> Kitöltés</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-12 mb-2">
+                                <div class="row">
+                                    <div class="col-12"><span class="text-xs">Átvevő</span></div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-12">Név</div>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" data-name="signature_name" data-type="received" value="{{ item.data.signatures.received.name|default('') }}">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-8" data-name="signature_preview" data-type="received">
+                                        <div class="btn btn-light">Nincs rögzített aláírás</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="btn btn-default btn-sm" data-name="btn_index_worksheet_signature_add" data-type="received"><i class="bi bi-pencil-square"></i> Kitöltés</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+    </div>
+
+</div>
+
+
+<style>
+    .condition-image-preview {
+        height: 150px;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    .condition-image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .condition-image-placeholder {
+        font-size: 4rem;
+        color: #adb5bd;
+    }
+</style>
+
+<script>
+
+    {% if item.status > 0 %}
+    $("[data-name='worksheet_add'] [data-name='alertify-save']").fadeIn(100);
+    {% endif %}
+
+    if (data_all?.worksheet?.status !== undefined) {
+        $("[data-name='status']").val(data_all.worksheet.status);
+    }
+
+    if (data_all?.worksheet?.partner_id) {
+        $("[data-name='partner_id']").val(data_all.worksheet.partner_id);
+    }
+
+    if (data_all?.worksheet?.data?.machine_id) {
+        $("[data-name='machine_id']").val(data_all.worksheet.data.machine_id);
+    }
+
+    var initialWorksheetSignatures = normalizeWorksheetSignatures({{ item.data.signatures|default({})|json_encode|raw }});
+
+    data_all.worksheet = data_all.worksheet || {};
+    data_all.worksheet.data = data_all.worksheet.data || {};
+    data_all.worksheet.data.signatures = Object.assign(
+        {},
+        initialWorksheetSignatures || {},
+        normalizeWorksheetSignatures(data_all.worksheet.data.signatures || {})
+    );
+    data_all.attachments = data_all.attachments || [];
+    bindConditionImageInputs();
+    renderConditionImages();
+    renderWorksheetSignatures();
+    setTimeout(renderWorksheetSignatures, 0);
+
+
+    var formData = new FormData();
+
+    formData.append("worksheet_id", "{{ item.id }}")
+
+    new Ajax({
+        url: '{{ path('index_worksheet_attachments_list') }}',
+        name: 'index_worksheet_attachments_list',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        target:  $("[data-name='index_worksheet_attachments_list']"),
+        function_success: function (result) {
+            if (result.success) {
+                this.target.html(result.content);
+            }
+        },
+        function_error: function (xhr) {
+            alertify.error(xhr.responseJSON?.data?.error || 'Hiba');
+        }
+    }).send();
+
+    $("[data-name='btn_index_worksheet_attachments_add']").unbind("click").click(function () {
+        $(this).parent().find("input").click();
+    });
+
+
+    $("[data-name='index_worksheet_attachments_file']").unbind("change").change(function () {
+        Array.from(this.files || []).forEach(function (file) {
+            data_all.attachments = data_all.attachments || [];
+            data_all.attachments.push({
+                id: null,
+                name: file.name,
+                file: file,
+                data: {
+                    function: "add",
+                    size: file.size,
+                    type: file.type
+                }
+            });
+        });
+
+        renderWorksheetPendingAttachments();
+        $(this).val("");
+    });
+
+    function bindConditionImageInputs() {
+        $("[data-name='condition_image_browse']").off("click").on("click", function () {
+            $(this).closest("[data-name='condition_image_slot']").find("[data-name='condition_image_file']").trigger("click");
+        });
+
+        $("[data-name='condition_image_file']").off("change").on("change", function () {
+            const file = this.files && this.files[0];
+            if (!(file instanceof File)) return;
+
+            const slot = $(this).closest("[data-name='condition_image_slot']");
+            const description = slot.attr("data-description");
+
+            data_all.attachments.forEach(function (attachment) {
+                if (attachment.description !== description || attachment.data?.function === "delete") return;
+                if (attachment.id) {
+                    attachment.data = attachment.data || {};
+                    attachment.data.function = "delete";
+                } else {
+                    attachment.data.function = "replaced";
+                }
+            });
+            data_all.attachments = data_all.attachments.filter(function (attachment) {
+                return attachment.data?.function !== "replaced";
+            });
+            data_all.attachments.push({
+                id: null,
+                name: file.name,
+                description: description,
+                file: file,
+                previewUrl: URL.createObjectURL(file),
+                data: {function: "add", size: file.size, type: file.type}
+            });
+
+            $(this).val("");
+            renderConditionImages();
+            renderWorksheetPendingAttachments();
+        });
+    }
+
+    function renderConditionImages() {
+        $("[data-name='condition_image_slot']").each(function () {
+            const slot = $(this);
+            const description = slot.attr("data-description");
+            const attachment = [...data_all.attachments].reverse().find(function (item) {
+                return item.description === description && item.data?.function !== "delete";
+            });
+            const image = slot.find("img");
+            const placeholder = slot.find(".condition-image-placeholder");
+
+            if (!attachment) {
+                image.addClass("d-none").attr("src", "");
+                placeholder.removeClass("d-none");
+                return;
+            }
+
+            const source = attachment.previewUrl || (attachment.id ? "{{ path('getdata_attachment') }}?id=" + encodeURIComponent(attachment.id) : "");
+            image.attr("src", source).toggleClass("d-none", source === "");
+            placeholder.toggleClass("d-none", source !== "");
+        });
+    }
+
+    $("[data-name='btn_index_worksheet_signature_add']").unbind("click").click(function () {
+        openWorksheetSignaturePopup($(this).attr("data-type"));
+    });
+
+    $("[data-name='btn_print_pdf']").unbind("click").click(function () {
+        let worksheetId = data_all?.worksheet?.id || "{{ item.id }}";
+        if (!worksheetId) {
+            alertify.error("A PDF megnyitasahoz elobb menteni kell a munkalapot.");
+            return;
+        }
+
+        window.open("{{ path('index_worksheet_pdf', {id: 'WORKSHEET_ID'}) }}".replace('WORKSHEET_ID', encodeURIComponent(worksheetId)), "_blank");
+    });
+
+    $("[data-name='signature_name']").unbind("input").on("input", function () {
+        let type = $(this).attr("data-type");
+        if (!type) {
+            return;
+        }
+
+        data_all.worksheet = data_all.worksheet || {};
+        data_all.worksheet.data = data_all.worksheet.data || {};
+        data_all.worksheet.data.signatures = getWorksheetSignatures();
+        data_all.worksheet.data.signatures[type] = normalizeSignatureRecord(data_all.worksheet.data.signatures[type] || {});
+        data_all.worksheet.data.signatures[type].name = ($(this).val() || "").trim();
+        renderWorksheetSignatures();
+    });
+
+
+
+    $(`div[data-box="worksheet_add"] .btn[data-name='alertify-save']`).unbind("click").click(function () {
+        alertify.confirm("Megerősítés", "Mented az adatokat?", () => {
+            saveWorksheetData();
+        }, () => {});
+    });
+
+    function openWorksheetSignaturePopup(type) {
+        data_all.worksheet = data_all.worksheet || {};
+        data_all.worksheet.data = data_all.worksheet.data || {};
+        data_all.worksheet.data.signatures = data_all.worksheet.data.signatures || {};
+
+        let content = `
+            <div data-name="worksheet_signature_popup" data-type="${type}">
+                <canvas data-name="signature_canvas" style="width:100%;height:90%;border:1px solid #d8dde6;background:#fff;touch-action:none;"></canvas>
+                <div class="text-end mt-2">
+                    <div class="btn btn-default btn-sm" data-name="signature_clear">Törles</div>
+                </div>
+            </div>
+        `;
+
+        var html_footer = `
+                            <div class="container-fluid p-0" data-box="signatures">
+                                <div class="row">
+                                    <div class="col-12 text-end">
+                                        <div class="btn btn-default btn-sm btn-success" data-name="alertify-save" style="display:noned"><i class="bi bi-floppy2-fill"></i> Mentés</div>
+                                        <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel"><i class="bi bi-x-circle"></i> Mégse</div>
+                                    </div>
+                                </div>
+                            </div>
+                    `;
+
+        let previousBodyOverflow = $("body").css("overflow");
+        $("body").css("overflow", "hidden");
+
+        function restoreSignaturePopupScroll() {
+            $("body").css("overflow", previousBodyOverflow);
+        }
+
+        alertify.popup("Aláírás", content)
+            .set("movable", false)
+            .set("resizable", false)
+            .set({transition:'zoom'})
+            .set("onclose", restoreSignaturePopupScroll)
+            .setFooter(html_footer);
+
+        let popup = $("[data-name='worksheet_signature_popup']");
+        let canvas = popup.find("[data-name='signature_canvas']")[0];
+        let context = canvas.getContext("2d");
+        let drawing = false;
+        let hasDrawing = false;
+        let lastPoint = null;
+        context.lineWidth = 3;
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.strokeStyle = "#111";
+
+        let existingSignature = normalizeSignatureImage(data_all.worksheet.data.signatures[type] || "");
+        if (existingSignature !== "") {
+            let image = new Image();
+            image.onload = function () {
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                hasDrawing = true;
+            };
+            image.src = existingSignature;
+        }
+
+        function getCanvasPoint(sourceEvent) {
+            let rect = canvas.getBoundingClientRect();
+
+            return {
+                x: (sourceEvent.clientX - rect.left) * (canvas.width / rect.width),
+                y: (sourceEvent.clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function startDrawing(event) {
+            event.preventDefault();
+            drawing = true;
+            canvas.setPointerCapture?.(event.pointerId);
+            let point = getCanvasPoint(event);
+            lastPoint = point;
+            context.beginPath();
+            context.moveTo(point.x, point.y);
+        }
+
+        function drawSignature(event) {
+            if (!drawing) {
+                return;
+            }
+
+            event.preventDefault();
+            let events = typeof event.getCoalescedEvents === "function" ? event.getCoalescedEvents() : [event];
+
+            events.forEach(function (sourceEvent) {
+                let point = getCanvasPoint(sourceEvent);
+
+                if (lastPoint) {
+                    let midPoint = {
+                        x: (lastPoint.x + point.x) / 2,
+                        y: (lastPoint.y + point.y) / 2
+                    };
+                    context.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);
+                } else {
+                    context.lineTo(point.x, point.y);
+                }
+
+                lastPoint = point;
+                hasDrawing = true;
+            });
+
+            context.stroke();
+        }
+
+        function stopDrawing(event) {
+            if (!drawing) {
+                return;
+            }
+
+            event.preventDefault();
+            drawing = false;
+            lastPoint = null;
+            canvas.releasePointerCapture?.(event.pointerId);
+        }
+
+        canvas.addEventListener("pointerdown", startDrawing, {passive: false});
+        canvas.addEventListener("pointermove", drawSignature, {passive: false});
+        canvas.addEventListener("pointerup", stopDrawing, {passive: false});
+        canvas.addEventListener("pointercancel", stopDrawing, {passive: false});
+        canvas.addEventListener("pointerleave", stopDrawing, {passive: false});
+
+        popup.find("[data-name='signature_clear']").unbind("click").click(function () {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            hasDrawing = false;
+        });
+
+        $(`div[data-box="signatures"] .btn[data-name='alertify-cancel']`).unbind("click").click(function () {
+            alertify.popup().close();
+        });
+
+        $(`div[data-box="signatures"] .btn[data-name='alertify-save']`).unbind("click").click(function () {
+
+
+
+            data_all.worksheet.data.signatures[type] = setSignatureImage(
+                data_all.worksheet.data.signatures[type],
+                canvas.toDataURL("image/png")
+            );
+            renderWorksheetSignatures();
+            restoreSignaturePopupScroll();
+            alertify.popup().close();
+
+        });
+
+        popup.find("[data-name='signature_save']").unbind("click").click(function () {
+            if (!hasDrawing) {
+                alertify.error("Nincs alairas.");
+                return;
+            }
+
+            data_all.worksheet.data.signatures[type] = setSignatureImage(
+                data_all.worksheet.data.signatures[type],
+                canvas.toDataURL("image/png")
+            );
+            renderWorksheetSignatures();
+            restoreSignaturePopupScroll();
+            alertify.popup().close();
+        });
+    }
+
+    function renderWorksheetSignatures() {
+        let signatures = getWorksheetSignatures();
+
+        ["handed", "received"].forEach(function (type) {
+            let container = $("[data-name='signature_preview'][data-type='" + type + "']");
+            let signature = normalizeSignatureImage(signatures[type] || "");
+
+            let signatureName = getSignatureName(signatures[type] || "");
+
+            if (signature === "") {
+                container.html(`
+                    <div class="btn btn-light">Nincs rögzített aláírás</div>
+                    ${signatureName !== "" ? `<div class="text-xs mt-1">${escapeHtml(signatureName)}</div>` : ""}
+                `);
+                return;
+            }
+
+            container.html(`
+                <img src="${signature}" alt="Alairas" class="img-fluid rounded-2 border bg-white" style="max-height:70px;">
+                ${signatureName !== "" ? `<div class="text-xs mt-1">${escapeHtml(signatureName)}</div>` : ""}
+            `);
+        });
+    }
+
+    function getWorksheetSignatures() {
+        let signatures = Object.assign(
+            {},
+            initialWorksheetSignatures || {},
+            normalizeWorksheetSignatures(data_all?.worksheet?.signatures || {}),
+            normalizeWorksheetSignatures(data_all?.worksheet?.data?.signatures || {})
+        );
+
+        data_all.worksheet = data_all.worksheet || {};
+        data_all.worksheet.data = data_all.worksheet.data || {};
+        data_all.worksheet.data.signatures = signatures;
+
+        ["handed", "received"].forEach(function (type) {
+            signatures[type] = normalizeSignatureRecord(signatures[type] || {});
+        });
+
+        return signatures;
+    }
+
+    function normalizeWorksheetSignatures(signatures) {
+        if (!signatures) {
+            return {};
+        }
+
+        if (typeof signatures === "string") {
+            try {
+                signatures = JSON.parse(signatures);
+            } catch (e) {
+                return {
+                    handed: signatures
+                };
+            }
+        }
+
+        if (typeof signatures !== "object") {
+            return {};
+        }
+
+        ["handed", "received"].forEach(function (type) {
+            if (signatures[type] !== undefined) {
+                signatures[type] = normalizeSignatureRecord(signatures[type]);
+            }
+        });
+
+        return signatures;
+    }
+
+    function normalizeSignatureRecord(signature) {
+        if (!signature) {
+            return {
+                name: "",
+                image: ""
+            };
+        }
+
+        if (typeof signature === "string") {
+            return {
+                name: "",
+                image: signature
+            };
+        }
+
+        if (typeof signature !== "object") {
+            return {
+                name: "",
+                image: ""
+            };
+        }
+
+        return {
+            ...signature,
+            name: signature.name || "",
+            image: signature.image || signature.base64 || signature.data || ""
+        };
+    }
+
+    function setSignatureImage(signature, image) {
+        signature = normalizeSignatureRecord(signature);
+        signature.image = image;
+
+        return signature;
+    }
+
+    function getSignatureName(signature) {
+        signature = normalizeSignatureRecord(signature);
+
+        return (signature.name || "").trim();
+    }
+
+    function normalizeSignatureImage(signature) {
+        if (signature && typeof signature === "object") {
+            signature = signature.base64 || signature.image || signature.data || "";
+        }
+
+        if (typeof signature !== "string") {
+            return "";
+        }
+
+        signature = signature.trim();
+        if (signature === "") {
+            return "";
+        }
+
+        if (signature.indexOf("data:image/") === 0) {
+            return signature;
+        }
+
+        return "data:image/png;base64," + signature;
+    }
+
+    function renderWorksheetPendingAttachments() {
+        let html = "";
+
+        (data_all.attachments || []).forEach(function (attachment, index) {
+            if (attachment?.data?.function !== "add") {
+                return;
+            }
+
+            html += `
+                <div class="row g-2 mt-2 bg-light" data-name="pending_attachment_item" data-index="${index}">
+                    <div class="col-8">
+                        <div class="fw-semibold text-truncate" title="${escapeHtml(attachment.name)}">${escapeHtml(attachment.name)}</div>
+                        <div class="text-muted text-xs">${formatFileSize(attachment?.data?.size ?? 0)}</div>
+                    </div>
+                    <div class="col-4 text-end">
+                        <div class="btn btn-default btn-sm text-danger" data-name="btn_remove_pending_attachment" data-index="${index}">
+                            <i class="bi bi-trash"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        $("[data-name='index_worksheet_attachments_add_list']").html(html);
+
+        $("[data-name='btn_remove_pending_attachment']").unbind("click").click(function () {
+            data_all.attachments.splice(parseInt($(this).attr("data-index"), 10), 1);
+            renderWorksheetPendingAttachments();
+            renderConditionImages();
+        });
+    }
+
+    function saveWorksheetData() {
+        data_all.worksheet = data_all.worksheet || {};
+        collectWorksheetEditorData();
+        data_all.worksheet.title = ($("[data-name='worksheet_title']").val() || "").trim();
+        data_all.worksheet.status = $("[data-name='status']").val();
+        data_all.worksheet.worksheet_type_id = $("[data-name='filter_worksheets_type']").val();
+        data_all.worksheet.data = data_all.worksheet.data || {};
+        data_all.worksheet.partner_id = data_all.worksheet.data.partner_id || null;
+
+        let formData = new FormData();
+        formData.append("id", data_all.worksheet.id || "{{ item.id }}");
+        formData.append("title", data_all.worksheet.title || "{{ item.title|e('js') }}");
+        formData.append("code", data_all.worksheet.code || "{{ item.code|e('js') }}");
+        formData.append("worksheet_type_id", data_all.worksheet.worksheet_type_id || "{{ item.worksheetType ? item.worksheetType.id : '' }}");
+        formData.append("partner_id", data_all.worksheet.partner_id || "");
+        formData.append("status", data_all.worksheet.status || "1");
+        formData.append("worksheet", JSON.stringify(data_all.worksheet));
+        formData.append("data", JSON.stringify(data_all.worksheet.data || {}));
+
+        new Ajax({
+            url: '{{ path('save_worksheets') }}',
+            name: 'save_worksheets_from_editor',
+            type: 'POST',
+            dataType: 'json',
+            formData: formData,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerult menteni a munkalapot.');
+                    return;
+                }
+
+                data_all.worksheet = result.data.worksheet || data_all.worksheet;
+                deleteWorksheetAttachments(data_all.worksheet.id);
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerult menteni a munkalapot.');
+            }
+        }).send();
+    }
+
+    function collectWorksheetEditorData() {
+        data_all.worksheet = data_all.worksheet || {};
+        data_all.worksheet.data = data_all.worksheet.data || {};
+
+        $("[data-worksheet-field]").each(function () {
+            let fieldName = $(this).attr("data-worksheet-field");
+            if (!fieldName) {
+                return;
+            }
+
+            data_all.worksheet.data[fieldName] = $(this).val();
+        });
+
+        data_all.worksheet.data.signatures = getWorksheetSignatures();
+        $("[data-name='signature_name']").each(function () {
+            let type = $(this).attr("data-type");
+            if (!type) {
+                return;
+            }
+
+            data_all.worksheet.data.signatures[type] = normalizeSignatureRecord(data_all.worksheet.data.signatures[type] || {});
+            data_all.worksheet.data.signatures[type].name = ($(this).val() || "").trim();
+        });
+    }
+
+    function deleteWorksheetAttachments(worksheetId) {
+        let attachmentsToDelete = (data_all.attachments || []).filter(function (attachment) {
+            return attachment?.data?.function === "delete" && attachment.id;
+        });
+
+        if (attachmentsToDelete.length === 0) {
+            saveWorksheetAttachments(worksheetId);
+            return;
+        }
+
+        let deletedCount = 0;
+        let failed = false;
+
+        attachmentsToDelete.forEach(function (attachment, index) {
+            let formData = new FormData();
+            formData.append("worksheet_id", worksheetId);
+            formData.append("attachment_id", attachment.id);
+
+            new Ajax({
+                url: '{{ path('delete_worksheet_attachment') }}',
+                name: 'delete_worksheet_attachment_' + index + '_' + Date.now(),
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                function_success: function (result) {
+                    if (!result.success) {
+                        failed = true;
+                    }
+
+                    deletedCount++;
+                    if (deletedCount === attachmentsToDelete.length) {
+                        if (failed) {
+                            alertify.error('Nem minden csatolmany torlese sikerult.');
+                            return;
+                        }
+
+                        data_all.attachments = (data_all.attachments || []).filter(function (item) {
+                            return item?.data?.function !== "delete";
+                        });
+                        saveWorksheetAttachments(worksheetId);
+                    }
+                },
+                function_error: function (xhr) {
+                    failed = true;
+                    deletedCount++;
+
+                    if (deletedCount === attachmentsToDelete.length) {
+                        alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerult torolni a csatolmanyokat.');
+                    }
+                }
+            }).send();
+        });
+    }
+
+    function saveWorksheetAttachments(worksheetId) {
+        let attachmentsToUpload = (data_all.attachments || []).filter(function (attachment) {
+            return attachment?.data?.function === "add" && attachment.file instanceof File;
+        });
+
+        if (attachmentsToUpload.length === 0) {
+            finishWorksheetSave();
+            return;
+        }
+
+        let uploadedCount = 0;
+        let failed = false;
+
+        attachmentsToUpload.forEach(function (attachment, index) {
+            let formData = new FormData();
+            formData.append("worksheet_id", worksheetId);
+            formData.append("attachment_data", JSON.stringify({
+                name: attachment.name,
+                description: attachment.description || null,
+                data: attachment.data
+            }));
+            formData.append("file", attachment.file);
+
+            new Ajax({
+                url: '{{ path('save_worksheet_attachment') }}',
+                name: 'save_worksheet_attachment_' + index + '_' + Date.now(),
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                function_success: function (result) {
+                    if (result.success) {
+                        attachment.id = result.data.attachment.id;
+                        attachment.data = result.data.attachment.data || attachment.data;
+                        attachment.file = null;
+                    } else {
+                        failed = true;
+                    }
+
+                    uploadedCount++;
+                    if (uploadedCount === attachmentsToUpload.length) {
+                        if (failed) {
+                            alertify.error('Nem minden csatolmany feltoltese sikerult.');
+                            return;
+                        }
+
+                        finishWorksheetSave();
+                    }
+                },
+                function_error: function (xhr) {
+                    failed = true;
+                    uploadedCount++;
+
+                    if (uploadedCount === attachmentsToUpload.length) {
+                        alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerult feltolteni a csatolmanyokat.');
+                    }
+                }
+            }).send();
+        });
+    }
+
+    function finishWorksheetSave() {
+        data_all.attachments = (data_all.attachments || []).filter(function (attachment) {
+            return attachment?.data?.function !== "add" && attachment?.data?.function !== "delete";
+        });
+        renderWorksheetPendingAttachments();
+
+        if (ajaxquery['index_worksheet_attachments_list']) {
+            ajaxquery['index_worksheet_attachments_list'].formData.set("worksheet_id", data_all.worksheet.id);
+            ajaxquery['index_worksheet_attachments_list'].send();
+        }
+
+        if (ajaxquery['list_worksheets']) {
+            ajaxquery['list_worksheets'].send();
+        }
+
+        alertify.success('Munkalap mentve.');
+        alertify.sheet().close();
+    }
+
+    function formatFileSize(bytes) {
+        bytes = parseInt(bytes, 10) || 0;
+        if (bytes >= 1048576) {
+            return Math.round(bytes / 104857.6) / 10 + " MB";
+        }
+        if (bytes >= 1024) {
+            return Math.round(bytes / 102.4) / 10 + " KB";
+        }
+        return bytes + " B";
+    }
+
+    function escapeHtml(value) {
+        return $("<div>").text(value ?? "").html();
+    }
+
+    renderWorksheetPendingAttachments();
+
+</script>

@@ -1,0 +1,50 @@
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr class="pt-2 pb-2">
+                <th class="p-2">Munkalap típusa</th>
+                <th class="p-2">Név</th>
+                <th class="p-2">Kód</th>
+                <th class="p-2">Rögzítette</th>
+                <th class="p-2">Módosította</th>
+                <th class="p-2">Rögzítve</th>
+                <th class="p-2">Módosítva</th>
+                <th class="p-2">#</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                <tr data-name="list_item" data-key="{{ record.id }}">
+                    <td>{{ record.worksheet_type_title }} ({{ record.worksheet_type_code }})</td>
+                    <td>{{ record.title }}</td>
+                    <td>{{ record.code }}</td>
+                    <td>{{ record.user_owner_name|default(record.user_owner_username|default('-')) }}</td>
+                    <td>{{ record.user_editor_name|default(record.user_editor_username|default('-')) }}</td>
+                    <td>{{ record.datetime_add ? record.datetime_add|date('Y-m-d H:i') : '-' }}</td>
+                    <td>{{ record.datetime_last ? record.datetime_last|date('Y-m-d H:i') : '-' }}</td>
+                    <td>
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm"
+                            data-name="list_item_btn"
+                            data-mode="edit"
+                            title="Szerkesztés"
+                            aria-label="Munkalap státusz szerkesztése"
+                        ><i class="bi bi-pencil-square"></i></button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-4">Nincs megjeleníthető adat.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_worksheet_status_types',
+    queryParams: queryParams
+} %}

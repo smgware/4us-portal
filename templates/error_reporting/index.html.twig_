@@ -1,0 +1,97 @@
+
+{% extends 'base_login.html.twig' %}
+{% block title %}Hibabejelentés - Portal Sigma{% endblock %}
+{% block body %}
+
+    <main class="page">
+        <div class="container-fluid">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-5 brand-block mb-0 pb-0">
+                    <img src="{{ asset('img/portal-logo-light.svg') }}" alt="Portal logó" class="portal-logo">
+                    <h1 class="welcome-title">Hibabejelentés</h1>
+                    <p class="welcome-text">Írd le a tapasztalt problémát.</p>
+                </div>
+
+                <div class="col-lg-7 mt-2 d-flex justify-content-center">
+                    <section class="login-card">
+                        <h2 class="login-title mb-1">Hibabejelentés</h2>
+                        <p class="login-subtitle">A beküldött adatokat a backend POST-ban fogadja, mentés nélkül.</p>
+
+                        <div id="errorReportingAlert" class="alert d-none"></div>
+
+                        <form id="errorReportingForm" method="post" action="{{ path('error_reporting_save') }}">
+                            <div class="mb-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                    <input type="text" class="form-control" name="name" placeholder="Név">
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" class="form-control" name="email" placeholder="Email cím">
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-tag"></i></span>
+                                    <input type="text" class="form-control" name="subject" placeholder="Tárgy" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <textarea class="form-control" name="message" rows="6" placeholder="Hiba leírása" required style="border:1px solid var(--input-border);border-radius:12px;background:var(--input-bg);"></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-login w-100" id="errorReportingBtn">Hibabejelentés küldése</button>
+                            <div class="divider"></div>
+                            <a href="{{ path('app_login_index') }}" class="forgot-link">Vissza a bejelentkezéshez</a>
+                        </form>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            function showAlert(type, message) {
+                $('#errorReportingAlert')
+                    .removeClass('d-none alert-danger alert-success alert-warning')
+                    .addClass('alert-' + type)
+                    .text(message || 'Ismeretlen hiba történt.');
+            }
+
+            $('#errorReportingForm').on('submit', function (event) {
+                event.preventDefault();
+
+                const btn = $('#errorReportingBtn');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Küldés...');
+
+                new Ajax({
+                    url: '{{ path('error_reporting_save') }}',
+                    name: 'error_reporting_save_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formdata: new FormData(this),
+                    function_success: function (result) {
+                        showAlert(result.success ? 'success' : 'danger', result.message);
+                        if (result.success) {
+                            $('#errorReportingForm')[0].reset();
+                        }
+                    },
+                    function_error: function (xhr) {
+                        showAlert('danger', xhr.responseJSON?.message || 'Nem sikerült elküldeni a hibabejelentést.');
+                    },
+                    function_complete: function () {
+                        btn.prop('disabled', false).text('Hibabejelentés küldése');
+                    }
+                }).send();
+            });
+        })();
+    </script>
+
+{% endblock %}
+-->

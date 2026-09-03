@@ -1,0 +1,458 @@
+<style>
+    .machine-rental-combobox {
+        position: relative;
+    }
+    .machine-rental-combobox-results {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        z-index: 1080;
+        width: 100%;
+        max-height: 260px;
+        overflow-y: auto;
+        background: #fff;
+    }
+    .machine-rental-combobox-option {
+        text-align: left;
+        white-space: normal;
+    }
+</style>
+
+<form action="" data-name="machine_rental">
+    <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
+    <!--
+    <div class="mb-3">
+        <label class="form-label">Kód</label>
+        <input type="text" class="form-control" name="code" data-name="code" value="{{ item ? item.code : '' }}" placeholder="Automatikusan generálódik" readonly>
+    </div>
+    -->
+    <div class="mb-3">
+        <div class="row">
+                <div class="col-12">
+                    <label class="form-label">Partner</label>
+                </div>
+                <div class="col-8">
+                    <div class="machine-rental-combobox" data-machine-rental-combobox="partner">
+                        <div class="input-group">
+                            <input
+                                type="text"
+                                name="partner_search"
+                                class="form-control"
+                                data-name="partner_search"
+                                value="{{ item and item.partner ? item.partner.name : '' }}"
+                                placeholder="Partner vagy cég keresése..."
+                                autocomplete="off"
+                                role="combobox"
+                                aria-autocomplete="list"
+                                aria-controls="machine_rental_partner_results"
+                                aria-expanded="false"
+                            >
+                            <button type="button" class="btn btn-outline-secondary" data-name="combobox-clear" aria-label="Partner törlése">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" name="partner_id" data-name="partner_id" value="{{ item and item.partner ? item.partner.id : '' }}">
+                        <div id="machine_rental_partner_results" class="machine-rental-combobox-results list-group shadow-sm d-none" data-name="combobox-results" role="listbox"></div>
+                    </div>
+                </div>
+                <div class="col-4 text-end">
+                    <div class="btn btn-default btn-sm" data-name="btn_partner_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Gép</label>
+        <div class="machine-rental-combobox" data-machine-rental-combobox="machine">
+            <div class="input-group">
+                <input
+                    type="text"
+                    name="machine_search"
+                    class="form-control"
+                    data-name="machine_search"
+                    value="{{ item and item.machine ? item.machine.title : '' }}"
+                    placeholder="Gép keresése név vagy kód alapján..."
+                    autocomplete="off"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="machine_rental_machine_results"
+                    aria-expanded="false"
+                >
+                <button type="button" class="btn btn-outline-secondary" data-name="combobox-clear" aria-label="Gép törlése">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <input type="hidden" name="machine_id" data-name="machine_id" value="{{ item and item.machine ? item.machine.id : '' }}">
+            <div id="machine_rental_machine_results" class="machine-rental-combobox-results list-group shadow-sm d-none" data-name="combobox-results" role="listbox"></div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 col-12">
+            <div class="mb-3">
+                <label class="form-label">Bérlés kezdete</label>
+                <input type="datetime-local" class="form-control" name="datetime_rental_start" data-name="datetime_rental_start" value="{{ item and item.datetimeRentalStart ? item.datetimeRentalStart|date('Y-m-d\\TH:i') : "now"|date("Y-m-d H:i:s") }}">
+            </div>
+        </div>
+        <div class="col-lg-6 col-12">
+            <div class="mb-3">
+                <label class="form-label">Bérlés vége</label>
+                <input type="datetime-local" class="form-control" name="datetime_rental_end" data-name="datetime_rental_end" value="{{ item and item.datetimeRentalEnd ? item.datetimeRentalEnd|date('Y-m-d\\TH:i') : '' }}">
+            </div>
+        </div>
+    </div>
+
+    {% if item %}
+    <div class="mb-3">
+        <label class="form-label">Állapot</label>
+        <select class="form-control" name="status" data-name="status">
+            <option value="1" {{ item is null or item.status == '1' ? 'selected' }}>Nyitott</option>
+            <option value="0" {{ item and item.status == '0' ? 'selected' }}>Lezárt</option>
+        </select>
+    </div>
+    {% endif %}
+
+    {% if item %}
+    <div class="row">
+        <div class="col-12">
+            <div class="btn btn-default text-warning btn-sm" data-name="btn_inner_show_worksheet" data-rental_id="{{ item ? item.id : '' }}" data-code_worksheet_type="MACHINE_HANDOVER"><i class="bi bi-arrow-left-right" title="Átadási munkalap"></i> Átadási munkalap </div>
+            <div class="btn btn-default text-warning btn-sm" data-name="btn_inner_show_worksheet" data-rental_id="{{ item ? item.id : '' }}" data-code_worksheet_type="MACHINE_RETURN"><i class="bi bi-arrow-return-left"title="Visszavételi munkalap"></i> Visszavételi munkalap</div>
+        </div>
+    </div>
+    {% endif %}
+
+</form>
+
+
+<script>
+    (() => {
+
+
+    function initMachineRentalCombobox(options) {
+        const root = $("[data-machine-rental-combobox='" + options.type + "']");
+        if (!root.length) {
+            return null;
+        }
+
+        const searchInput = root.find("[data-name='" + options.searchName + "']");
+        const idInput = root.find("[data-name='" + options.idName + "']");
+        const results = root.find("[data-name='combobox-results']");
+        const clearButton = root.find("[data-name='combobox-clear']");
+        const formData = new FormData();
+        const eventNamespace = '.machineRental' + options.type.charAt(0).toUpperCase() + options.type.slice(1) + 'Combobox';
+        const trimValue = value => String(value ?? '').trim();
+        let selectedLabel = trimValue(searchInput.val());
+        let searchTimer = null;
+
+        function openResults() {
+            results.removeClass('d-none');
+            searchInput.attr('aria-expanded', 'true');
+        }
+
+        function closeResults() {
+            results.addClass('d-none');
+            searchInput.attr('aria-expanded', 'false');
+        }
+
+        function showMessage(message) {
+            results
+                .empty()
+                .append($('<div>', {
+                    class: 'px-3 py-2 text-muted text-sm',
+                    text: message
+                }));
+            openResults();
+        }
+
+        const previousRequest = ajaxquery?.[options.requestName]?.ajax;
+        if (previousRequest && previousRequest.readyState !== 4) {
+            previousRequest.abort();
+        }
+
+        const request = new Ajax({
+            url: options.url,
+            name: options.requestName,
+            type: 'POST',
+            dataType: 'json',
+            formData: formData,
+            function_prepare: function () {
+                showMessage('Keresés...');
+            },
+            function_success: function (result) {
+                if (!result.success) {
+                    showMessage(result.data?.error || 'A találatok nem tölthetők be.');
+                    return;
+                }
+
+                results.html(result.content || '');
+                if (!trimValue(results.html())) {
+                    showMessage('Nincs találat.');
+                    return;
+                }
+
+                openResults();
+            },
+            function_error: function (xhr, status) {
+                if (status === 'abort') {
+                    return;
+                }
+
+                showMessage(xhr.responseJSON?.data?.error || 'A keresés nem sikerült.');
+            }
+        });
+
+        function sendSearch() {
+            if (request.ajax && request.ajax.readyState !== 4) {
+                request.ajax.abort();
+            }
+
+            const filters = typeof options.getFilters === 'function'
+                ? (options.getFilters() || {})
+                : {};
+            filters.search = trimValue(searchInput.val());
+            formData.set('filters', JSON.stringify(filters));
+            request.send();
+        }
+
+        function queueSearch(delay) {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(sendSearch, delay ?? 250);
+        }
+
+        function setValue(id, label) {
+            window.clearTimeout(searchTimer);
+            if (request.ajax && request.ajax.readyState !== 4) {
+                request.ajax.abort();
+            }
+
+            const normalizedId = String(id ?? '');
+            const normalizedLabel = String(label ?? '');
+            idInput.val(normalizedId).trigger('change');
+            searchInput.val(normalizedLabel);
+            selectedLabel = normalizedLabel;
+            closeResults();
+        }
+
+        function selectOption(option) {
+            setValue(
+                option.attr('data-select-id'),
+                option.attr('data-select-label')
+            );
+        }
+
+        searchInput
+            .off(eventNamespace)
+            .on('focus' + eventNamespace, function () {
+                queueSearch(0);
+            })
+            .on('keyup' + eventNamespace, function (event) {
+                if (event.key === 'Escape') {
+                    closeResults();
+                    return;
+                }
+
+                if (event.key === 'Enter') {
+                    const firstOption = results.find('[data-select-id]').first();
+                    if (firstOption.length) {
+                        selectOption(firstOption);
+                    }
+                    return;
+                }
+
+                if (['ArrowDown', 'ArrowUp', 'Tab', 'Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) {
+                    return;
+                }
+
+                if (trimValue(searchInput.val()) !== selectedLabel && idInput.val() !== '') {
+                    idInput.val('').trigger('change');
+                }
+
+                queueSearch(250);
+            })
+            .on('keydown' + eventNamespace, function (event) {
+                if (event.key !== 'ArrowDown') {
+                    return;
+                }
+
+                const firstOption = results.find('[data-select-id]').first();
+                if (firstOption.length) {
+                    event.preventDefault();
+                    firstOption.trigger('focus');
+                }
+            });
+
+        results
+            .off(eventNamespace)
+            .on('mousedown' + eventNamespace, '[data-select-id]', function (event) {
+                event.preventDefault();
+                selectOption($(this));
+            })
+            .on('keydown' + eventNamespace, '[data-select-id]', function (event) {
+                const optionsList = results.find('[data-select-id]');
+                const currentIndex = optionsList.index(this);
+
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    selectOption($(this));
+                } else if (event.key === 'ArrowDown' && currentIndex < optionsList.length - 1) {
+                    event.preventDefault();
+                    optionsList.eq(currentIndex + 1).trigger('focus');
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    if (currentIndex > 0) {
+                        optionsList.eq(currentIndex - 1).trigger('focus');
+                    } else {
+                        searchInput.trigger('focus');
+                    }
+                } else if (event.key === 'Escape') {
+                    closeResults();
+                    searchInput.trigger('focus');
+                }
+            });
+
+        clearButton
+            .off(eventNamespace)
+            .on('click' + eventNamespace, function () {
+                setValue('', '');
+                searchInput.trigger('focus');
+                queueSearch(0);
+            });
+
+        $(document)
+            .off('mousedown' + eventNamespace)
+            .on('mousedown' + eventNamespace, function (event) {
+                if (!$(event.target).closest(root).length) {
+                    closeResults();
+                }
+            });
+
+        return {
+            setValue: setValue,
+            search: sendSearch,
+            close: closeResults
+        };
+    }
+
+    const partnerCombobox = initMachineRentalCombobox({
+        type: 'partner',
+        searchName: 'partner_search',
+        idName: 'partner_id',
+        requestName: 'list_machine_rental_partner_select_list',
+        url: '{{ path('list_machine_rental_partner_select_list') }}'
+    });
+
+    const machineCombobox = initMachineRentalCombobox({
+        type: 'machine',
+        searchName: 'machine_search',
+        idName: 'machine_id',
+        requestName: 'list_machine_rental_machine_select_list',
+        url: '{{ path('list_machine_rental_machine_select_list') }}',
+        getFilters: function () {
+            return {
+                rental_id: $("form[data-name='machine_rental'] [data-name='id']").val() || null
+            };
+        }
+    });
+
+    $("[data-name='btn_inner_show_worksheet']").unbind("click").click(function () {
+            var formData = new FormData();
+            formData.append("rental_id", $(this).attr("data-rental_id"));
+            formData.append("code_worksheet_type", $(this).attr("data-code_worksheet_type"));
+
+            new Ajax({
+                url: '{{ path('index_worksheets_add') }}',
+                name: 'index_worksheets_add',
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                target: null,
+                function_success: function (result) {
+                    if (result.success) {
+                        //this.target.html(result.content);
+                        $("#worksheet_add_content").remove();
+                        $("#worksheet_add_content").css("display", "none");
+                        $("<div>", { id: "worksheet_add_content", html: result.content }).appendTo("body");
+                    }
+                },
+                function_error: function (xhr) {
+                    alertify.error(xhr.responseJSON?.data?.error || 'Hiba a betöltéskor.');
+                }
+
+            }).send();
+
+    });
+
+    $("[data-name='btn_partner_add']").unbind("click").click(function () {
+
+
+        var formData = new FormData();
+        formData.set('filters', '{}');
+
+        new Ajax({
+            url: '{{ path('index_partners_add') }}',
+            name: 'index_partners_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: formData,
+            target: null,
+            function_success: function (result) {
+                html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div> </div></div></div>`;
+
+                alertify.popup("Partner hozzádása", result.content).
+                set("movable",false).
+                set("resizable",false).
+                set("closable",false).
+                set('closableByEscape', false).
+                    resizeTo("70%", "80%").
+                    //maximize().
+                set({transition:'zoom'}).
+                setFooter(html_footer);
+
+                $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function(){
+                    alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
+                        alertify.popup().close();
+                    },()=>{});
+                });
+
+                $(`div[data-box="${this.name}"] .btn[data-name='alertify-save']`).unbind("click").click(function(){
+                    alertify.confirm("Megerősítés","Mented az adatokat?", ()=>{
+                        const form = $("form[data-name='partner']")[0];
+                        var formData = new FormData(form);
+
+                        new Ajax({
+                            url: '{{ path('save_partners') }}',
+                            name: 'save_partners',
+                            type: 'POST',
+                            dataType: 'json',
+                            formData: formData,
+                            target: $("[data-name='index_settings_content']"),
+                            function_success: function (result) {
+                                if(result.success){
+                                    alertify.popup().close();
+                                    alertify.success("Sikeres mentés");
+
+                                    partnerCombobox?.setValue(
+                                        result.data?.id,
+                                        String(result.data?.post?.name ?? '').trim()
+                                    );
+                                }
+                            },
+                            function_error: function (xhr) {
+                                const message = xhr.responseText || 'Nem sikerült menteni az adatot.';
+                                alertify.error(message);
+                            }
+                        }).send();
+                    },()=>{});
+                });
+            },
+            function_error: function (xhr) {
+                const message = xhr.responseText || 'Nem sikerült betölteni az oldalt.';
+                alertify.error(message);
+            }
+        }).send();
+    });
+
+    })();
+</script>

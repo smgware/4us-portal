@@ -1,0 +1,217 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+    {% set profileUser = user|default(data.user|default(app.user)) %}
+    {% set fullName = profileUser ? profileUser.name|default(profileUser.userIdentifier) : 'Felhasználó' %}
+    {% set nameParts = fullName|trim|split(' ') %}
+    {% if nameParts|length >= 2 %}
+        {% set initials = (nameParts[0]|slice(0, 1) ~ nameParts[1]|slice(0, 1))|upper %}
+    {% else %}
+        {% set initials = fullName|slice(0, 2)|upper %}
+    {% endif %}
+
+    <div class="page-title"><i class="bi bi-person"></i> Profil</div>
+
+    <div class="card panel-card p-3">
+        <div class="row g-3 align-items-start">
+            <div class="col-md-3 d-flex justify-content-center">
+                <div class="avatar" style="width:160px;height:160px;font-size:42px;">
+                    {% if profileUser and profileUser.image %}
+                        <img src="{{ profileUser.image }}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                    {% else %}
+                        {{ initials }}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-9">
+                <table class="table-default w-100">
+                    <tbody>
+                        <tr>
+                            <td class="p-2" style="width:220px;">Név</td>
+                            <td class="p-2 text-start">{{ profileUser ? profileUser.name : '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="p-2">Email</td>
+                            <td class="p-2 text-start">{{ profileUser ? profileUser.email : '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="p-2">Telefon</td>
+                            <td class="p-2 text-start">{{ profileUser and profileUser.phone ? profileUser.phone : '-' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="p-2">Jogosultság</td>
+                            <td class="p-2 text-start">{{ profileUser and profileUser.permission ? profileUser.permission.title : '-' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="mt-3">
+                    <div class="btn btn-default btn-sm" data-name="btn_profile_edit"><i class="bi bi-pencil-square"></i> Adatok szerkesztése</div>
+                    <div class="btn btn-default btn-sm" data-name="btn_profile_password"><i class="bi bi-key"></i> Jelszó módosítása</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <template id="profileEditTemplate">
+        <form data-name="profile_form">
+            <input type="hidden" name="image" data-name="image" value="{{ profileUser and profileUser.image ? profileUser.image : '' }}">
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="mb-3">
+                        <label class="form-label">Név</label>
+                        <input type="text" class="form-control" name="name" data-name="name" value="{{ profileUser ? profileUser.name : '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" data-name="email" value="{{ profileUser ? profileUser.email : '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefon</label>
+                        <input type="text" class="form-control" name="phone" data-name="phone" value="{{ profileUser and profileUser.phone ? profileUser.phone : '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Profilkép</label>
+                        <input type="file" class="form-control" accept="image/*" data-name="image_file">
+                    </div>
+                    <div class="card panel-card p-2">
+                        {% if profileUser and profileUser.image %}
+                            <img src="{{ profileUser.image }}" data-name="image_preview" alt="" style="width:100%;aspect-ratio:1/1;object-fit:cover;">
+                        {% else %}
+                            <img src="" data-name="image_preview" alt="" style="display:none;width:100%;aspect-ratio:1/1;object-fit:cover;">
+                            <div class="text-muted" data-name="image_empty">Nincs kiválasztva.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mt-3">
+                <div class="btn btn-default btn-sm btn-success" data-name="profile_save">Mentés</div>
+            </div>
+        </form>
+    </template>
+
+    <script>
+        function resizeProfileImageToBase64(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const image = new Image();
+                image.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    const size = 500;
+                    canvas.width = size;
+                    canvas.height = size;
+
+                    const context = canvas.getContext('2d');
+                    context.fillStyle = '#ffffff';
+                    context.fillRect(0, 0, size, size);
+
+                    const scale = Math.max(size / image.width, size / image.height);
+                    const width = image.width * scale;
+                    const height = image.height * scale;
+                    const x = (size - width) / 2;
+                    const y = (size - height) / 2;
+
+                    context.drawImage(image, x, y, width, height);
+                    callback(canvas.toDataURL('image/jpeg', 0.88));
+                };
+                image.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        $("[data-name='btn_profile_edit']").unbind("click").click(function () {
+            alertify.popup("Adatok szerkesztése", $("#profileEditTemplate").html())
+                .set("movable", false)
+                .set("resizable", false)
+                .set({transition:'zoom'});
+
+            $("form[data-name='profile_form'] [data-name='image_file']").unbind("change").change(function () {
+                const file = this.files && this.files[0] ? this.files[0] : null;
+                if (!file) {
+                    return;
+                }
+
+                resizeProfileImageToBase64(file, function (base64) {
+                    $("form[data-name='profile_form'] [data-name='image']").val(base64);
+                    $("form[data-name='profile_form'] [data-name='image_preview']").attr("src", base64).show();
+                    $("form[data-name='profile_form'] [data-name='image_empty']").hide();
+                });
+            });
+
+            $("form[data-name='profile_form'] [data-name='profile_save']").unbind("click").click(function () {
+                const form = $("form[data-name='profile_form']")[0];
+                const formData = new FormData(form);
+
+                formData.set('name', $("form[data-name='profile_form'] [data-name='name']").val());
+                formData.set('email', $("form[data-name='profile_form'] [data-name='email']").val());
+                formData.set('phone', $("form[data-name='profile_form'] [data-name='phone']").val());
+                formData.set('image', $("form[data-name='profile_form'] [data-name='image']").val());
+
+                new Ajax({
+                    url: '{{ path('profile_save') }}',
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    function_success: function (result) {
+                        if (result.success) {
+                            alertify.popup().close();
+                            alertify.success("Sikeres mentés");
+                            window.location.reload();
+                        }
+                    },
+                    function_error: function (xhr) {
+                        alertify.error(xhr.responseJSON?.data?.error || 'Adatmentés hiba');
+                    }
+                }).send();
+            });
+        });
+
+        $("[data-name='btn_profile_password']").unbind("click").click(function () {
+            const content = `
+                <div data-name="profile_password_popup">
+                    <div class="mb-3">
+                        <label class="form-label">Új jelszó</label>
+                        <input type="password" class="form-control" data-name="password" autocomplete="new-password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Új jelszó ismét</label>
+                        <input type="password" class="form-control" data-name="password_again" autocomplete="new-password">
+                    </div>
+                    <div class="text-end">
+                        <div class="btn btn-default btn-sm btn-success" data-name="save_password">Mentés</div>
+                    </div>
+                </div>
+            `;
+
+            alertify.popup("Jelszó módosítása", content)
+                .set("movable", false)
+                .set("resizable", false)
+                .set({transition:'zoom'});
+
+            $("[data-name='profile_password_popup'] [data-name='save_password']").unbind("click").click(function () {
+                const formData = new FormData();
+                formData.set('password', $("[data-name='profile_password_popup'] [data-name='password']").val());
+                formData.set('password_again', $("[data-name='profile_password_popup'] [data-name='password_again']").val());
+
+                new Ajax({
+                    url: '{{ path('profile_change_password') }}',
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    function_success: function (result) {
+                        if (result.success) {
+                            alertify.popup().close();
+                            alertify.success("Sikeres jelszó módosítás");
+                        }
+                    },
+                    function_error: function (xhr) {
+                        alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült módosítani a jelszót.');
+                    }
+                }).send();
+            });
+        });
+    </script>
+{% endblock %}

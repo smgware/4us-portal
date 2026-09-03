@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+{% block body %}
+    <div class="page-title"><i class="bi bi-file-ruled-fill"></i> Árajánlatok</div>
+
+    <div class="container-fluid p-0">
+        <div class="row">
+            <div class="col-12">
+                <div class="btn btn-default btn-sm mb-2" data-name="btn_main_quotes_incoming_quotes"><i class="bi bi-inbox-fill"></i> Daru összehasonlítás - ajánlatkérések </div>
+                <div class="btn btn-default btn-sm mb-2" data-name="btn_main_quotes_quote_maker"><i class="bi bi-person-lock"></i> Árajánlat készítés</div>
+            </div>
+        </div>
+
+        <div class="row mt-2">
+            <div class="col-12" data-name="index_quotes_content"></div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        function loadSettingsSection(buttonName, route, ajaxName) {
+            $(`[data-name='${buttonName}']`).unbind("click").click(function () {
+                let formData = new FormData();
+                formData.set('filters', '{}');
+
+                new Ajax({
+                    url: route,
+                    name: ajaxName,
+                    type: 'GET',
+                    dataType: 'json',
+                    formData: formData,
+                    target: $("[data-name='index_quotes_content']"),
+                    function_success: function (result) {
+                        this.target.html(result.content);
+                    },
+                    function_error: function (xhr) {
+                        const message = xhr.responseText || 'Nem sikerült betölteni az oldalt.';
+                        alertify.error(message);
+                    }
+                }).send();
+            });
+        }
+
+        loadSettingsSection('btn_main_quotes_incoming_quotes', '{{ path('index_incoming_quotes') }}', 'index_incoming_quotes');
+        //loadSettingsSection('btn_main_quotes_quote_maker', '{{ path('index_quote_maker') }}', 'index_quote_maker');
+
+        $(`[data-name='btn_main_quotes_quote_maker']`).unbind("click").click(function () {
+            alertify.alert("Infó","<h1>😞 Sajnáljuk!</h1><br>A funkció jelenleg még nem elérhető!");
+        });
+    </script>
+{% endblock %}

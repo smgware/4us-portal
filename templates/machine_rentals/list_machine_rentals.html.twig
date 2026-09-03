@@ -1,0 +1,119 @@
+<div class="card panel-card w-100 overflow-auto p-2">
+    <div class="table-responsive">
+        <table class="table-default w-100">
+            <thead>
+                <tr class="pt-2 pb-2">
+                    <th class="p-2" style="width:150px">Kód</th>
+                    <th class="p-2" style="width:150px">Partner</th>
+                    <th class="p-2" style="width:150px">Gép</th>
+                    <th class="p-2">Gépkód</th>
+                    <th class="p-2">Bérlés kezdése (fix) </th>
+                    <th class="p-2">Tervezett vége</th>
+                    <th class="p-2">Visszavétel dátuma</th>
+                    <th class="p-2">Állapot</th>
+                    <th class="p-2">#</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                    <tr data-name="list_item" data-key="{{ record.id }}"  data-status="{{ record.status == "0" ? 'open' : 'closed' }}">
+                        <td>{{ record.code|default('-') }}</td>
+                        <td>{{ record.partner_name|default('-') }}</td>
+                        <td>{{ record.machine_title|default('-') }}</td>
+                        <td>{{ record.machine_code|default('-') }}</td>
+                        <td>
+                            {% if record.datetime_rental_start %}
+                                {{ record.datetime_rental_start|date('Y-m-d H:i') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.datetime_rental_end %}
+                                {{ record.datetime_rental_end|date('Y-m-d H:i') }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td> { lezárt visszavételi munkalap módosítási dátuma ha nincs lezárva akkor: -  }</td>
+                        <td>
+                            {% if record.status == "0" %}
+                                <div class="btn btn-sm btn-success">nyitott</div>
+                            {% else %}
+                                <div class="btn btn-sm btn-danger">lezárt</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn btn-default text-warning btn-sm" data-name="list_item_btn" data-mode="show_worksheet" data-code_worksheet_type="MACHINE_HANDOVER" data-worksheet_id="{{ record.handover_worksheet_id|default('') }}"><i class="bi bi-arrow-left-right" title="Átadási munkalap"></i></i></div>
+                            <div class="btn btn-default text-warning btn-sm" data-name="list_item_btn" data-mode="show_worksheet" data-code_worksheet_type="MACHINE_RETURN" data-worksheet_id="{{ record.return_worksheet_id|default('') }}"><i class="bi bi-arrow-return-left"title="Visszavételi munkalap"></i></i></div>
+                            <div class="btn btn-default text-warning btn-sm" data-name="list_item_btn" data-mode="edit"><i class="bi bi-pencil-square"></i></div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">Nincs megjeleníthető adat.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include 'partials/_pagination.html.twig' with {
+        currentPage: page,
+        totalPages: totalPages,
+        routeName: 'list_machine_rentals',
+        queryParams: app.request.query.all
+    } %}
+</div>
+
+
+<script>
+    (function () {
+        $("[data-name='list_item_btn']").unbind("click").click(function () {
+            var mode = $(this).attr("data-mode");
+            var key = $(this).closest("[data-name='list_item']").attr("data-key");
+
+
+            if (mode === "edit") {
+                ajaxquery['index_machine_rentals_add'].formData.set("id", key);
+                ajaxquery['index_machine_rentals_add'].send();
+            }
+
+
+            if (mode === "show_worksheet") {
+
+                var formData = new FormData();
+                var worksheetId = ($(this).attr("data-worksheet_id") || '').trim();
+                if (worksheetId !== '') {
+                    formData.append("worksheet_id", worksheetId);
+                } else {
+                    formData.append("rental_id", key);
+                    formData.append("code_worksheet_type", $(this).attr("data-code_worksheet_type") || '');
+                }
+                new Ajax({
+                    url: '{{ path('index_worksheets_add') }}',
+                    name: 'index_worksheets_add',
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    target: null,
+                    function_success: function (result) {
+                        if (result.success) {
+                            //this.target.html(result.content);
+                            $("#worksheet_add_content").remove();
+                            $("#worksheet_add_content").css("display", "none");
+                            $("<div>", { id: "worksheet_add_content", html: result.content }).appendTo("body");
+                        }
+                    },
+                    function_error: function (xhr) {
+                        alertify.error(xhr.responseJSON?.data?.error || 'Hiba a betöltéskor.');
+                    }
+
+                }).send();
+
+            }
+        });
+
+    })();
+
+</script>

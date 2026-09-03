@@ -1,0 +1,153 @@
+<div class="row g-2 mt-2">
+
+    <div class="col-xl-4 col-md-6 col-12">
+        <div class="card panel-card report-kpi p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="label">Hibabejelentések</div>
+                    <div class="value mt-2">{{ report.kpi.errorReports }}</div>
+                </div>
+                <div class="report-icon"><i class="bi bi-tools"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 col-12">
+        <div class="card panel-card report-kpi p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="label">Érintett gépek</div>
+                    <div class="value mt-2">{{ report.kpi.affectedMachines }}</div>
+                </div>
+                <div class="report-icon"><i class="bi bi-cpu"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 col-12">
+        <div class="card panel-card report-kpi p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="label">Átlagos átfutás</div>
+                    <div class="value mt-2">{{ report.kpi.avgTurnaroundHours|number_format(1, ',', ' ') }} óra</div>
+                </div>
+                <div class="report-icon"><i class="bi bi-stopwatch"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+    <div class="col-xl-3 col-md-6 col-12">
+        <div class="card panel-card report-kpi p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="label">Ismétlődő hibák</div>
+                    <div class="value mt-2">{{ report.kpi.repeatPercent|number_format(1, ',', ' ') }}%</div>
+                </div>
+                <div class="report-icon"><i class="bi bi-arrow-repeat"></i></div>
+            </div>
+        </div>
+    </div>
+    -->
+</div>
+
+<div class="row g-2 mt-1">
+    <div class="col-xl-7 col-12">
+        <div class="card panel-card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0"><i class="bi bi-activity"></i> Meghibásodási gyakoriság</h5>
+                <span class="report-chip"><i class="bi bi-calendar3"></i> havi bontás</span>
+            </div>
+            <div class="report-trend" style="grid-template-columns: repeat({{ report.trend|length > 0 ? report.trend|length : 1 }}, minmax(20px, 1fr));">
+                {% for item in report.trend %}
+                    <div style="height:{{ item.height }}%; --report-chart-index: {{ loop.index0 }}" title="{{ item.label }}: {{ item.count }} db"></div>
+                {% else %}
+                    <div style="height:8%"></div>
+                {% endfor %}
+            </div>
+            <div class="d-flex justify-content-between report-muted mt-2">
+                {% for item in report.trend %}
+                    <span>{{ item.label }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-5 col-12">
+        <div class="card panel-card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0"><i class="bi bi-exclamation-triangle"></i> Leggyakoribb hibás géptípusok</h5>
+                <span class="report-chip">Top 5</span>
+            </div>
+
+            {% for item in report.topCategories %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>{{ item.title }}</span>
+                        <span class="report-muted">{{ item.count }} db</span>
+                    </div>
+                    <div class="report-bar {{ loop.first ? 'danger' : (loop.index == 2 ? 'warning' : '') }}">
+                        <span style="width: {{ item.percent }}%; --report-chart-index: {{ loop.index0 }}"></span>
+                    </div>
+                </div>
+            {% else %}
+                <div class="report-muted">Nincs adat a kiválasztott időszakban.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-2 mt-1">
+    <div class="col-xl-6 col-12">
+        <div class="card panel-card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0"><i class="bi bi-cpu"></i> Legtöbbször meghibásodott gépek</h5>
+                <span class="report-chip">gép szint</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table-default w-100">
+                    <thead>
+                    <tr>
+                        <th class="p-2">Gép</th>
+                        <th class="p-2">Géptípus</th>
+                        <th class="p-2">Hibák</th>
+                        <th class="p-2">Utolsó hiba</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in report.topMachines %}
+                        <tr>
+                            <td>{{ item.machine_title }}{% if item.machine_code != '-' %} ({{ item.machine_code }}){% endif %}</td>
+                            <td>{{ item.category_title }}</td>
+                            <td>{{ item.error_count }}</td>
+                            <td>{{ item.last_error ? item.last_error|date('Y-m-d H:i') : '-' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-3">Nincs adat.</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6 col-12">
+        <div class="card panel-card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="m-0"><i class="bi bi-stopwatch"></i> Átfutási idők</h5>
+                <span class="report-chip">lezárt hibajegyek</span>
+            </div>
+            {% for item in report.timeline %}
+                <div class="report-timeline mb-3">
+                    <div>{{ item.label }}</div>
+                    <div class="report-bar"><span style="width: {{ item.percent }}%; --report-chart-index: {{ loop.index0 }}"></span></div>
+                    <div class="text-end report-muted">{{ item.count }} db</div>
+                </div>
+            {% else %}
+                <div class="report-muted">Nincs adat.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

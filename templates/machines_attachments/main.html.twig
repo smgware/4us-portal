@@ -1,0 +1,225 @@
+<div class="page-title"><i class="bi bi-collection"></i> Csatolmányok</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5">
+            <input type="text" class="form-control" placeholder="Keresés..." data-name="searchMachineAttachmentsList">
+        </div>
+        <div class="col-7 text-end">
+            <button type="button" class="btn btn-default btn-sm" data-name="btnAddMachineAttachment">
+                <i class="bi bi-plus-circle-fill"></i> Új hozzáadása
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_machines_attachments_list"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const machineId = '{{ machine_id }}';
+        const listTarget = $("[data-key='list_machines_attachments_list']");
+        const listFormData = new FormData();
+        let searchTimer = null;
+
+        listFormData.set('machine_id', machineId);
+        listFormData.set('filters', JSON.stringify({search: ''}));
+
+        const listRequest = new Ajax({
+            url: '{{ path('list_machines_attachments_list') }}',
+            name: 'list_machines_attachments_list',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: listTarget,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni a csatolmányokat.');
+                    return;
+                }
+
+                this.target.html(result.content);
+                bindListActions();
+            },
+            function_error: function (xhr) {
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni a csatolmányokat.'));
+            }
+        });
+
+        function reloadMachineAttachmentsList(page = 1) {
+            listRequest.url = '{{ path('list_machines_attachments_list') }}';
+            listFormData.set('machine_id', machineId);
+            listFormData.set('page', String(page));
+            listFormData.set('filters', JSON.stringify({
+                search: $(`[data-name='searchMachineAttachmentsList']`).val() || ''
+            }));
+            listRequest.send();
+        }
+
+        function bindListActions() {
+            listTarget.find(".pagination__item[href]")
+                .off('click.machineAttachments')
+                .on('click.machineAttachments', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const pageUrl = new URL(this.href, window.location.origin);
+                    reloadMachineAttachmentsList(pageUrl.searchParams.get('page') || 1);
+                });
+
+            listTarget.find("[data-name='btnDownloadMachineAttachment']")
+                .off('click.machineAttachments')
+                .on('click.machineAttachments', function () {
+                    window.open(String($(this).data('url') || ''), '_blank');
+                });
+
+            listTarget.find("[data-name='btnDeleteMachineAttachment']")
+                .off('click.machineAttachments')
+                .on('click.machineAttachments', function () {
+                    const attachmentId = String($(this).data('id') || '');
+
+                    alertify.confirm('Megerősítés', 'Törlöd a csatolmányt?', function () {
+                        const deleteFormData = new FormData();
+                        deleteFormData.set('id', attachmentId);
+                        deleteFormData.set('machine_id', machineId);
+                        deleteFormData.set('function', 'delete');
+
+                        new Ajax({
+                            url: '{{ path('save_machine_attachments') }}',
+                            name: 'delete_machine_attachment_' + attachmentId,
+                            type: 'POST',
+                            dataType: 'json',
+                            formData: deleteFormData,
+                            target: null,
+                            function_success: function (result) {
+                                if (!result.success) {
+                                    alertify.error(result.data?.error || 'Nem sikerült törölni a csatolmányt.');
+                                    return;
+                                }
+
+                                alertify.success('A csatolmány törölve.');
+                                reloadMachineAttachmentsList();
+                            },
+                            function_error: function (xhr) {
+                                alertify.error(errorMessage(xhr, 'Nem sikerült törölni a csatolmányt.'));
+                            }
+                        }).send();
+                    }, function () {});
+                });
+        }
+
+        function openAttachmentDialog(content) {
+            const parsedDocument = new DOMParser().parseFromString(content, 'text/html');
+            const scripts = Array.from(parsedDocument.body.querySelectorAll('script'));
+            scripts.forEach(script => script.remove());
+
+            const footer = `
+                <div class="container-fluid p-0" data-box="machine_attachment_add">
+                    <div class="row">
+                        <div class="col-12 text-end">
+                            <button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Feltöltés</button>
+                            <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            alertify.add('Csatolmányok kiválasztása', parsedDocument.body.innerHTML)
+                .set('movable', false)
+                .set('resizable', false)
+                .set('closable', false)
+                .set('closableByEscape', false)
+                .maximize()
+                .set({transition: 'zoom'})
+                .setFooter(footer);
+
+            scripts.forEach(script => $.globalEval(script.textContent || ''));
+            if (typeof window.initializeMachineAttachmentUploader === 'function') {
+                window.initializeMachineAttachmentUploader();
+            }
+
+            const dialogFooter = $("[data-box='machine_attachment_add']");
+            dialogFooter.find("[data-name='alertify-cancel']")
+                .off('click.machineAttachmentUpload')
+                .on('click.machineAttachmentUpload', function () {
+                    alertify.confirm('Megerősítés', 'Bezárod az ablakot?', function () {
+                        window.cleanupMachineAttachmentPreviews?.();
+                        alertify.add().close();
+                    }, function () {});
+                });
+
+            dialogFooter.find("[data-name='alertify-save']")
+                .off('click.machineAttachmentUpload')
+                .on('click.machineAttachmentUpload', function () {
+                    const button = $(this);
+                    const selectedFiles = Array.isArray(window.selectedFiles) ? window.selectedFiles : [];
+                    const pendingFiles = selectedFiles.filter(item => !item.uploaded);
+
+                    if (pendingFiles.length === 0) {
+                        alertify.warning('Válassz legalább egy feltöltendő fájlt.');
+                        return;
+                    }
+
+                    alertify.confirm('Megerősítés', 'Feltöltöd a csatolmányokat?', function () {
+                        if (typeof window.uploadAttachmentsFunction !== 'function') {
+                            alertify.error('A feltöltés nem indítható el.');
+                            return;
+                        }
+
+                        button.prop('disabled', true);
+                        Promise.resolve(window.uploadAttachmentsFunction())
+                            .then(function () {
+                                alertify.success('A csatolmányok feltöltve.');
+                                window.cleanupMachineAttachmentPreviews?.();
+                                alertify.add().close();
+                                reloadMachineAttachmentsList();
+                            })
+                            .catch(function (error) {
+                                alertify.error(error?.message || 'Nem sikerült feltölteni a csatolmányokat.');
+                                button.prop('disabled', false);
+                            });
+                    }, function () {});
+                });
+        }
+
+        $(`[data-name='btnAddMachineAttachment']`)
+            .off('click.machineAttachments')
+            .on('click.machineAttachments', function () {
+                const formData = new FormData();
+                formData.set('machine_id', machineId);
+
+                new Ajax({
+                    url: '{{ path('index_machines_attachment_add') }}',
+                    name: 'index_machines_attachment_add',
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    target: null,
+                    function_success: function (result) {
+                        if (!result.success) {
+                            alertify.error(result.data?.error || 'Nem sikerült megnyitni a feltöltőt.');
+                            return;
+                        }
+
+                        openAttachmentDialog(result.content);
+                    },
+                    function_error: function (xhr) {
+                        alertify.error(errorMessage(xhr, 'Nem sikerült megnyitni a feltöltőt.'));
+                    }
+                }).send();
+            });
+
+        $(`[data-name='searchMachineAttachmentsList']`)
+            .off('input.machineAttachments')
+            .on('input.machineAttachments', function () {
+                window.clearTimeout(searchTimer);
+                searchTimer = window.setTimeout(() => reloadMachineAttachmentsList(), 300);
+            });
+
+        window.reloadMachineAttachmentsList = reloadMachineAttachmentsList;
+        reloadMachineAttachmentsList();
+    })();
+</script>

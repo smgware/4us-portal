@@ -1,0 +1,230 @@
+<div class="page-title"><i class="bi bi-people-fill"></i> Partnerek</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5"><input type="text" class="form-control" placeholder="Keresés..." data-name="search_partners_list"/></div>
+        <div class="col-7">
+            <div class="row">
+                <div class="col-12 text-end">
+                    <div class="btn btn-default btn-sm" data-name="btn_index_partners_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_partners"></div>
+    </div>
+</div>
+
+<script>
+    var formData = new FormData();
+    formData.set('filters', '{}');
+
+    new Ajax({
+        url: '{{ path('list_partners') }}',
+        name: 'list_partners',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        target: $("[data-key='list_partners']"),
+        function_success: function (result) {
+            if(result.success){
+                this.target.html(result.content);
+
+                this.target.find("[data-name='list_item_btn']").unbind("click").click(function(){
+                    mode = $(this).attr("data-mode");
+                    key = $(this).closest("[data-name='list_item']").attr("data-key");
+
+                    localStorage.setItem("partner_name", $(this).closest("[data-name='list_item']").find("[data-name='partner_name']").html());
+
+                    if(mode == "edit"){
+                        ajaxquery['index_partners_add'].formData.set("id", key);
+                        ajaxquery['index_partners_add'].send();
+                    }
+                    if(mode == "contacts"){
+
+
+                        ajaxquery['index_partner_contacts_main'].formData.set("id", key);
+                        ajaxquery['index_partner_contacts_main'].send();
+
+                        localStorage.setItem("partnerId",key);
+                    }
+                    if(mode == "delete"){
+                        alertify.confirm("Megerősítés","Törlöd az adatot?", ()=> {
+                            var formData = new FormData();
+                            formData.set('id', key);
+                            new Ajax({
+                                url: '{{ path('delete_partner') }}',
+                                type: 'DELETE',
+                                dataType: 'json',
+                                formData: formData,
+                                target: $("[data-name='list_partners']"),
+                                function_success: function (result) {
+                                    if (result.success) {
+                                        alertify.message("Sikeres törlés");
+                                        ajaxquery['list_partners'].send();
+                                    }
+                                },
+                                function_error: function (xhr) {
+                                    const message = xhr.responseText || 'Nem sikerült törölni az adatot.';
+                                    alertify.error(message);
+                                }
+                            }).send();
+                        },()=>{});
+                    }
+                })
+            }
+        }
+    }).send();
+
+    //////////////////////////////////////////////////////////////////////////
+
+    var formData = new FormData();
+    formData.set('filters', '{}');
+
+    new Ajax({
+        url: '{{ path('index_partners_add') }}',
+        name: 'index_partners_add',
+        type: 'GET',
+        dataType: 'json',
+        formData: formData,
+        target: null,
+        function_success: function (result) {
+            html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div> </div></div></div>`;
+
+            alertify.add("Hozzáadás", result.content).
+            set("movable",false).
+            set("resizable",false).
+            set("closable",false).
+            set('closableByEscape', false).
+            //resizeTo("60%", "100%").
+            resizeTo('80%','80%').
+            set({transition:'zoom'}).
+            setFooter(html_footer);
+
+            $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function(){
+                alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
+                    alertify.add().close();
+                },()=>{});
+            });
+
+            $(`div[data-box="${this.name}"] .btn[data-name='alertify-save']`).unbind("click").click(function(){
+
+                const form = $("form[data-name='partner']")[0];
+
+                var errors = [];
+                $.each(form.elements, function () {
+                    //console.log(this.name, this.value);
+                    if(this.name == 'name' && this.value==''){
+                        errors.push("A név mező kitöltése kötelező!")
+                    }
+
+                    if(this.name == 'email' && this.value==''){
+                        errors.push("A email mező kitöltése kötelező!")
+                    }
+
+                    if(this.name == 'email' && !this.validity.valid && this.type === "email"){
+                        errors.push("A email formátuma nem megfelelő!")
+                    }
+
+                });
+
+                if(errors.length > 0 ){
+                    alertify.alert("Hiba", "Kérlek javítsd az alábbi hibákat:<br><br>" + errors.join("<br>"));
+                }else{
+                    alertify.confirm("Megerősítés","Mented az adatokat?", ()=>{
+                        const form = $("form[data-name='partner']")[0];
+                        if (!form.reportValidity()) return;
+                        var formData = new FormData(form);
+
+                        new Ajax({
+                            url: '{{ path('save_partners') }}',
+                            name: 'save_partners',
+                            type: 'POST',
+                            dataType: 'json',
+                            formData: formData,
+                            target: $("[data-name='index_settings_content']"),
+                            function_success: function (result) {
+                                if(result.success){
+                                    alertify.add().close();
+                                    alertify.success("Sikeres mentés");
+                                    ajaxquery['list_partners'].send();
+                                }
+                            },
+                            function_error: function (xhr) {
+                                const message = xhr.responseText || 'Nem sikerült menteni az adatot.';
+                                alertify.error(message);
+                            }
+                        }).send();
+                    },()=>{});
+                }
+
+            });
+        },
+        function_error: function (xhr) {
+            const message = xhr.responseText || 'Nem sikerült betölteni az oldalt.';
+            alertify.error(message);
+        }
+    });
+
+    $("[data-name='btn_index_partners_add']").unbind("click").click(function () {
+        ajaxquery['index_partners_add'].formData.set("id", null);
+        ajaxquery['index_partners_add'].send();
+    });
+
+    $("[data-name='search_partners_list']").unbind("keyup").keyup(function (e) {
+        if(e.keyCode == 13){
+            var filters = JSON.parse(ajaxquery['list_partners'].formData.get("filters"));
+            filters.search = $(this).val();
+            ajaxquery['list_partners'].formData.set("filters", JSON.stringify(filters));
+            ajaxquery['list_partners'].send();
+        }
+    });
+
+
+    //partners contacts
+    var formData = new FormData();
+    formData.set('filters', '{}');
+
+    new Ajax({
+        url: '{{ path('index_partner_contacts_main') }}',
+        name: 'index_partner_contacts_main',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        function_success: function (result) {
+            if (result.success) {
+                //popup
+                html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div> </div></div></div>`;
+
+                alertify.popup("Kapcsolattartók: " + localStorage.getItem("partner_name") ?? '', result.content).
+                set("movable",false).
+                set("resizable",false).
+                set("closable",false).
+                set('closableByEscape', false).
+                    //resizeTo("60%", "100%").
+                    maximize().
+                set({transition:'zoom'}).
+                setFooter(html_footer);
+
+                $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function(){
+                    alertify.popup().close();
+                    /*
+                    alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
+
+                    },()=>{});
+
+                     */
+                });
+
+            }
+        },
+        function_error: function (xhr) {
+            alertify.error(xhr.responseJSON?.message || 'Hiba');
+        }
+    });
+
+</script>

@@ -1,0 +1,59 @@
+<form action="" data-name="machine">
+    <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
+
+    <div class="mb-3">
+        <label for="" class="form-label">Név</label>
+        <input type="text" class="form-control" name="name" data-name="name" value="{{ item ? item.title : '' }}" placeholder="Add meg a gep nevet">
+    </div>
+
+    <div class="mb-3">
+        <label for="" class="form-label">Kód</label>
+        <input type="text" class="form-control" name="code" data-name="code" value="{{ item ? item.code : '' }}" placeholder="Add meg a kodot">
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Projekt</label>
+        <div class="machine-project-combobox" data-machine-project-combobox="form">
+            <div class="input-group">
+                <input
+                    type="text"
+                    name="project_search"
+                    class="form-control"
+                    data-name="project_search"
+                    value="{{ item and item.project ? item.project.name : '' }}"
+                    placeholder="Projekt keresése név vagy kód alapján..."
+                    autocomplete="off"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="machine_form_project_results"
+                    aria-expanded="false"
+                >
+                <button type="button" class="btn btn-outline-secondary" data-name="combobox-clear" aria-label="Projekt törlése">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <input type="hidden" name="project_id" data-name="project_id" value="{{ item and item.project ? item.project.id : '' }}">
+            <div id="machine_form_project_results" class="machine-project-combobox-results list-group shadow-sm d-none" data-name="combobox-results" role="listbox"></div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="" class="form-label">Gép kategória</label>
+        <select class="form-control" name="machine_category_id" data-name="machine_category_id">
+            <option value="">Válassz kategóriát</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {{ item and item.machineCategory and item.machineCategory.id == category.id ? 'selected' }}>
+                    {{ category.title }} ({{ category.code }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="" class="form-label">Státusz</label>
+        <select class="form-control" name="status" data-name="status">
+            <option value="1" {{ item is null or item.status == '1' ? 'selected' }}>Aktív</option>
+            <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
+        </select>
+    </div>
+</form>

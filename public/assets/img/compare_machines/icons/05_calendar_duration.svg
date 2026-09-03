@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Időtartam / naptár" width="64" height="64">
+  <title>Időtartam / naptár</title>
+  <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" color="#0E8B37">
+    <rect x="10" y="14" width="44" height="38" rx="6"/>
+    <path d="M20 9v10M44 9v10M10 25h44"/>
+    <path d="M21 36h8M35 36h8M21 44h8M35 44h8"/>
+  </g>
+</svg>

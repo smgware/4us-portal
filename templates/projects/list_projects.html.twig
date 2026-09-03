@@ -1,0 +1,36 @@
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr class="pt-2 pb-2">
+                <th class="p-2">Kód</th>
+                <th class="p-2">Név</th>
+                <th class="p-2">Megjegyzés</th>
+                <th class="p-2">#</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                <tr data-name="list_item" data-key="{{ record.id }}">
+                    <td>{{ record.code }}</td>
+                    <td>{{ record.name }}</td>
+                    <td>{{ record.description|default('-') }}</td>
+                    <td>
+                        <!-- <button type="button" class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="info" title="Információ"><i class="bi bi-info-circle-fill"></i></button> -->
+                        <button type="button" class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit" title="Szerkesztés"><i class="bi bi-pencil-square"></i></button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-4">Nincs megjeleníthető adat.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_projects',
+    queryParams: queryParams
+} %}

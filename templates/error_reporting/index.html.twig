@@ -1,0 +1,429 @@
+{% extends 'base_login.html.twig' %}
+{% block title %}Hibabejelentes - Portal Sigma{% endblock %}
+{% block body %}
+
+    <style>
+        .error-reporting-page {
+            min-height: 100vh;
+            padding: 24px 12px 40px;
+            background: #f4f6f8;
+            color: #111827;
+        }
+
+        .error-reporting-shell {
+            max-width: 1040px;
+            margin: 0 auto;
+        }
+
+        .error-reporting-card {
+            border: 1px solid #d8dee8;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 14px 40px rgba(15, 23, 42, .08);
+        }
+
+        .error-reporting-card__header {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .error-reporting-card__body {
+            padding: 20px;
+        }
+
+        .error-reporting-title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .error-reporting-subtitle {
+            margin: 4px 0 0;
+            color: #64748b;
+        }
+
+        .required-mark {
+            color: #dc2626;
+        }
+
+        .error-reporting-page .form-control,
+        .error-reporting-page .form-select {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            color: #111827;
+            font-size: 16px;
+        }
+
+        .error-reporting-page .form-control:focus,
+        .error-reporting-page .form-select:focus {
+            border-color: #2563eb;
+            background: #fff;
+            color: #111827;
+            box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .12);
+        }
+
+        .qr-button {
+            min-height: 38px;
+            white-space: nowrap;
+        }
+
+        .attachment-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .attachment-item {
+            display: grid;
+            grid-template-columns: 76px 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .attachment-preview {
+            width: 76px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 6px;
+            background: #e5e7eb;
+            color: #475569;
+        }
+
+        .attachment-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .attachment-name {
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .attachment-size {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        #qr-reader {
+            width: 100%;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        #qr-reader video {
+            border-radius: 8px;
+        }
+
+        #qrModal .modal-content {
+            color: #111827;
+        }
+    </style>
+
+    <main class="error-reporting-page">
+        <div class="error-reporting-shell">
+            <section class="error-reporting-card">
+                <div class="error-reporting-card__header">
+                    <h1 class="error-reporting-title">Hibabejelentes</h1>
+                    <p class="error-reporting-subtitle">Toltsd ki az adatokat, majd kuldd be a hibabejelentest.</p>
+                </div>
+
+                <div class="error-reporting-card__body">
+                    <form id="errorReportingForm" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('error_reporting') }}">
+
+                        <div class="row g-3">
+                            <div class="col-lg-9">
+                                <label class="form-label">Gép száma <span class="required-mark">*</span></label>
+                                <input type="text" class="form-control" name="machine_code" data-required="1"
+                                       value="{{ machine_code|default('') }}">
+                            </div>
+                            <div class="col-lg-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-secondary w-100 qr-button" id="openQrBtn">
+                                    <i class="bi bi-qr-code me-1"></i> QR kód beolvasása
+                                </button>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Hiba leírása <span class="required-mark">*</span></label>
+                                <textarea class="form-control" rows="4" name="error_description" data-required="1"></textarea>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Cégnév <span class="required-mark">*</span></label>
+                                <input type="text" class="form-control" name="company_name" data-required="0">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Adószám <span class="required-mark">*</span></label>
+                                <input type="text" class="form-control" name="tax_number" data-required="0">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Bejelentő neve <span class="required-mark">*</span></label>
+                                <input type="text" class="form-control" name="name" data-required="1">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">E-mail cím <span class="required-mark">*</span></label>
+                                <input type="email" class="form-control" name="email" data-required="1">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Telefonszám <span class="required-mark">*</span></label>
+                                <input type="text" class="form-control" name="phone" data-required="1">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Helyszín <span class="required-mark">*</span></label>
+                                <input type="text" class="form-control" name="address" data-required="1">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Képek</label>
+                                <div>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="selectImagesBtn">
+                                        <i class="bi bi-images me-1"></i> Kép kiválasztása
+                                    </button>
+                                    <input type="file" id="imageInput" accept="image/*" multiple class="d-none">
+                                </div>
+                                <div class="attachment-list mt-3" id="attachmentList"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success w-100" id="errorReportingBtn">
+                                    Hiba bejelentése
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">QR kód beolvasása</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bezárás"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="qr-reader"></div>
+                    <div id="qr-result" class="text-secondary mt-3">Irányítsd a kamerát a QR kódra</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        (function () {
+
+            const selectedFiles = [];
+            let qrScanner = null;
+            let qrAlreadyScanned = false;
+            const qrModalElement = document.getElementById('qrModal');
+            const qrModal = new bootstrap.Modal(qrModalElement);
+
+            function formatFileSize(size) {
+                if (size >= 1024 * 1024) {
+                    return (size / 1024 / 1024).toFixed(2) + ' MB';
+                }
+
+                return (size / 1024).toFixed(1) + ' KB';
+            }
+
+            function renderAttachments() {
+                const list = $('#attachmentList');
+                list.empty();
+
+                selectedFiles.forEach(function (file, index) {
+                    const item = $('<div class="attachment-item"></div>');
+                    const preview = $('<div class="attachment-preview"></div>');
+
+                    if (file.type.startsWith('image/')) {
+                        const image = $('<img alt="">');
+                        image.attr('src', URL.createObjectURL(file));
+                        preview.append(image);
+                    } else {
+                        preview.append('<i class="bi bi-file-earmark fs-3"></i>');
+                    }
+
+                    item.append(preview);
+                    item.append(
+                        '<div><div class="attachment-name"></div><div class="attachment-size"></div></div>'
+                    );
+                    item.find('.attachment-name').text(file.name);
+                    item.find('.attachment-size').text(formatFileSize(file.size));
+
+                    const removeButton = $('<button type="button" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>');
+                    removeButton.on('click', function () {
+                        selectedFiles.splice(index, 1);
+                        renderAttachments();
+                    });
+
+                    item.append(removeButton);
+                    list.append(item);
+                });
+            }
+
+            function checkMachine(code) {
+                const formData = new FormData();
+                formData.set('_csrf_token', $("[name='_csrf_token']").val());
+                formData.set('code', code);
+
+                new Ajax({
+                    url: '{{ path('error_reporting_getmachine') }}',
+                    name: 'error_reporting_getmachine_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    function_success: function (result) {
+                        if (result.success) {
+                            $('[name="machine_code"]').val(result.data.code);
+                            alertify.success('Gép azonosítva: ' + result.data.title);
+                        }
+                    },
+                    function_error: function (xhr) {
+                        alertify.error(xhr.responseJSON?.message || 'Nem található gép ezzel a kóddal.');
+                    }
+                }).send();
+            }
+
+            function startQrScanner() {
+                if (qrScanner !== null) {
+                    return;
+                }
+
+                if (typeof Html5Qrcode === 'undefined') {
+                    $('#qr-result').text('A QR olvasó nem töltődött be.');
+                    return;
+                }
+
+                qrScanner = new Html5Qrcode('qr-reader');
+                qrScanner.start(
+                    {facingMode: 'environment'},
+                    {
+                        fps: 10,
+                        qrbox: {width: 260, height: 260}
+                    },
+                    function (decodedText) {
+                        if (qrAlreadyScanned) {
+                            return;
+                        }
+
+                        qrAlreadyScanned = true;
+                        $('#qr-result').text('Beolvasva: ' + decodedText);
+                        stopQrScanner();
+                        qrModal.hide();
+                        checkMachine(decodedText);
+                    },
+                    function () {}
+                ).catch(function (error) {
+                    $('#qr-result').text('Kamera hiba: ' + error);
+                    qrScanner = null;
+                });
+            }
+
+            function stopQrScanner() {
+                if (qrScanner === null) {
+                    return;
+                }
+
+                qrScanner.stop()
+                    .then(function () {
+                        qrScanner.clear();
+                        qrScanner = null;
+                    })
+                    .catch(function () {
+                        qrScanner = null;
+                    });
+            }
+
+            $('#openQrBtn').on('click', function () {
+                qrAlreadyScanned = false;
+                $('#qr-result').text('Irányítsd a kamerát a QR kódra');
+                qrModal.show();
+            });
+
+            $(qrModalElement).on('shown.bs.modal', startQrScanner);
+            $(qrModalElement).on('hidden.bs.modal', stopQrScanner);
+
+            $('#selectImagesBtn').on('click', function () {
+                $('#imageInput').trigger('click');
+            });
+
+            $('#imageInput').on('change', function () {
+                Array.from(this.files || []).forEach(function (file) {
+                    if (file.type.startsWith('image/')) {
+                        selectedFiles.push(file);
+                    }
+                });
+
+                this.value = '';
+                renderAttachments();
+            });
+
+            $('#errorReportingForm').on('submit', function (event) {
+                event.preventDefault();
+
+                var errors = [];
+                $(this).find('[data-required="1"]').each(function () {
+                    if($(this).val() == ""){
+                        errors.push( $(this).parent().find("label").text().replace('*', '') + ' megadása kötelező.');
+                    }
+                });
+
+
+
+                if (errors.length > 0) {
+                    alertify.alert('Hiányzó adatok', errors.join('<br>'));
+                    return;
+                }
+
+                const btn = $('#errorReportingBtn');
+                const formData = new FormData(this);
+                selectedFiles.forEach(function (file) {
+                    formData.append('attachments[]', file);
+                });
+
+
+
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Küldés...');
+
+                new Ajax({
+                    url: '{{ path('error_reporting_save') }}',
+                    name: 'error_reporting_save_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    function_success: function (result) {
+                        alertify.alert('Sikeres hibabejelentés', 'A hibabejelentés kódja:<br><strong>' + result.data.code + '</strong>');
+                        $('#errorReportingForm')[0].reset();
+                        selectedFiles.splice(0, selectedFiles.length);
+                        renderAttachments();
+                    },
+                    function_error: function (xhr) {
+                        alertify.alert('Hiba', xhr.responseJSON?.message || 'Nem sikerült elküldeni a hibabejelentést.');
+                    },
+                    function_complete: function () {
+                        btn.prop('disabled', false).text('Hiba bejelentése');
+                    }
+                }).send();
+
+
+            });
+        })();
+    </script>
+{% endblock %}

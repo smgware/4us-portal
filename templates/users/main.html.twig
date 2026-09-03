@@ -1,0 +1,271 @@
+<div class="page-title"><i class="bi bi-person"></i> Felhasználók</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5"><input type="text" class="form-control" placeholder="Keresés..." data-name="search_users_list"/></div>
+        <div class="col-7">
+            <div class="row">
+                <div class="col-12 text-end">
+                    <!-- <div class="btn btn-default btn-sm" data-name="btn_index_users_list_filters"><i class="bi bi-filter-circle-fill"></i> Szűrők</div> -->
+                    <div class="btn btn-default btn-sm" data-name="btn_index_users_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_users"></div>
+    </div>
+</div>
+
+<script>
+    var formData = new FormData();
+    formData.set('filters', '{}');
+
+    new Ajax({
+        url: '{{ path('list_users') }}',
+        name: 'list_users',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        target: $("[data-key='list_users']"),
+        function_success: function (result) {
+            if(result.success){
+                this.target.html(result.content);
+                bindUserListButtons(this.target);
+            }
+        }
+    }).send();
+
+
+    var formData = new FormData();
+
+    new Ajax({
+        url: '{{ path('index_users_add') }}',
+        name: 'index_users_add',
+        type: 'GET',
+        dataType: 'json',
+        formData: formData,
+        target: null,
+        function_success: function (result) {
+            html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div> </div></div></div>`;
+
+            alertify.add("Felhasználó", result.content).
+            set("movable",false).
+            set("resizable",false).
+            set("closable",false).
+            set('closableByEscape', false).
+            // resizeTo("70%", "80%").
+            maximize().
+            set({transition:'zoom'}).
+            setFooter(html_footer);
+
+            bindUserImagePicker();
+
+            $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function(){
+                alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
+                    alertify.add().close();
+                },()=>{});
+            });
+
+            $(`div[data-box="${this.name}"] .btn[data-name='alertify-save']`).unbind("click").click(function(){
+                saveUserForm();
+            });
+        },
+        function_error: function (xhr) {
+            const message = xhr.responseText || 'Hiba';
+            alertify.error(message);
+        }
+    });
+
+    function bindUserImagePicker() {
+        $("form[data-name='user'] [data-name='image_file']").unbind("change").change(function () {
+            const file = this.files && this.files[0] ? this.files[0] : null;
+            if (!file) {
+                return;
+            }
+
+            resizeImageToBase64(file, function (base64) {
+                $("form[data-name='user'] [data-name='image']").val(base64);
+                $("form[data-name='user'] [data-name='image_preview']").attr("src", base64).show();
+                $("form[data-name='user'] [data-name='image_empty']").hide();
+            });
+        });
+    }
+
+    function resizeImageToBase64(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+            const image = new Image();
+            image.onload = function () {
+                const canvas = document.createElement('canvas');
+                const size = 500;
+                canvas.width = size;
+                canvas.height = size;
+
+                const context = canvas.getContext('2d');
+                context.fillStyle = '#ffffff';
+                context.fillRect(0, 0, size, size);
+
+                const scale = Math.max(size / image.width, size / image.height);
+                const width = image.width * scale;
+                const height = image.height * scale;
+                const x = (size - width) / 2;
+                const y = (size - height) / 2;
+
+                context.drawImage(image, x, y, width, height);
+                callback(canvas.toDataURL('image/jpeg', 0.88));
+            };
+            image.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function saveUserForm() {
+        const form = $("form[data-name='user']")[0];
+        var formData = new FormData(form);
+        const data = {
+            user_notification_events: []
+        };
+
+        $(form).find("[data-name='user_notification_event']").each(function () {
+            data.user_notification_events.push({
+                id: Number($(this).val()),
+                enabled: $(this).is(':checked')
+            });
+        });
+
+        formData.set('id', $("form[data-name='user'] [data-name='id']").val());
+        formData.set('name', $("form[data-name='user'] [data-name='name']").val());
+        formData.set('email', $("form[data-name='user'] [data-name='email']").val());
+        formData.set('username', $("form[data-name='user'] [data-name='username']").val());
+        formData.set('phone', $("form[data-name='user'] [data-name='phone']").val());
+        formData.set('permission_id', $("form[data-name='user'] [data-name='permission_id']").val());
+        formData.set('password', $("form[data-name='user'] [data-name='password']").val() || '');
+        formData.set('password_again', $("form[data-name='user'] [data-name='password_again']").val() || '');
+        formData.set('image', $("form[data-name='user'] [data-name='image']").val());
+        formData.set('data', JSON.stringify(data));
+
+        alertify.confirm("Megerősítés","Mented az adatokat?", ()=>{
+            new Ajax({
+                url: '{{ path('save_users') }}',
+                name: 'save_users',
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                function_success: function (result) {
+                    if(result.success){
+                        alertify.add().close();
+                        alertify.success("Sikeres mentés");
+                        ajaxquery['list_users'].send();
+                    }
+                },
+                function_error: function (xhr) {
+                    alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült menteni a felhasználót.');
+                }
+            }).send();
+        },()=>{});
+    }
+
+    function bindUserListButtons(target) {
+        target.find("[data-name='list_item_btn']").unbind("click").click(function(){
+            const mode = $(this).attr("data-mode");
+            const key = $(this).closest("[data-name='list_item']").attr("data-key");
+
+            if(mode === "edit"){
+                ajaxquery['index_users_add'].formData.set("id", key);
+                ajaxquery['index_users_add'].send();
+            }
+
+            if(mode === "delete"){
+                alertify.confirm("Megerősítés","Törölni szeretnéd az adatot?", ()=> {
+                    var formData = new FormData();
+                    formData.set('id', key);
+
+                    new Ajax({
+                        url: '{{ path('delete_users') }}',
+                        type: 'DELETE',
+                        dataType: 'json',
+                        formData: formData,
+                        function_success: function (result) {
+                            if (result.success) {
+                                alertify.message("Sikeres törlés");
+                                ajaxquery['list_users'].send();
+                            }
+                        },
+                        function_error: function (xhr) {
+                            alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült törölni a felhasználót.');
+                        }
+                    }).send();
+                },()=>{});
+            }
+
+            if(mode === "password"){
+                openUserPasswordPopup(key);
+            }
+        });
+    }
+
+    function openUserPasswordPopup(userId) {
+        const content = `
+            <div data-name="user_password_popup">
+                <input type="hidden" data-name="id" value="${userId}">
+                <div class="mb-3">
+                    <label class="form-label">Új jelszó</label>
+                    <input type="password" class="form-control" data-name="password" autocomplete="new-password">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Új jelszó ismét</label>
+                    <input type="password" class="form-control" data-name="password_again" autocomplete="new-password">
+                </div>
+                <div class="text-end">
+                    <div class="btn btn-default btn-sm btn-success" data-name="save_password">Mentés</div>
+                </div>
+            </div>
+        `;
+
+        alertify.popup("Jelszó módosítása", content)
+            .set("movable",false)
+            .set("resizable",false)
+            .set({transition:'zoom'});
+
+        $("[data-name='user_password_popup'] [data-name='save_password']").unbind("click").click(function () {
+            var formData = new FormData();
+            formData.set('id', userId);
+            formData.set('password', $("[data-name='user_password_popup'] [data-name='password']").val());
+            formData.set('password_again', $("[data-name='user_password_popup'] [data-name='password_again']").val());
+
+            new Ajax({
+                url: '{{ path('change_user_password') }}',
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                function_success: function (result) {
+                    if (result.success) {
+                        alertify.popup().close();
+                        alertify.success("Sikeres jelszó módosítás");
+                    }
+                },
+                function_error: function (xhr) {
+                    alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült módosítani a jelszót.');
+                }
+            }).send();
+        });
+    }
+
+    $("[data-name='btn_index_users_add']").unbind("click").click(function () {
+        ajaxquery['index_users_add'].formData.set("id", null);
+        ajaxquery['index_users_add'].send();
+    });
+
+    $("[data-name='search_users_list']").unbind("keyup").keyup(function (e) {
+        if(e.keyCode == 13){
+            var filters = JSON.parse(ajaxquery['list_users'].formData.get("filters"));
+            filters.search = $(this).val();
+            ajaxquery['list_users'].formData.set("filters", JSON.stringify(filters));
+            ajaxquery['list_users'].send();
+        }
+    });
+</script>

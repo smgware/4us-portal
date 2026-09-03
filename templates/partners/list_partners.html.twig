@@ -1,0 +1,53 @@
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr class="pt-2 pb-2">
+                <th class="p-2">Név</th>
+                <th class="p-2">Típus</th>
+                <th class="p-2">Adószám</th>
+                <th class="p-2">E-mail</th>
+                <th class="p-2">Telefon</th>
+                <th class="p-2">Város</th>
+                <th class="p-2">Megjegyzés</th>
+                <th class="p-2">Státusz</th>
+                <th class="p-2">#</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                <tr data-name="list_item" data-key="{{ record.id }}">
+                    <td data-name="partner_name">{{ record.name }}</td>
+                    <td>{{ record.type|default('-') }}</td>
+                    <td>{{ record.tax_number|default('-') }}</td>
+                    <td>{{ record.email|default('-') }}</td>
+                    <td>{{ record.phone|default('-') }}</td>
+                    <td>{{ record.city|default('-') }}</td>
+                    <td>{{ record.description }}</td>
+                    <td>{{ record.status == 1 ? '<div class="btn btn-sm btn-success">aktív</div>' : '<div class="btn btn-sm btn-danger">inaktív</div>' }}</td>
+                    <td>
+                        <div class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit"><i class="bi bi-pencil-square"></i></div>
+                        <div class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="contacts"><i class="bi bi-people-fill"></i></div>
+                        <!-- <div class="btn btn-default btn-sm text-danger" data-name="list_item_btn" data-mode="delete"><i class="bi bi-trash"></i></div> -->
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="9" class="text-center py-4">Nincs megjeleníthető adat.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_partners',
+    queryParams: app.request.query.all
+} %}
+
+
+<script>
+
+
+</script>

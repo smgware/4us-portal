@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Darupár összehasonlítás - 4US Zrt.</title>
+</head>
+<body style="margin:0;padding:0;background:#eef3ef;font-family:Arial,Helvetica,sans-serif;color:#17221b;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#eef3ef;border-collapse:collapse;">
+    <tr>
+        <td align="center" style="padding:24px 12px;">
+            <table role="presentation" width="720" cellspacing="0" cellpadding="0" style="width:100%;max-width:720px;background:#ffffff;border:1px solid #dce8df;border-radius:14px;border-collapse:separate;overflow:hidden;">
+                <tr>
+                    <td style="padding:24px 28px;background:#07512d;color:#ffffff;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                            <tr>
+                                <td valign="middle">
+                                    <div style="font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#b8e8c7;">Darupár összehasonlítás</div>
+                                    <h1 style="margin:7px 0 0;font-size:24px;line-height:1.25;color:#ffffff;">A kiválasztott daruk részletes adatai</h1>
+                                </td>
+                                <td align="right" valign="middle" style="padding-left:18px;">
+                                    {% if logoEmbedded %}
+                                        <img src="cid:4us-logo-mail" width="130" alt="4US Zrt." style="display:block;width:130px;max-width:100%;height:auto;border:0;">
+                                    {% else %}
+                                        <strong style="font-size:24px;color:#ffffff;">4US Zrt.</strong>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:28px;">
+                        <p style="margin:0 0 14px;font-size:16px;line-height:1.6;">Kedves <strong>{{ customer.name }}</strong>!</p>
+                        <p style="margin:0 0 22px;color:#526159;font-size:14px;line-height:1.65;">
+                            Köszönjük érdeklődését. Az alábbiakban küldjük a kiválasztott modell és a hozzá tartozó másik daru részletes műszaki és költség-összehasonlítását.
+                        </p>
+
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;border:1px solid #dce8df;border-radius:10px;border-collapse:separate;overflow:hidden;">
+                            <tr>
+                                <td colspan="2" style="padding:12px 16px;background:#f1f8f3;font-size:15px;font-weight:bold;color:#07512d;">Ajánlatkérés adatai</td>
+                            </tr>
+                            <tr>
+                                <td style="width:210px;padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Ajánlatkérés kódja</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;font-weight:bold;">{{ quoteCode }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Név</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">{{ customer.name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Cégnév</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">{{ customer.company }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">E-mail</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">{{ customer.email }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Telefonszám</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">{{ customer.phone }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Kiválasztott darupár</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">{{ tower.name }} / {{ mobile.name }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Kiválasztott modell</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;font-weight:bold;color:#087238;">{{ selectedMachine.name }} · {{ selectedMachine.type }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Összehasonlított modell</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">{{ otherMachine.name }} · {{ otherMachine.type }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Futamidő</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">{{ months }} hónap</td>
+                            </tr>
+                            <tr>
+                                <td valign="top" style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Üzenet</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;line-height:1.55;">{{ customer.message|e|nl2br }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;color:#68756e;">Adatkezelési nyilatkozat</td>
+                                <td style="padding:9px 16px;border-top:1px solid #e5ece7;">Elfogadva</td>
+                            </tr>
+                        </table>
+
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;border-collapse:separate;border-spacing:8px 0;">
+                            <tr>
+                                <td width="50%" valign="top" style="padding:18px;border:2px solid {{ selectedMachine.name == tower.name ? '#159447' : '#dce8df' }};border-radius:10px;{{ selectedMachine.name == tower.name ? 'background:#f0faf3;' : '' }}">
+                                    {% if selectedMachine.name == tower.name %}<div style="margin-bottom:8px;font-size:11px;font-weight:bold;text-transform:uppercase;color:#087238;">Kiválasztott modell</div>{% endif %}
+                                    <div style="font-size:20px;font-weight:bold;color:#16251c;">{{ tower.name }}</div>
+                                    <div style="margin-top:4px;color:#647269;">{{ tower.type }}</div>
+                                    <div style="margin-top:14px;font-size:20px;font-weight:bold;color:#087238;">{{ tower.totalFormatted }}</div>
+                                    <div style="margin-top:3px;font-size:12px;color:#6b776f;">becsült teljes költség / {{ months }} hónap</div>
+                                </td>
+                                <td width="50%" valign="top" style="padding:18px;border:2px solid {{ selectedMachine.name == mobile.name ? '#159447' : '#dce8df' }};border-radius:10px;{{ selectedMachine.name == mobile.name ? 'background:#f0faf3;' : '' }}">
+                                    {% if selectedMachine.name == mobile.name %}<div style="margin-bottom:8px;font-size:11px;font-weight:bold;text-transform:uppercase;color:#087238;">Kiválasztott modell</div>{% endif %}
+                                    <div style="font-size:20px;font-weight:bold;color:#16251c;">{{ mobile.name }}</div>
+                                    <div style="margin-top:4px;color:#647269;">{{ mobile.type }}</div>
+                                    <div style="margin-top:14px;font-size:20px;font-weight:bold;color:#087238;">{{ mobile.totalFormatted }}</div>
+                                    <div style="margin-top:3px;font-size:12px;color:#6b776f;">becsült teljes költség / {{ months }} hónap</div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <h2 style="margin:0 0 12px;font-size:18px;color:#16251c;">Műszaki paraméterek</h2>
+                        {% for machine in [tower, mobile] %}
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:16px;border:1px solid #dce8df;border-collapse:collapse;">
+                                <tr>
+                                    <td colspan="4" style="padding:11px 13px;background:{{ machine.selected ? '#eaf7ee' : '#f6f8f6' }};font-weight:bold;color:#07512d;">
+                                        {{ machine.name }} · {{ machine.type }}{% if machine.selected %} — kiválasztott modell{% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th align="left" style="padding:8px;border-top:1px solid #dce8df;background:#fafcfb;font-size:12px;color:#5f6c64;">Gémhossz</th>
+                                    <th align="left" style="padding:8px;border-top:1px solid #dce8df;background:#fafcfb;font-size:12px;color:#5f6c64;">Gémvégi teherbírás</th>
+                                    <th align="left" style="padding:8px;border-top:1px solid #dce8df;background:#fafcfb;font-size:12px;color:#5f6c64;">Max. teherbírás</th>
+                                    <th align="left" style="padding:8px;border-top:1px solid #dce8df;background:#fafcfb;font-size:12px;color:#5f6c64;">Max. teher kinyúlása</th>
+                                </tr>
+                                {% for row in machine.capacityRows %}
+                                    <tr>
+                                        <td style="padding:8px;border-top:1px solid #e7ece8;">{{ row.jibLength }}</td>
+                                        <td style="padding:8px;border-top:1px solid #e7ece8;">{{ row.tipLoad }}</td>
+                                        <td style="padding:8px;border-top:1px solid #e7ece8;">{{ row.maximumLoad }}</td>
+                                        <td style="padding:8px;border-top:1px solid #e7ece8;">{{ row.maximumLoadReach }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="4" style="padding:10px;border-top:1px solid #e7ece8;color:#6b776f;">Nincs megadott teherbírási adat.</td></tr>
+                                {% endfor %}
+                            </table>
+                        {% endfor %}
+
+                        <h2 style="margin:24px 0 12px;font-size:18px;color:#16251c;">Költségek részletes összehasonlítása</h2>
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #dce8df;border-collapse:collapse;">
+                            <tr>
+                                <th align="left" style="width:40%;padding:10px;background:#07512d;color:#ffffff;font-size:13px;">Tétel</th>
+                                <th align="left" style="width:30%;padding:10px;background:#07512d;color:#ffffff;font-size:13px;">{{ tower.name }}{% if tower.selected %} ✓{% endif %}</th>
+                                <th align="left" style="width:30%;padding:10px;background:#07512d;color:#ffffff;font-size:13px;">{{ mobile.name }}{% if mobile.selected %} ✓{% endif %}</th>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="padding:9px 10px;background:#eaf7ee;font-weight:bold;color:#07512d;">Egyszeri költségek</td>
+                            </tr>
+                            {% for item in tower.oneTimeItems %}
+                                <tr>
+                                    <td style="padding:9px 10px;border-top:1px solid #e5ece7;color:#526159;">{{ item.label }}</td>
+                                    <td style="padding:9px 10px;border-top:1px solid #e5ece7;{{ tower.selected ? 'background:#f5fbf7;' : '' }}">{{ item.value }}</td>
+                                    <td style="padding:9px 10px;border-top:1px solid #e5ece7;{{ mobile.selected ? 'background:#f5fbf7;' : '' }}">{{ mobile.oneTimeItems[loop.index0].value }}</td>
+                                </tr>
+                            {% endfor %}
+                            <tr>
+                                <td style="padding:10px;border-top:2px solid #cbd9cf;font-weight:bold;">Egyszeri költségek összesen</td>
+                                <td style="padding:10px;border-top:2px solid #cbd9cf;font-weight:bold;{{ tower.selected ? 'background:#f5fbf7;' : '' }}">{{ tower.oneTimeTotalFormatted }}</td>
+                                <td style="padding:10px;border-top:2px solid #cbd9cf;font-weight:bold;{{ mobile.selected ? 'background:#f5fbf7;' : '' }}">{{ mobile.oneTimeTotalFormatted }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" style="padding:9px 10px;background:#eaf7ee;font-weight:bold;color:#07512d;">Havi költségek</td>
+                            </tr>
+                            {% for item in tower.monthlyItems %}
+                                <tr>
+                                    <td style="padding:9px 10px;border-top:1px solid #e5ece7;color:#526159;">{{ item.label }}</td>
+                                    <td style="padding:9px 10px;border-top:1px solid #e5ece7;{{ tower.selected ? 'background:#f5fbf7;' : '' }}">{{ item.value }}</td>
+                                    <td style="padding:9px 10px;border-top:1px solid #e5ece7;{{ mobile.selected ? 'background:#f5fbf7;' : '' }}">{{ mobile.monthlyItems[loop.index0].value }}</td>
+                                </tr>
+                            {% endfor %}
+                            <tr>
+                                <td style="padding:10px;border-top:2px solid #cbd9cf;font-weight:bold;">Havi költségek összesen</td>
+                                <td style="padding:10px;border-top:2px solid #cbd9cf;font-weight:bold;{{ tower.selected ? 'background:#f5fbf7;' : '' }}">{{ tower.monthlyTotalFormatted }}</td>
+                                <td style="padding:10px;border-top:2px solid #cbd9cf;font-weight:bold;{{ mobile.selected ? 'background:#f5fbf7;' : '' }}">{{ mobile.monthlyTotalFormatted }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px;border-top:1px solid #e5ece7;">{{ months }} × havi költség</td>
+                                <td style="padding:10px;border-top:1px solid #e5ece7;{{ tower.selected ? 'background:#f5fbf7;' : '' }}">{{ tower.durationCostFormatted }}</td>
+                                <td style="padding:10px;border-top:1px solid #e5ece7;{{ mobile.selected ? 'background:#f5fbf7;' : '' }}">{{ mobile.durationCostFormatted }}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 10px;border-top:2px solid #159447;background:#f0faf3;font-size:15px;font-weight:bold;color:#07512d;">Becsült teljes költség</td>
+                                <td style="padding:12px 10px;border-top:2px solid #159447;background:#f0faf3;font-size:15px;font-weight:bold;color:#07512d;">{{ tower.totalFormatted }}</td>
+                                <td style="padding:12px 10px;border-top:2px solid #159447;background:#f0faf3;font-size:15px;font-weight:bold;color:#07512d;">{{ mobile.totalFormatted }}</td>
+                            </tr>
+                        </table>
+
+                        <div style="margin-top:16px;padding:14px 16px;background:#fff8e6;border:1px solid #f0d58c;border-radius:9px;color:#765b13;font-size:13px;line-height:1.55;">
+                            A két becsült teljes költség közötti különbség: <strong>{{ differenceFormatted }}</strong>.
+                        </div>
+
+                        <p style="margin:24px 0 0;color:#68756e;font-size:12px;line-height:1.6;">
+                            A feltüntetett összegek előzetes becslések, ideális feltételezéseken alapulnak. A végleges árakat többek között a helyszín, a szállítási távolság, a telepítési feltételek, az ütemezés és a konkrét daruzási feladat módosíthatja.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td style="padding:22px 28px;background:#f3f7f4;border-top:1px solid #dce8df;color:#526159;font-size:13px;line-height:1.6;">
+                        <strong style="color:#07512d;">Üdvözlettel, a 4US Zrt. csapata</strong><br>
+                        <a href="mailto:hello@4uszrt.hu" style="color:#087238;text-decoration:none;">hello@4uszrt.hu</a><br>
+                        <a href="tel:+3619988899" style="color:#087238;text-decoration:none;">+36 1 99 888 99</a>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

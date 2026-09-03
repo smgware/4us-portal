@@ -1,0 +1,20 @@
+<div class="login-box">
+    <h1>Belépés</h1>
+
+    {% if error %}
+        <div class="error">Hibás felhasználónév vagy jelszó.</div>
+    {% endif %}
+
+    <form method="post" action="{{ path('app_login') }}">
+        <label>Felhasználónév</label>
+        <input type="text" value="{{ last_username }}" name="_username" autocomplete="username" required autofocus>
+
+        <label>Jelszó</label>
+        <input type="password" name="_password" autocomplete="current-password" required>
+
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+        <button type="submit">Belépés</button>
+    </form>
+
+    <button type="button" data-load-password-recovery>Elfelejtett jelszó</button>
+</div>

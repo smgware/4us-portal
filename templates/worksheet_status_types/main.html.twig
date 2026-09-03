@@ -1,0 +1,189 @@
+<div class="page-title"><i class="bi bi-ui-checks"></i> Munkalap státuszok</div>
+
+<div class="card panel-card p-2">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-4 col-12">
+            <input type="text" class="form-control" placeholder="Keresés..." data-name="search_worksheet_status_types_list">
+        </div>
+        <div class="col-md-4 col-12">
+            <select class="form-control" data-name="filter_worksheet_status_types_worksheet_type">
+                <option value="">Minden munkalaptípus</option>
+                {% for worksheetType in worksheetTypes|default([]) %}
+                    <option value="{{ worksheetType.id }}">{{ worksheetType.title }} ({{ worksheetType.code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 col-12 text-end">
+            <button type="button" class="btn btn-default btn-sm" data-name="btn_index_worksheet_status_types_add">
+                <i class="bi bi-plus-circle-fill"></i> Új hozzáadása
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_worksheet_status_types"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const errorMessage = (xhr, fallback) =>
+            xhr.responseJSON?.data?.error || xhr.responseJSON?.message || fallback;
+
+        const listFormData = new FormData();
+        listFormData.set('filters', '{}');
+
+        new Ajax({
+            url: '{{ path('list_worksheet_status_types') }}',
+            name: 'list_worksheet_status_types',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: $("[data-key='list_worksheet_status_types']"),
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalap státuszokat.');
+                    return;
+                }
+
+                this.target.html(result.content);
+                this.target.find("[data-name='list_item_btn'][data-mode='edit']")
+                    .off('click.worksheetStatusTypes')
+                    .on('click.worksheetStatusTypes', function () {
+                        const id = $(this).closest("[data-name='list_item']").attr('data-key');
+                        ajaxquery['index_worksheet_status_types_add'].formData.set('id', id);
+                        ajaxquery['index_worksheet_status_types_add'].send();
+                    });
+            },
+            function_error: function (xhr) {
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni a munkalap státuszokat.'));
+            }
+        }).send();
+
+        new Ajax({
+            url: '{{ path('index_worksheet_status_types_add') }}',
+            name: 'index_worksheet_status_types_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: new FormData(),
+            target: null,
+            function_success: function (result) {
+                if (!result.success) {
+                    alertify.error(result.data?.error || 'Nem sikerült betölteni az adatlapot.');
+                    return;
+                }
+
+                const dialogTitle = result.data?.mode === 'update'
+                    ? 'Munkalap státusz szerkesztése'
+                    : 'Munkalap státusz hozzáadása';
+                const footer = `<div class="container-fluid p-0" data-box="${this.name}">
+                    <div class="row"><div class="col-12 text-end">
+                        <button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</button>
+                        <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</button>
+                    </div></div>
+                </div>`;
+
+                alertify.add(dialogTitle, result.content)
+                    .set('movable', false)
+                    .set('resizable', false)
+                    .set('closable', false)
+                    .set('closableByEscape', false)
+                    .resizeTo('50%', '60%')
+                    .set({transition: 'zoom'})
+                    .setFooter(footer);
+
+                const dialogSelector = `div[data-box="${this.name}"]`;
+                const codeInput = $("form[data-name='worksheet_status_type'] [name='code']");
+                codeInput
+                    .off('input.worksheetStatusTypes')
+                    .on('input.worksheetStatusTypes', function () {
+                        this.value = this.value.toLocaleUpperCase('hu-HU');
+                    });
+
+                $(`${dialogSelector} [data-name='alertify-cancel']`)
+                    .off('click.worksheetStatusTypes')
+                    .on('click.worksheetStatusTypes', function () {
+                        alertify.confirm('Megerősítés', 'Bezárod az ablakot?', () => {
+                            alertify.add().close();
+                        }, () => {});
+                    });
+
+                $(`${dialogSelector} [data-name='alertify-save']`)
+                    .off('click.worksheetStatusTypes')
+                    .on('click.worksheetStatusTypes', function () {
+                        const form = $("form[data-name='worksheet_status_type']")[0];
+                        if (!form || !form.reportValidity()) {
+                            return;
+                        }
+
+                        alertify.confirm('Megerősítés', 'Mented az adatokat?', () => {
+                            new Ajax({
+                                url: '{{ path('save_worksheet_status_types') }}',
+                                name: 'save_worksheet_status_types',
+                                type: 'POST',
+                                dataType: 'json',
+                                formData: new FormData(form),
+                                target: null,
+                                function_success: function (saveResult) {
+                                    if (!saveResult.success) {
+                                        alertify.error(saveResult.data?.error || 'Nem sikerült menteni a munkalap státuszt.');
+                                        return;
+                                    }
+
+                                    alertify.add().close();
+                                    alertify.success('Sikeres mentés');
+                                    ajaxquery['list_worksheet_status_types'].send();
+                                },
+                                function_error: function (xhr) {
+                                    alertify.error(errorMessage(xhr, 'Nem sikerült menteni a munkalap státuszt.'));
+                                }
+                            }).send();
+                        }, () => {});
+                    });
+            },
+            function_error: function (xhr) {
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni az adatlapot.'));
+            }
+        });
+
+        $("[data-name='btn_index_worksheet_status_types_add']")
+            .off('click.worksheetStatusTypes')
+            .on('click.worksheetStatusTypes', function () {
+                ajaxquery['index_worksheet_status_types_add'].formData.set('id', '');
+                ajaxquery['index_worksheet_status_types_add'].send();
+            });
+
+        $("[data-name='search_worksheet_status_types_list']")
+            .off('keyup.worksheetStatusTypes')
+            .on('keyup.worksheetStatusTypes', function (event) {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                const filters = JSON.parse(ajaxquery['list_worksheet_status_types'].formData.get('filters'));
+                filters.search = $(this).val();
+                ajaxquery['list_worksheet_status_types'].formData.set('filters', JSON.stringify(filters));
+                ajaxquery['list_worksheet_status_types'].formData.set('page', '1');
+                ajaxquery['list_worksheet_status_types'].send();
+            });
+
+        $("[data-name='filter_worksheet_status_types_worksheet_type']")
+            .off('change.worksheetStatusTypes')
+            .on('change.worksheetStatusTypes', function () {
+                const filters = JSON.parse(ajaxquery['list_worksheet_status_types'].formData.get('filters'));
+                const worksheetTypeId = $(this).val();
+
+                if (worksheetTypeId === '') {
+                    delete filters.worksheet_type_id;
+                } else {
+                    filters.worksheet_type_id = worksheetTypeId;
+                }
+
+                ajaxquery['list_worksheet_status_types'].formData.set('filters', JSON.stringify(filters));
+                ajaxquery['list_worksheet_status_types'].formData.set('page', '1');
+                ajaxquery['list_worksheet_status_types'].send();
+            });
+    })();
+</script>

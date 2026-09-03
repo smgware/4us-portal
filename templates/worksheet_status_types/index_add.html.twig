@@ -1,0 +1,51 @@
+<form action="" data-name="worksheet_status_type">
+    <input type="hidden" name="id" value="{{ item ? item.id : '' }}">
+
+    <div class="mb-3">
+        <label class="form-label" for="worksheet-status-type-worksheet-type">Munkalap típusa</label>
+        <select
+            class="form-control"
+            id="worksheet-status-type-worksheet-type"
+            name="worksheet_type_id"
+            required
+        >
+            <option value="">Válassz munkalaptípust</option>
+            {% for worksheetType in worksheetTypes %}
+                <option
+                    value="{{ worksheetType.id }}"
+                    {{ item and item.worksheetType and item.worksheetType.id == worksheetType.id ? 'selected' : '' }}
+                >{{ worksheetType.title }} ({{ worksheetType.code }})</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="worksheet-status-type-name">Név</label>
+        <input
+            type="text"
+            class="form-control"
+            id="worksheet-status-type-name"
+            name="name"
+            value="{{ item ? item.title : '' }}"
+            maxlength="255"
+            placeholder="Add meg a nevet"
+            required
+        >
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="worksheet-status-type-code">Kód</label>
+        <input
+            type="text"
+            class="form-control text-uppercase"
+            id="worksheet-status-type-code"
+            name="code"
+            value="{{ item ? item.code : '' }}"
+            maxlength="255"
+            placeholder="Add meg a kódot"
+            autocapitalize="characters"
+            spellcheck="false"
+            required
+        >
+    </div>
+</form>

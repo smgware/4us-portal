@@ -1,0 +1,23 @@
+DirectoryIndex index.php
+
+<IfModule php_module>
+    php_value upload_max_filesize 256M
+    php_value post_max_size 260M
+    php_value max_input_time 800
+    php_value max_execution_time 800
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Keep direct /public URLs working and avoid rewrite loops.
+    RewriteRule ^public/ - [L]
+    RewriteRule ^index\.php$ - [L]
+
+    # Serve static files from Symfony's public directory without exposing /public.
+    RewriteCond %{DOCUMENT_ROOT}/4us-portal/public/$1 -f
+    RewriteRule ^(.+)$ public/$1 [L]
+
+    # Route everything else to the root front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Súly" width="64" height="64">
+  <title>Súly</title>
+  <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" color="#0E8B37">
+    <path d="M22 24h20l5 28H17l5-28z"/>
+    <path d="M25 24a7 7 0 0 1 14 0"/>
+    <path d="M25 34h14"/>
+  </g>
+</svg>
