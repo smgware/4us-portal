@@ -1,0 +1,64 @@
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr class="pt-2 pb-2">
+                <th class="p-2">Cím</th>
+                <th class="p-2">Leírás</th>
+                <th class="p-2">Rögzítette</th>
+                <th class="p-2">Módosította</th>
+                <th class="p-2">Rögzítve</th>
+                <th class="p-2">Módosítva</th>
+                <th class="p-2">Státusz</th>
+                <th class="p-2">#</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                <tr data-name="list_item" data-key="{{ record.id }}">
+                    <td class="p-2 fw-600">{{ record.title }}</td>
+                    <td class="p-2" style="min-width:260px;max-width:520px;">
+                        <div style="white-space:pre-wrap;overflow-wrap:anywhere;">{{ record.description|slice(0, 180) }}{% if record.description|length > 180 %}…{% endif %}</div>
+                    </td>
+                    <td class="p-2">{{ record.user_owner_name|default(record.user_owner_username|default('-')) }}</td>
+                    <td class="p-2">{{ record.user_editor_name|default(record.user_editor_username|default('-')) }}</td>
+                    <td class="p-2">{{ record.datetime_add ? record.datetime_add|date('Y-m-d H:i') : '-' }}</td>
+                    <td class="p-2">{{ record.datetime_last ? record.datetime_last|date('Y-m-d H:i') : '-' }}</td>
+                    <td class="p-2">
+                        {% if record.status == '1' %}
+                            <span class="btn btn-sm btn-success">aktív</span>
+                        {% else %}
+                            <span class="btn btn-sm btn-danger">inaktív</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-2 text-nowrap">
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm"
+                            data-name="list_item_btn"
+                            data-mode="edit"
+                            title="Szerkesztés"
+                        ><i class="bi bi-pencil-square"></i></button>
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm text-danger"
+                            data-name="list_item_btn"
+                            data-mode="delete"
+                            title="Törlés"
+                        ><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-4">Nincs megjeleníthető adat.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_worksheet_description_templates',
+    queryParams: app.request.query.all
+} %}

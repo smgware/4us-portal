@@ -1,333 +1,224 @@
 {% extends 'base.html.twig' %}
+
 {% block body %}
-<div class="page-title"><i class="bi bi-clipboard-check"></i> Munkalapok</div>
+    <div class="page-title"><i class="bi bi-clipboard-check"></i> Munkalapok</div>
 
-<div class="container-fluid p-0">
-
-
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card panel-card p-2">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="row">
-                            <div class="col-12 text-end">
-
-                                <div class="btn btn-default btn-sm" data-name="btn_index_worksheets_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
-                                {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
-                                {% endif %}
-                            </div>
-                        </div>
+    <div class="container-fluid p-0 mt-3">
+        <div class="card panel-card p-3">
+            <div class="row">
+                {% for shortcut in worksheetTypeShortcuts %}
+                    {% if not is_granted('ROLE_SERVICE') or shortcut.code == 'ERROR_REPORT' %}
+                    <div class="col-xl col-lg-4 col-md-6 col-12 mb-2 mb-xl-0">
+                        <button
+                            type="button"
+                            class="btn btn-default w-100 h-100 position-relative text-start worksheet-type-shortcut"
+                            data-name="worksheet-type-shortcut"
+                            data-worksheet-type-id="{{ shortcut.id }}"
+                        >
+                            <i class="bi {{ shortcut.icon }} me-2" aria-hidden="true"></i>{{ shortcut.title }}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" title="Új / nyitott munkalapok">
+                                {{ shortcut.count }}
+                                <span class="visually-hidden">új vagy nyitott munkalap</span>
+                            </span>
+                        </button>
                     </div>
-                </div>
+                    {% endif %}
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    <div class="row mt-2">
-        <div class="col-12">
-            <div class="card panel-card p-2">
-
-                <div class="row mt-2">
-                    <div class="col-12">
-
-                        {% set canViewAllWorksheetTypes = is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER') %}
+    <div class="container-fluid p-0 mt-3">
+        <div class="card panel-card p-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-xl-5 col-md-6 col-12">
+                    <label class="text-xs" for="worksheet_list_search">Keresés</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="worksheet_list_search" data-name="search_worksheets_list" placeholder="Kód, cím, partner...">
+                        <button type="button" class="btn btn-default" data-name="btnSearchWorksheets" title="Keresés">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-3 col-6">
+                    <label class="text-xs" for="worksheet_list_type">Típus</label>
+                    <select class="form-control" id="worksheet_list_type" data-name="filter_worksheets_type">
+                        <option value="">Minden típus</option>
                         {% for worksheetType in worksheetTypes %}
-                            {% if canViewAllWorksheetTypes or (is_granted('ROLE_SERVICE') and worksheetType.code == 'ERROR_REPORT') %}
-                            <div class="btn btn-default position-relative  me-2 mt-0 mb-2" data-name="btn_filter_worksheets_type" data-id="{{ worksheetType.id }}" data-code="{{ worksheetType.code }} ">
-                                {{ worksheetType.title }}
-                                <span class="position-absolute bg-danger p-1 rounded-3 text-xs" style="top:-10px;right:-10px;"><span data-name="cnt_worksheet" data-key="{{ worksheetType.code }}">{nr_of_worksheet}</span></span>
-                            </div>
-                            {% endif %}
+                            <option value="{{ worksheetType.id }}">{{ worksheetType.title }}</option>
                         {% endfor %}
-                    </div>
+                    </select>
                 </div>
-
-                <div class="row mt-3">
-
-                    <div class="col-lg-3 col-12">
-                        <span class="small">Keresés</span>
-                        <input type="text" class="form-control" data-name="search_worksheets_list" placeholder="Gép kód, Munkalap száma, Cégnév..."/>
-                    </div>
-
-                    <div class="col col-lg-2 col-12  d-none">
-                        <span class="text-xs">Típus</span>
-                        <select class="form-control" data-name="filter_worksheets_type">
-                            {% set canViewAllWorksheetTypes = is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER') %}
-                            {% if canViewAllWorksheetTypes %}
-                                <option value="">Mind</option>
-                            {% endif %}
-                            {% for worksheetType in worksheetTypes %}
-                                {% if canViewAllWorksheetTypes or (is_granted('ROLE_SERVICE') and worksheetType.code == 'ERROR_REPORT') %}
-                                    <option value="{{ worksheetType.id }}" data-code="{{ worksheetType.code }}">{{ worksheetType.title }}</option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                    </div>
-
-
-                    <div class="col-lg-5 col-12">
-                            <span class="text-xs">Dátum</span>
-                            <div class="row">
-                                    <div class="col-5">
-                                        <input type="datetime-local" class="form-control" placeholder="" data-name="date_from" />
-                                    </div>
-                                    <div class="col-1">-</div>
-                                    <div class="col-5">
-                                        <input type="datetime-local" class="form-control" placeholder="" data-name="date_to" />
-                                    </div>
-
-                            </div>
-                    </div>
-
-
-                    <div class="col-lg-4 col-12 mb-2">
-                        <span class="small">Státusz</span>
-                        <select class="form-control" data-name="filter_worksheets_status">
-                            <option value="">Mind</option>
-                        </select>
-                    </div>
-
-
+                <div class="col-xl-2 col-md-3 col-6">
+                    <label class="text-xs" for="worksheet_list_status">Státusz</label>
+                    <select class="form-control" id="worksheet_list_status" data-name="filter_worksheets_status">
+                        <option value="">Minden státusz</option>
+                        {% for worksheetStatusFilter in worksheetStatusFilters %}
+                            <option value="{{ worksheetStatusFilter.code }}" data-worksheet-types="{{ worksheetStatusFilter.worksheet_type_ids|join(',') }}">
+                                {{ worksheetStatusFilter.title }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
-
-                <div class="row">
-                        <div class="col-12 text-end">
-                            <!-- <div class="btn btn-default btn-sm" data-name="btn_index_worksheets_filter"><i class="bi bi-filter-circle-fill"></i> Részletes keresés</div> -->
-                        </div>
+                <div class="col-xl-2 col-12 text-end">
+                    <button type="button" class="btn btn-default btn-sm" data-name="btnWorksheetsAdd">
+                        <i class="bi bi-plus-circle-fill"></i> Új hozzáadása
+                    </button>
                 </div>
+            </div>
+        </div>
+
+        <div class="card panel-card p-2 mt-2">
+            <div class="row">
+                <div class="col-12" data-name="ajax-content" data-key="list_worksheets_list"></div>
             </div>
         </div>
     </div>
 
-    <div class="row mt-2">
-        <div class="col-12 ajax-content" data-name="index_worksheets_content" data-key="list_worksheets"></div>
-    </div>
-</div>
+    <script>
+        $(document).ready(function () {
+            const listUrl = {{ path('list_worksheets_list')|json_encode|raw }};
+            const listFormData = new FormData();
+            listFormData.set('filters', '{}');
+            listFormData.set('page', '1');
 
-<script>
-    (function () {
-
-
-
-        new Ajax({
-            url: '{{ path('getdata_worksheets_count_to_index') }}',
-            name: 'getdata_worksheets_count_to_index',
-            type: 'POST',
-            dataType: 'json',
-            formData: new FormData(),
-            target: null,
-            function_prepare: function () {
-                $("[data-name='cnt_worksheet']").text('0');
-            },
-            function_success: function (result) {
-                if (result.success) {
-                    const worksheetCounts = result.data?.worksheet_counts ?? {};
-
-                    $("[data-name='cnt_worksheet']").each(function () {
-                        const worksheetTypeCode = String($(this).attr('data-key') ?? '').trim();
-                        const worksheetCount = Number(worksheetCounts[worksheetTypeCode] ?? 0);
-
-                        $(this).text(Number.isFinite(worksheetCount) ? worksheetCount : 0);
-                    });
-                }
-            },
-            function_error: function (xhr) {
-                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a munkalapokat.');
-            }
-
-        }).send();
-
-
-        const worksheetTypesFormData = new FormData();
-        worksheetTypesFormData.set('worksheet_type_id', '');
-
-        new Ajax({
-            url: '{{ path('getdata_worksheets_types') }}',
-            name: 'getdata_worksheets_types',
-            type: 'POST',
-            dataType: 'json',
-            formData: worksheetTypesFormData,
-            target: null,
-            function_prepare: function () {
-                const statusSelect = $("[data-name='filter_worksheets_status']");
-                statusSelect
-                    .prop('disabled', true)
-                    .empty()
-                    .append(new Option('Betöltés...', ''));
-            },
-            function_success: function (result) {
-                if (result.success) {
-                    const requestedWorksheetTypeId = String(result.data?.worksheet_type_id ?? '');
-                    const currentWorksheetTypeId = String(this.formData.get('worksheet_type_id') ?? '');
-                    if (requestedWorksheetTypeId !== currentWorksheetTypeId) {
+            const listRequest = new Ajax({
+                url: listUrl,
+                name: 'list_worksheets_list',
+                type: 'POST',
+                dataType: 'json',
+                formData: listFormData,
+                target: $('[data-key="list_worksheets_list"]'),
+                function_prepare: function () {
+                    this.target.html('<div class="p-3 text-xs text-muted-custom"><span class="spinner-border spinner-border-sm me-1"></span> Betöltés...</div>');
+                },
+                function_success: function (result) {
+                    if (!result.success) {
+                        alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalapokat.');
                         return;
                     }
 
-                    const statusSelect = $("[data-name='filter_worksheets_status']");
-                    statusSelect.empty().append(new Option('Mind', ''));
-
-                    (result.data?.status_types ?? []).forEach(function (statusType) {
-                        const option = new Option(statusType.title, statusType.id);
-                        $(option).attr('data-code', statusType.code);
-                        statusSelect.append(option);
-                    });
-
-                    statusSelect.prop('disabled', false);
-
+                    this.target.html(result.content);
+                    bindWorksheetRows();
+                },
+                function_error: function (xhr) {
+                    alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a munkalapokat.');
                 }
-            },
-            function_error: function (xhr, status) {
-                if (status === 'abort') {
-                    return;
-                }
-
-                $("[data-name='filter_worksheets_status']")
-                    .prop('disabled', false)
-                    .empty()
-                    .append(new Option('Mind', ''));
-                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a munkalap státuszokat.');
-            }
-
-        }).send();
-
-        $("[data-name='btn_filter_worksheets_type']")
-            .off('click.worksheetTypeFilter')
-            .on('click.worksheetTypeFilter', function () {
-                const button = $(this);
-                const worksheetTypeId = String(button.attr('data-id') ?? '').trim();
-                if (worksheetTypeId === '') {
-                    return;
-                }
-
-                $("[data-name='btn_filter_worksheets_type']").addClass('btn-default');
-                $("[data-name='btn_filter_worksheets_type']").removeClass('btn-success');
-                button.removeClass('btn-default');
-                button.addClass('btn-success');
-
-                $("[data-name='filter_worksheets_type']").val(worksheetTypeId);
-                $("[data-name='filter_worksheets_status']").val('');
-
-                const statusTypesRequest = ajaxquery['getdata_worksheets_types'];
-                if (statusTypesRequest.ajax && statusTypesRequest.ajax.readyState !== 4) {
-                    statusTypesRequest.ajax.abort();
-                }
-                statusTypesRequest.formData.set('worksheet_type_id', worksheetTypeId);
-                statusTypesRequest.send();
-
-                ajaxquery['list_worksheets'].formData.set('page', '1');
-                refreshWorksheetList();
             });
 
-        new Ajax({
-            url: '{{ path('list_worksheets') }}',
-            name: 'list_worksheets',
-            type: 'POST',
-            dataType: 'json',
-            formData: new FormData(),
-            target: $('[data-name="index_worksheets_content"]'),
-            function_success: function (result) {
-                if (result.success) {
-                    this.target.html(result.content);
+            const editorRequest = new Ajax({
+                url: {{ path('index_worksheets_add')|json_encode|raw }},
+                name: 'index_worksheets_add',
+                type: 'POST',
+                dataType: 'json',
+                formData: new FormData(),
+                target: null,
+                function_success: function (result) {
+                    if (!result.success) {
+                        alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalapot.');
+                        return;
+                    }
+
+                    $('#worksheet_add_content').remove();
+                    $('<div>', {
+                        id: 'worksheet_add_content',
+                        html: result.content
+                    }).appendTo('body');
+                },
+                function_error: function (xhr) {
+                    const error = xhr.responseJSON?.data?.error;
+                    alertify.error(error === 'notfound' ? 'A munkalap nem található.' : (error || 'Nem sikerült betölteni a munkalapot.'));
                 }
-            },
-            function_error: function (xhr) {
-                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a munkalapokat.');
-            }
-        });
+            });
 
-        new Ajax({
-            url: '{{ path('index_worksheets_add') }}',
-            name: 'index_worksheets_add',
-            type: 'POST',
-            dataType: 'json',
-            formData: new FormData(),
-            target: null,
-            function_success: function (result) {
-                if (result.success) {
-                    //this.target.html(result.content);
-                    $("#worksheet_add_content").remove();
-                    $("#worksheet_add_content").css("display", "none");
-                    $("<div>", { id: "worksheet_add_content", html: result.content }).appendTo("body");
+            function openWorksheet(id) {
+                editorRequest.formData = new FormData();
+                if (id) {
+                    editorRequest.formData.set('worksheet_id', String(id));
                 }
-            },
-            function_error: function (xhr) {
-                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a munkalapokat.');
+                editorRequest.send();
             }
 
-        });
+            function bindWorksheetRows() {
+                $('[data-key="list_worksheets_list"] [data-name="list_item_btn"]')
+                    .off('click.worksheets')
+                    .on('click.worksheets', function () {
+                        const button = $(this);
+                        const id = button.closest('[data-name="list_item"]').attr('data-key');
+                        if (button.attr('data-mode') === 'print') {
+                            const url = button.attr('data-url');
+                            window.open(url, '_blank');
+                            return;
+                        }
 
-        $("[data-name='btn_index_worksheets_add']").unbind("click").click(function () {
-            ajaxquery['index_worksheets_add'].formData = new FormData();
-            ajaxquery['index_worksheets_add'].send();
-        });
-
-
-        function refreshWorksheetList() {
-            var filters = JSON.parse(ajaxquery['list_worksheets'].formData.get("filters") ?? '{}');
-            filters.search = $("[data-name='search_worksheets_list']").val();
-            filters.worksheet_type_id = $("[data-name='filter_worksheets_type']").val();
-            filters.date_from = $("[data-name='date_from']").val();
-            filters.date_to = $("[data-name='date_to']").val();
-            filters.company = $("[data-name='filter_worksheets_company']").val();
-            filters.status = $("[data-name='filter_worksheets_status']").val();
-
-            ajaxquery['list_worksheets'].formData.set("filters", JSON.stringify(filters));
-            ajaxquery['list_worksheets'].url = '{{ path('list_worksheets') }}';
-            ajaxquery['list_worksheets'].send();
-        }
-
-        $("[data-name='btn_index_worksheets_filter']").unbind("click").click(function () {
-            refreshWorksheetList();
-        });
-
-        $("[data-name='filter_worksheets_type'], [data-name='date_from'], [data-name='date_to'], [data-name='filter_worksheets_status']").unbind("change").change(function () {
-            refreshWorksheetList();
-        });
-
-        $("[data-name='filter_worksheets_company']").unbind("keyup").keyup(function (event) {
-            if (event.keyCode === 13) {
-                refreshWorksheetList();
+                        openWorksheet(id);
+                    });
             }
-        });
 
-        $("[data-name='search_worksheets_list']").unbind("keyup").keyup(function (event) {
-            if (event.keyCode === 13) {
-                refreshWorksheetList();
+            function updateStatusFilter() {
+                const typeId = String($('[data-name="filter_worksheets_type"]').val() || '');
+                const status = $('[data-name="filter_worksheets_status"]');
+                const selectedOption = status.find('option:selected');
+
+                status.find('option').each(function () {
+                    const optionTypeIds = String($(this).attr('data-worksheet-types') || '')
+                        .split(',')
+                        .filter(Boolean);
+                    const visible = String($(this).val() || '') === '' || typeId === '' || optionTypeIds.includes(typeId);
+                    $(this).prop('disabled', !visible).prop('hidden', !visible);
+                });
+
+                if (selectedOption.prop('disabled')) {
+                    status.val('');
+                }
             }
+
+            function applyFilters() {
+                const filters = {
+                    search: String($('[data-name="search_worksheets_list"]').val() || '').trim(),
+                    worksheet_type_id: $('[data-name="filter_worksheets_type"]').val() || '',
+                    worksheet_status_type_code: $('[data-name="filter_worksheets_status"]').val() || ''
+                };
+                listRequest.url = listUrl;
+                listRequest.formData.set('filters', JSON.stringify(filters));
+                listRequest.formData.set('page', '1');
+                listRequest.send();
+            }
+
+            $('[data-name="btnWorksheetsAdd"]')
+                .off('click.worksheets')
+                .on('click.worksheets', function () { openWorksheet(null); });
+            $('[data-name="worksheet-type-shortcut"]')
+                .off('click.worksheets')
+                .on('click.worksheets', function () {
+                    const typeId = String($(this).attr('data-worksheet-type-id') || '');
+                    $('[data-name="filter_worksheets_type"]').val(typeId);
+                    updateStatusFilter();
+                    applyFilters();
+                });
+            $('[data-name="btnSearchWorksheets"]')
+                .off('click.worksheets')
+                .on('click.worksheets', applyFilters);
+            $('[data-name="search_worksheets_list"]')
+                .off('keydown.worksheets')
+                .on('keydown.worksheets', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        applyFilters();
+                    }
+                });
+            $('[data-name="filter_worksheets_type"]')
+                .off('change.worksheets')
+                .on('change.worksheets', function () {
+                    updateStatusFilter();
+                    applyFilters();
+                });
+            $('[data-name="filter_worksheets_status"]')
+                .off('change.worksheets')
+                .on('change.worksheets', applyFilters);
+
+            updateStatusFilter();
+            listRequest.send();
         });
-
-
-
-        const url = new URL(location.href);
-        const search_type = url.searchParams.get("type")
-        if(search_type != null){
-            var filters = JSON.parse(ajaxquery['list_worksheets'].formData.get("filters") ?? '{}');
-
-            $("[data-name='filter_worksheets_type'] option").removeAttr("selected");
-
-            $("[data-name='filter_worksheets_type'] option[data-code='"+search_type+"']").attr("selected", "selected");
-            $("[data-name='filter_worksheets_type'] option[data-code='"+search_type+"']").trigger("change");
-            /*
-            filters.worksheet_type = search_type;
-
-            ajaxquery['list_worksheets'].formData.set("filters", JSON.stringify(filters));
-            ajaxquery['list_worksheets'].url = '{{ path('list_worksheets') }}';
-            ajaxquery['list_worksheets'].send();
-            */
-        }else{
-            ajaxquery['list_worksheets'].send();
-        }
-    })();
-
-    /*$("[data-name='btn_index_worksheets_add']").trigger("click");*/
-
-    setTimeout(
-        ()=>{
-             //   $("[data-name='list_item_btn']").eq(0).trigger("click");
-        },500
-    )
-</script>
-
+    </script>
 {% endblock %}

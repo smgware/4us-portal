@@ -53,6 +53,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $image = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $signature = null;
+
     #[ORM\Column(length: 255)]
     private ?string $status = null;
 
@@ -236,6 +239,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setImage(?string $image): static
     {
         $this->image = $image;
+
+        return $this;
+    }
+
+    public function getSignature(): ?string
+    {
+        return $this->signature;
+    }
+
+    public function setSignature(?string $signature): static
+    {
+        $this->signature = $signature;
 
         return $this;
     }

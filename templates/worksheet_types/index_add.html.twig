@@ -18,4 +18,21 @@
             <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
         </select>
     </div>
+
+    <div class="mb-3">
+        <label for="worksheet-type-prefix" class="form-label">Kód előtag</label>
+        <input
+            type="text"
+            class="form-control text-uppercase"
+            id="worksheet-type-prefix"
+            name="prefix"
+            data-name="prefix"
+            value="{{ item ? item.prefix : '' }}"
+            maxlength="10"
+            placeholder="Például: GS"
+            autocapitalize="characters"
+            spellcheck="false"
+            required
+        >
+    </div>
 </form>

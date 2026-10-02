@@ -20,6 +20,9 @@ class WorksheetType
     #[ORM\Column(length: 255)]
     private ?string $code = null;
 
+    #[ORM\Column(length: 10)]
+    private ?string $prefix = null;
+
     #[ORM\Column(name: 'uid_add', nullable: true)]
     private ?int $uidAdd = null;
 
@@ -60,6 +63,18 @@ class WorksheetType
     public function setCode(string $code): static
     {
         $this->code = $code;
+
+        return $this;
+    }
+
+    public function getPrefix(): ?string
+    {
+        return $this->prefix;
+    }
+
+    public function setPrefix(string $prefix): static
+    {
+        $this->prefix = $prefix;
 
         return $this;
     }

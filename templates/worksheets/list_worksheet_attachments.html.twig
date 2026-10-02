@@ -1,0 +1,43 @@
+{% for attachment in attachments %}
+    <div class="worksheet-attachment-block" data-attachment-id="{{ attachment.id }}">
+        <div class="d-flex align-items-start gap-2">
+            <button type="button" class="worksheet-attachment-preview" data-action="view" title="Megnyitás">
+                {% if attachment.isImage %}
+                    <img src="{{ attachment.contentUrl }}" alt="">
+                {% else %}
+                    <i class="bi bi-file-earmark"></i>
+                {% endif %}
+            </button>
+            <div class="flex-grow-1 overflow-hidden">
+                <button type="button" class="btn btn-link text-default text-start text-decoration-none p-0 w-100" data-action="view">
+                    <span class="attachment-name d-block text-truncate" title="{{ attachment.originalName }}">{{ attachment.originalName }}</span>
+                </button>
+                <div class="attachment-meta">{{ attachment.sizeFormatted }} · {{ attachment.mimeType|default('ismeretlen típus') }}</div>
+                {% if attachment.description %}
+                    <div class="worksheet-attachment-description text-xs mt-1">{{ attachment.description }}</div>
+                {% endif %}
+            </div>
+            <div class="d-flex flex-column gap-1">
+                <button type="button" class="btn btn-default btn-sm" data-action="edit" title="Leírás szerkesztése">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+                <button type="button" class="btn btn-default btn-sm" data-action="info" title="Fájlinformáció">
+                    <i class="bi bi-info-circle"></i>
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-action="delete" title="Törlés">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+{% else %}
+    {% if page == 1 %}
+        <span class="text-xs text-muted-custom" data-name="no_existing_attachments">Nincsenek csatolmányok.</span>
+    {% endif %}
+{% endfor %}
+
+{% if hasMore %}
+    <button type="button" class="btn btn-default btn-sm w-100 mt-2" data-action="load-more" data-next-page="{{ page + 1 }}">
+        <i class="bi bi-plus-circle"></i> Továbbiak betöltése
+    </button>
+{% endif %}

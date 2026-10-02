@@ -1,4 +1,6 @@
 ﻿<div class="card panel-card w-100 overflow-auto p-2">
+    <div class="text-end small text-muted mb-2">Összesen: {{ totalRecords }} bejegyzés</div>
+
     <div class="table-responsive">
         <table class="table-default w-100">
             <thead>
@@ -7,7 +9,7 @@
                     <th class="p-2">Megnevezés</th>
                     <th class="p-2">Kód</th>
                     <th class="p-2">Kategória</th>
-                    <th class="p-2">Projekt</th>
+                    <th class="p-2">Telephely</th>
                     <!--<th class="p-2">Státusz</th> -->
                     <th class="p-2">#</th>
                 </tr>
@@ -16,7 +18,7 @@
                 {% for record in records %}
                     <tr data-name="list_item" data-key="{{ record.id }}">
                         <td>
-                            {% if record.open_rental_count > 0 and record.open_error_reporting_count > 0 %}
+                            {% if record.open_error_reporting_count > 0 %}
                                 <div class="btn btn-sm btn-danger">javítás alatt</div>
                             {% elseif record.open_rental_count > 0 %}
                                 <div class="btn btn-sm btn-warning">kiadva</div>
@@ -27,7 +29,7 @@
                         <td>{{ record.title }}</td>
                         <td>{{ record.code }}</td>
                         <td>{{ record.machine_category_title|default('-') }}</td>
-                        <td>{{ record.project_name|default('-') }}</td>
+                        <td>{{ record.company_site_title|default('-') }}</td>
                         <!-- <td>{{ record.status == 1 ? '<div class="btn btn-sm btn-success">aktív</div>' : '<div class="btn btn-sm btn-danger">inaktív</div>' }}</td> -->
                         <td>
                             <div class="btn btn-default text-info btn-sm" data-name="list_item_btn" data-mode="info"><i class="bi bi-info-circle-fill"></i></div>
@@ -37,7 +39,7 @@
                     </tr>
                 {% else %}
                     <tr>
-                        <td colspan="6" class="text-center py-4">Nincs megjeleníthető adat.</td>
+                    <td colspan="6" class="text-center py-4">Nincs megjeleníthető adat.</td>
                     </tr>
                 {% endfor %}
             </tbody>

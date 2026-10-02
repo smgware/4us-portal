@@ -2,9 +2,9 @@
 {% set title = statusTitle|default(code ?: '-') %}
 
 {% if code in ['CLOSED', 'RETURNED', 'REPAIRED_ISSUED'] %}
-    <span class="btn btn-sm btn-danger">{{ title }}</span>
+    <span class="badge text-bg-secondary">{{ title }}</span>
 {% elseif code == 'UNDER_REPAIR' %}
-    <span class="btn btn-sm btn-warning">{{ title }}</span>
+    <span class="badge text-bg-warning">{{ title }}</span>
 {% else %}
-    <span class="btn btn-sm btn-success">{{ title }}</span>
+    <span class="badge text-bg-success">{{ title }}</span>
 {% endif %}

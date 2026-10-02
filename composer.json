@@ -25,7 +25,9 @@
     "phpmailer/phpmailer": "^6.9",
     "symfony/apache-pack": "*",
     "phpoffice/phpspreadsheet": "^5.8",
-    "symfony/string": "7.4.*"
+    "symfony/string": "7.4.*",
+    "dompdf/dompdf": "^3.1",
+    "endroid/qr-code": "5.0"
   },
   "require-dev": {
     "symfony/maker-bundle": "^1.64",
@@ -35,10 +37,7 @@
   "autoload": {
     "psr-4": {
       "App\\": "src/"
-    },
-    "files": [
-      "src/Helper/debug.php"
-    ]
+    }
   },
   "autoload-dev": {
     "psr-4": {

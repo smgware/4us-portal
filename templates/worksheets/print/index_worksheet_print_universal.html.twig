@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4 portrait; margin: 8mm 10mm 10mm; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: #171717;
+            font-family: "DejaVu Sans", sans-serif;
+            font-size: 9.5pt;
+            line-height: 1.25;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        .header td { vertical-align: middle; }
+        .logo-cell { width: 32%; }
+        .logo { width: 45mm; height: auto; }
+        .contact-cell {
+            width: 28%;
+            color: #456bb2;
+            font-size: 8.5pt;
+            line-height: 1.4;
+        }
+        .sites-cell {
+            width: 40%;
+            padding-left: 5mm;
+            border-left: 1px solid #456bb2;
+            color: #456bb2;
+            font-size: 8pt;
+            line-height: 1.35;
+        }
+        .title-bar { margin-top: 3mm; background: #456bb2; color: #fff; }
+        .title-bar td { padding: 2.2mm 3mm; }
+        .document-code {
+            width: 38mm;
+            color: #111;
+            background: #fff;
+            border: 2mm solid #456bb2;
+            font-size: 11pt;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .document-title {
+            font-size: 17pt;
+            font-style: italic;
+            font-weight: bold;
+            text-align: center;
+            letter-spacing: .2pt;
+        }
+        .info-table { margin-top: 1.5mm; border: 1px solid #456bb2; }
+        .info-table td {
+            width: 50%;
+            height: 10mm;
+            padding: 2mm 3mm;
+            border: 1px solid #456bb2;
+            vertical-align: middle;
+        }
+        .label { color: #456bb2; font-weight: bold; margin-right: 2mm; }
+        .value { color: #171717; }
+        .note-box {
+            min-height: 34mm;
+            margin-top: 1.5mm;
+            padding: 2.5mm 3mm;
+            border: 1px solid #456bb2;
+        }
+        .note-label { color: #456bb2; font-weight: bold; }
+        .note-value { margin-top: 1mm; white-space: pre-wrap; }
+        .section-title { margin: 4mm 0 2mm; font-size: 11pt; }
+        .work-table { border: 1px solid #456bb2; page-break-inside: auto; }
+        .work-table thead { display: table-header-group; }
+        .work-table th {
+            padding: 2.2mm 2mm;
+            border: 1px solid #456bb2;
+            color: #fff;
+            background: #456bb2;
+            font-size: 10.5pt;
+        }
+        .work-table td {
+            height: 8.2mm;
+            padding: 1.4mm 2.5mm;
+            border: 1px solid #456bb2;
+        }
+        .work-table .name { width: 48%; }
+        .work-table .quantity { width: 32%; text-align: center; }
+        .work-table .unit { width: 20%; text-align: center; }
+        .service-row .name { color: #456bb2; font-weight: bold; text-align: center; }
+        .signatures { width: 100%; margin-top: 6mm; table-layout: fixed; page-break-inside: avoid; }
+        .signatures .signature-cell,
+        .signatures .date-cell { width: 50%; padding: 0 8mm; text-align: center; }
+        .signatures .signature-content-row td { height: 16mm; vertical-align: middle; }
+        .signatures .signature-line-row td { height: 0; line-height: 0; }
+        .signatures .signature-label-row td { padding-top: 1.5mm; vertical-align: top; }
+        .date-value { white-space: nowrap; }
+        .signature-image { display: block; max-width: 42mm; max-height: 15mm; margin: 0 auto; }
+        .signature-line { height: 0; border-top: 1px dotted #456bb2; }
+        .signature-label { color: #456bb2; }
+        .signature-name { color: #171717; font-size: 8pt; }
+        .legal {
+            margin-top: 4mm;
+            padding-top: 2mm;
+            border-top: 1px solid #456bb2;
+            color: #456bb2;
+            font-size: 7.5pt;
+            text-align: center;
+            line-height: 1.35;
+        }
+    </style>
+</head>
+<body>
+{% set externalData = worksheetData.error_reporting_data|default({}) %}
+{% set site = worksheet.companySite ?: (machine ? machine.companySite : null) %}
+{% set customerName = partner ? partner.name : externalData.company_name|default('-') %}
+{% set projectName = partnerProject ? partnerProject.name : '-' %}
+{% set projectCode = partnerProject ? partnerProject.code : '' %}
+{% set machineName = machine ? machine.title : '-' %}
+{% set machineSerial = machine ? (machineData.sku|default('') ?: '-') : '-' %}
+{% set machineYear = machine ? (machineData.year|default('') ?: '-') : '-' %}
+{% set note = worksheetData.note|default('') ?: externalData.error_description|default('') %}
+{% set fillerRowCount = 4 - materialsUsed|length %}
+
+<table class="header">
+    <tr>
+        <td class="logo-cell"><img class="logo" src="{{ logoDataUri }}" alt="4US"></td>
+        <td class="contact-cell">
+            Telefon: +36 1 99 888 99<br>
+            E-mail: office@4uszrt.hu<br>
+            Weboldal: www.4uszrt.hu
+        </td>
+        <td class="sites-cell">
+            Iroda: 2051 Biatorbágy, Köris utca 2.<br>
+            Raktár 1: 2051 Biatorbágy, Tópark<br>
+            Raktár 2: 7200 Dombóvár, Köztársaság u. 15.<br>
+            Raktár 3: 4002 Debrecen, Balmazújvárosi út 14.<br>
+            Raktár 4: 6727 Szeged II., Algyői út 87-89.
+        </td>
+    </tr>
+</table>
+
+<table class="title-bar">
+    <tr>
+        <td class="document-code">{{ worksheet.code }}</td>
+        <td class="document-title">SZERVÍZ MUNKALAP</td>
+    </tr>
+</table>
+
+<table class="info-table">
+    <tr>
+        <td colspan=""><span class="label">Megrendelő:</span><span class="value">{{ customerName }}</span></td>
+        <td colspan=""><span class="label">Projekt:</span><span class="value">{{ projectName }}{% if projectCode %} ({{ projectCode }}){% endif %}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">Géptípus:</span><span class="value">{{ machineName }}</span></td>
+        <td><span class="label">Gyári/belső szám:</span><span class="value">{{ machineSerial }}</span></td>
+    </tr>
+    <tr>
+        <td><span class="label">Évjárat:</span><span class="value">{{ machineYear }}</span></td>
+        <td>
+            <span class="label">Üzemóra / km:</span>
+            <span class="value">
+                {% if machine %}
+                    {{ worksheetData.operating_hours|default('') ?: '-' }}
+                    {% if worksheetData.kilometer|default('') %} / {{ worksheetData.kilometer }} km{% endif %}
+                {% else %}
+                    -
+                {% endif %}
+            </span>
+        </td>
+    </tr>
+</table>
+
+<div class="note-box">
+    <div class="note-label">Megjegyzés:</div>
+    <div class="note-value">{{ note ?: '-' }}</div>
+</div>
+
+<div class="section-title">Munkavégzés és felhasznált anyagok</div>
+<table class="work-table">
+    <thead>
+        <tr>
+            <th class="name">Megnevezés</th>
+            <th class="quantity">Mennyiség</th>
+            <th class="unit">Mértékegység</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr class="service-row">
+            <td class="name">Munka és útidő</td>
+            <td class="quantity">{{ worksheetData.work_and_travel_time|default('') }}</td>
+            <td class="unit">óra</td>
+        </tr>
+        <tr class="service-row">
+            <td class="name">Kiszállás</td>
+            <td class="quantity">{{ worksheetData.distance_to_site|default('') }}</td>
+            <td class="unit">km</td>
+        </tr>
+        {% for material in materialsUsed %}
+            <tr>
+                <td class="name">
+                    {{ material.name }}{% if material.article_number|default('') %} ({{ material.article_number }}){% endif %}
+                </td>
+                <td class="quantity">{{ material.quantity }}</td>
+                <td class="unit">{{ material.unit.short|default('') }}</td>
+            </tr>
+        {% endfor %}
+        {% if fillerRowCount > 0 %}
+            {% for row in 1..fillerRowCount %}
+                <tr><td class="name">&nbsp;</td><td class="quantity"></td><td class="unit"></td></tr>
+            {% endfor %}
+        {% endif %}
+    </tbody>
+</table>
+
+<table class="signatures">
+    <tr class="signature-content-row">
+        <td class="signature-cell">
+            {% if editor and editor.signature %}<img class="signature-image" src="{{ editor.signature }}" alt="Aláírás">{% endif %}
+        </td>
+        <td class="date-cell date-value">{{ documentDate|date('Y-m-d H:i') }}</td>
+    </tr>
+    <tr class="signature-line-row">
+        <td class="signature-cell"><div class="signature-line"></div></td>
+        <td class="date-cell"><div class="signature-line"></div></td>
+    </tr>
+    <tr class="signature-label-row">
+        <td class="signature-cell">
+            <div class="signature-label">Szerviztechnikus</div>
+            {% if editor %}<div class="signature-name">{{ editor.name ?: editor.userName }}</div>{% endif %}
+        </td>
+        <td class="date-cell"><div class="signature-label">Dátum</div></td>
+    </tr>
+</table>
+
+<div class="legal">
+    A hibafelmérés díjtalan, amennyiben a javítást cégünknél végeztetik el.<br>
+    A megrendelő köteles késedelmes fizetés esetén a késedelmi kamatot és a behajtás összes költségét megtéríteni.
+</div>
+</body>
+</html>

@@ -1,0 +1,585 @@
+{% set itemData = item ? item.data|default({}) : {} %}
+{% set errorReportingData = itemData.error_reporting_data|default({}) %}
+{% set selectedTypeId = item and item.worksheetType ? item.worksheetType.id : (selectedWorksheetType ? selectedWorksheetType.id : null) %}
+{% set selectedStatusId = item and item.worksheetStatusType ? item.worksheetStatusType.id : null %}
+{% set selectedTypeCode = item and item.worksheetType ? item.worksheetType.code : (selectedWorksheetType ? selectedWorksheetType.code : '') %}
+{% set isMachineMove = selectedTypeCode == 'MACHINE_MOVE_BETWEEN_LOCATIONS' %}
+{% set requiresOperationalDetails = true %}
+{% set conditionTypes = ['Elölről', 'Hátulról', 'Jobbról', 'Balról', 'Üzem / KM óra'] %}
+
+<style>
+    .worksheet-editor .worksheet-subtitle { font-weight: 600; }
+    .worksheet-editor .condition-image-preview {
+        min-height: 135px;
+        height: 135px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        color: var(--muted);
+    }
+    .worksheet-editor .condition-image-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .worksheet-editor .condition-image-placeholder { font-size: 2.2rem; }
+    .worksheet-editor .condition-image-filename {
+        min-height: 32px;
+        word-break: break-word;
+    }
+    .worksheet-editor .worksheet-attachment-block {
+        border: 1px solid var(--border);
+        background: var(--field-bg);
+        border-radius: 12px;
+        padding: 10px;
+    }
+    .worksheet-editor .worksheet-attachment-block + .worksheet-attachment-block { margin-top: 8px; }
+    .worksheet-editor .worksheet-attachment-preview {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        border: 0;
+        border-radius: 9px;
+        background: var(--grayblue);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .worksheet-editor .worksheet-attachment-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .worksheet-editor .worksheet-attachment-preview i { font-size: 1.5rem; }
+    .worksheet-editor .worksheet-attachment-description {
+        color: var(--muted);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .worksheet-editor .worksheet-notification-contact {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--field-bg);
+        padding: 10px;
+        cursor: pointer;
+        transition: border-color .15s ease, background-color .15s ease;
+    }
+    .worksheet-editor .worksheet-notification-contact:hover {
+        border-color: #4da3ff;
+    }
+    .worksheet-editor .worksheet-notification-contact:has(input[type='checkbox']:checked) {
+        border-color: rgba(13, 110, 253, .45);
+        background: rgba(13, 110, 253, .06);
+    }
+    .worksheet-editor .worksheet-notification-contact:has(input[type='checkbox']:disabled) {
+        cursor: default;
+    }
+    .worksheet-editor .worksheet-notification-empty {
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+    }
+    .worksheet-editor .worksheet-notification-loading {
+        min-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    #attachment_viewer {
+        inset: 0;
+        color: #fff;
+    }
+    #attachment_viewer .attachment-viewer-stage {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 76px 100px 54px;
+    }
+    #attachment_viewer .attachment-viewer-content {
+        max-width: min(1100px, 85vw);
+        max-height: calc(100vh - 130px);
+        text-align: center;
+        position: relative;
+        z-index: 2;
+    }
+    #attachment_viewer .attachment-viewer-content img {
+        max-width: 100%;
+        max-height: calc(100vh - 245px);
+        object-fit: contain;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+    }
+    #attachment_viewer .attachment-viewer-file-icon { font-size: min(25vw, 190px); }
+    #attachment_viewer [data-name='attachment_viewer_navigate'] {
+        width: 90px;
+        height: 100%;
+        border: 0;
+        color: #fff;
+        z-index: 3;
+        font-size: 2.4rem;
+    }
+    #attachment_viewer [data-name='attachment_viewer_close'] {
+        position: fixed;
+        right: 18px;
+        top: 18px;
+        z-index: 4;
+    }
+    #attachment_viewer .attachment-viewer-caption {
+        margin-top: 14px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, .65);
+    }
+    @media (max-width: 768px) {
+        #attachment_viewer .attachment-viewer-stage { padding: 70px 58px 40px; }
+        #attachment_viewer [data-name='attachment_viewer_navigate'] { width: 52px; }
+    }
+</style>
+
+<div class="container-fluid worksheet-editor" data-name="worksheet_editor">
+    <form data-name="worksheet" novalidate>
+        <input type="hidden" name="id" value="{{ item ? item.id : '' }}">
+        <input type="hidden" name="machine_rental_id" value="{{ item and item.machineRentalId ? item.machineRentalId : rentalId|default('') }}">
+
+        <div class="row">
+            <div class="col-lg-8 col-12">
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <div class="panel-card p-3">
+                            <div class="text-s fw-600 mb-2">Alapadatok</div>
+                            <div class="row g-2">
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_type_id">Munkalap típusa</label>
+                                    <select name="worksheet_type_id" id="worksheet_type_id" class="form-control" required>
+                                        <option value="">Válassz típust...</option>
+                                        {% for worksheetType in worksheetTypes %}
+                                            <option value="{{ worksheetType.id }}" data-code="{{ worksheetType.code }}" {{ selectedTypeId == worksheetType.id ? 'selected' }}>
+                                                {{ worksheetType.title }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_status_type_id">Státusz</label>
+                                    <select name="worksheet_status_type_id" id="worksheet_status_type_id" class="form-control" required>
+                                        <option value="">Válassz státuszt...</option>
+                                        {% for worksheetStatusType in worksheetStatusTypes %}
+                                            <option
+                                                value="{{ worksheetStatusType.id }}"
+                                                data-worksheet-type="{{ worksheetStatusType.worksheetType ? worksheetStatusType.worksheetType.id : '' }}"
+                                                {{ selectedStatusId == worksheetStatusType.id ? 'selected' }}
+                                            >{{ worksheetStatusType.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_title">Munkalap címe</label>
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        id="worksheet_title"
+                                        name="title"
+                                        value="{{ item ? item.title : '' }}"
+                                        maxlength="255"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_partner_search">Partner</label>
+                                    <div class="ajax-combobox" data-worksheet-combobox="partner">
+                                        <div class="input-group">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="worksheet_partner_search"
+                                                value="{{ item and item.partner ? item.partner.name : '' }}"
+                                                placeholder="Partner keresése név, kód vagy adószám alapján..."
+                                                autocomplete="off"
+                                                role="combobox"
+                                                aria-autocomplete="list"
+                                                aria-controls="worksheet_partner_results"
+                                                aria-expanded="false"
+                                                data-ajax-combobox-search
+                                            >
+                                            <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Partner kiválasztásának törlése">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" name="partner_id" id="worksheet_partner_id" value="{{ item and item.partner ? item.partner.id : '' }}" data-ajax-combobox-value>
+                                        <div id="worksheet_partner_results" class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
+                                    </div>
+                                    {% if item and item.partner and item.partner.status != '1' %}
+                                        <div class="form-text text-warning"><i class="bi bi-exclamation-triangle"></i> A jelenlegi partner inaktív. Másik értékre cserélhető, újból nem választható ki.</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_machine_search">Gép</label>
+                                    <div class="ajax-combobox" data-worksheet-combobox="machine">
+                                        <div class="input-group">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="worksheet_machine_search"
+                                                name="machine"
+                                                value="{{ selectedMachine ? selectedMachine.title : itemData.machine|default('') }}"
+                                                placeholder="Gép keresése név, kód, kategória vagy telephely alapján..."
+                                                autocomplete="off"
+                                                role="combobox"
+                                                aria-autocomplete="list"
+                                                aria-controls="worksheet_machine_results"
+                                                aria-expanded="false"
+                                                data-ajax-combobox-search
+                                            >
+                                            <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Gép kiválasztásának törlése">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                        <input type="hidden" name="machine_id" id="worksheet_machine_id" value="{{ selectedMachine ? selectedMachine.id : '' }}" data-ajax-combobox-value>
+                                        <div id="worksheet_machine_results" class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
+                                    </div>
+                                    {% if selectedMachine and selectedMachine.status != '1' %}
+                                        <div class="form-text text-warning"><i class="bi bi-exclamation-triangle"></i> A jelenlegi gép inaktív. Másik értékre cserélhető, újból nem választható ki.</div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 col-12 {{ isMachineMove ? '' : 'd-none' }}" data-worksheet-company-site-field>
+                                    <label class="text-s" for="worksheet_company_site_id">Céltelephely <span class="text-danger">*</span></label>
+                                    <select
+                                        name="company_site_id"
+                                        id="worksheet_company_site_id"
+                                        class="form-control"
+                                        {{ isMachineMove ? 'required' }}
+                                    >
+                                        <option value="">Válassz telephelyet...</option>
+                                        {% for companySite in companySites %}
+                                            <option value="{{ companySite.id }}" {{ item and item.companySite and item.companySite.id == companySite.id ? 'selected' }}>
+                                                {{ companySite.title }}{% if companySite.code and companySite.code != '-' %} ({{ companySite.code }}){% endif %}{% if companySite.status != '1' %} – inaktív{% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">Mentéskor ez lesz a gép aktuális telephelye.</div>
+                                </div>
+
+                                <!--projekt-->
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s">Projekt</label>
+                                    <div class="text-m" data-name="worksheet_partner_project_name">{{ partnerProject ? partnerProject.name : '-' }}</div>
+                                    <div class="text-xs text-muted-custom" data-name="worksheet_partner_project_code">{{ partnerProject and partnerProject.code ? partnerProject.code : '' }}</div>
+                                </div>
+                                <!--projekt end-->
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if itemData.source|default('') == 'external' %}
+                    <div class="row mb-2">
+                        <div class="col-12">
+                            <div class="panel-card p-3">
+                                <div class="text-s fw-600 mb-3"><i class="bi bi-exclamation-circle"></i> Hibajegy információk</div>
+                                <div class="row g-3">
+                                    <div class="col-md-6 col-12">
+                                        <div class="text-xs text-muted-custom">Gép száma</div>
+                                        <div class="text-s fw-600 text-break">{{ errorReportingData.machine_code|default('-') }}</div>
+                                    </div>
+                                    <div class="col-md-6 col-12">
+                                        <div class="text-xs text-muted-custom">Bejelentő neve</div>
+                                        <div class="text-s fw-600 text-break">{{ errorReportingData.name|default('-') }}</div>
+                                    </div>
+                                    <div class="col-md-6 col-12">
+                                        <div class="text-xs text-muted-custom">Cégnév</div>
+                                        <div class="text-s fw-600 text-break">{{ errorReportingData.company_name|default('-') }}</div>
+                                    </div>
+                                    <div class="col-md-6 col-12">
+                                        <div class="text-xs text-muted-custom">Adószám</div>
+                                        <div class="text-s fw-600 text-break">{{ errorReportingData.tax_number|default('-') }}</div>
+                                    </div>
+                                    <div class="col-md-6 col-12">
+                                        <div class="text-xs text-muted-custom">E-mail cím</div>
+                                        <div class="text-s fw-600 text-break">{{ errorReportingData.email|default('-') }}</div>
+                                    </div>
+                                    <div class="col-md-6 col-12">
+                                        <div class="text-xs text-muted-custom">Telefonszám</div>
+                                        <div class="text-s fw-600 text-break">{{ errorReportingData.phone|default('-') }}</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="text-xs text-muted-custom">Helyszín</div>
+                                        <div class="text-s fw-600 text-break">{{ errorReportingData.address|default('-') }}</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="text-xs text-muted-custom mb-1">Hiba leírása</div>
+                                        <div class="p-2 rounded bg-body-tertiary text-s text-break" style="white-space: pre-wrap;">{{ errorReportingData.error_description|default('-') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <div class="panel-card p-3">
+                            <div class="text-s fw-600 mb-2">Hiba és munkavégzés</div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="text-s" for="worksheet_note">Megjegyzés</label>
+
+                                    <div class="col-12 text-s mt-2 mb-2">
+                                        <label for="worksheet_description_template">Sablon kiválasztása</label>
+                                        <select
+                                            id="worksheet_description_template"
+                                            data-name="worksheet_description_template"
+                                            class="form-control"
+                                        >
+                                            <option value="">Nincs kiválasztva</option>
+                                            {% for descriptionTemplate in worksheetDescriptionTemplates %}
+                                                <option
+                                                    value="{{ descriptionTemplate.id }}"
+                                                    data-description="{{ descriptionTemplate.description|e('html_attr') }}"
+                                                >{{ descriptionTemplate.title }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+
+                                    <textarea name="note" id="worksheet_note" rows="4" class="form-control">{{ itemData.note|default('') }}</textarea>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_operating_hours">Üzemóra <span class="text-danger">*</span></label>
+                                    <input type="number" inputmode="decimal" min="1" class="form-control" id="worksheet_operating_hours" name="operating_hours" value="{{ itemData.operating_hours|default(requiresOperationalDetails ? '1' : '') }}" {{ requiresOperationalDetails ? 'required' }} data-worksheet-operational-input>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_kilometer">KM óra állás <span class="text-danger">*</span></label>
+                                    <input type="number" inputmode="decimal" min="1" class="form-control" id="worksheet_kilometer" name="kilometer" value="{{ itemData.kilometer|default(requiresOperationalDetails ? '1' : '') }}" {{ requiresOperationalDetails ? 'required' }} data-worksheet-operational-input>
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_work_and_travel_time">Munka és útidő (óra) <span class="text-danger">*</span></label>
+                                    <input
+                                        type="number"
+                                        inputmode="decimal"
+                                        min="1"
+                                        class="form-control"
+                                        id="worksheet_work_and_travel_time"
+                                        name="work_and_travel_time"
+                                        value="{{ itemData.work_and_travel_time|default(requiresOperationalDetails ? '1' : '') }}"
+                                        {{ requiresOperationalDetails ? 'required' }}
+                                        data-worksheet-operational-input
+                                    >
+                                </div>
+                                <div class="col-md-6 col-12">
+                                    <label class="text-s" for="worksheet_distance_to_site">Kiszállás (km) <span class="text-danger">*</span></label>
+                                    <input
+                                        type="number"
+                                        inputmode="decimal"
+                                        min="1"
+                                        class="form-control"
+                                        id="worksheet_distance_to_site"
+                                        name="distance_to_site"
+                                        value="{{ itemData.distance_to_site|default(requiresOperationalDetails ? '1' : '') }}"
+                                        {{ requiresOperationalDetails ? 'required' }}
+                                        data-worksheet-operational-input
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <div class="panel-card p-3">
+                            <div class="text-s fw-600">Felhasznált anyagok</div>
+                            <input
+                                type="hidden"
+                                name="materials_used"
+                                data-name="materials_used_json"
+                                value="{{ itemData.materials_used|default([])|json_encode|e('html_attr') }}"
+                            >
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-default btn-sm" data-name="btnAddMaterialsUsed">
+                                        <i class="bi bi-plus-circle-fill"></i> Hozzáadás
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row mt-2">
+                                <div class="col-12" data-name="listMaterialsUsed">
+                                    <div class="text-xs text-muted-custom mb-3">Nincsenek hozzáadott tételek</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <div class="panel-card p-3">
+                            <div class="text-s fw-600">Képek</div>
+                            <div class="text-xs text-muted-custom mb-2">Állapotképek</div>
+                            <div class="row g-2">
+                                {% for conditionType in conditionTypes %}
+                                    {% set conditionImage = conditionImages[conditionType]|default(null) %}
+                                    <div class="col-xl col-md-4 col-6">
+                                        <div
+                                            class="card panel-card p-2 h-100"
+                                            data-name="condition_image_slot"
+                                            data-condition="{{ conditionType }}"
+                                            data-existing-id="{{ conditionImage ? conditionImage.id : '' }}"
+                                        >
+                                            <div class="text-xs mb-2 fw-600">{{ conditionType }}</div>
+                                            <button type="button" class="condition-image-preview border rounded bg-light w-100 mb-2" data-name="condition_image_browse">
+                                                <i class="bi bi-image condition-image-placeholder {{ conditionImage ? 'd-none' }}"></i>
+                                                <img class="{{ conditionImage ? '' : 'd-none' }}" src="{{ conditionImage ? conditionImage.contentUrl : '' }}" alt="{{ conditionType }}">
+                                            </button>
+                                            <div class="condition-image-filename text-xxs mb-2" data-name="condition_image_filename">
+                                                {{ conditionImage ? conditionImage.originalName : 'Nincs kiválasztott kép' }}
+                                            </div>
+                                            <input type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/avif" class="d-none" data-name="condition_image_input">
+                                            <div class="d-flex gap-1 mt-auto">
+                                                <button type="button" class="btn btn-default btn-sm flex-grow-1" data-name="btnAddConditionImage">
+                                                    <i class="bi bi-folder2-open"></i> Tallózás
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-outline-danger btn-sm {{ conditionImage ? '' : 'd-none' }}"
+                                                    data-name="btnRemoveConditionImage"
+                                                    title="Állapotkép eltávolítása"
+                                                ><i class="bi bi-trash"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-lg-4 col-12">
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <div class="panel-card p-3">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <div class="text-s fw-600"><i class="bi bi-files"></i> Csatolmányok</div>
+                                <button type="button" class="btn btn-default btn-sm" data-name="btnAddWorksheetAttachments">
+                                    <i class="bi bi-paperclip"></i> Hozzáadás
+                                </button>
+                                <input type="file" multiple class="d-none" data-name="worksheet_attachment_input">
+                            </div>
+
+                            <div class="row mt-2">
+                                <div class="col-12" data-name="worksheet_new_attachments">
+                                    <!--new selected files-->
+                                    <span class="text-xs text-muted-custom" data-name="no_new_attachments">Nincsenek újonnan kiválasztott fájlok.</span>
+                                </div>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <div class="row g-1 align-items-center">
+                                <div class="col-10">
+                                    <input type="text" class="form-control" data-name="attachment_search" placeholder="Keresés a csatolmányokban">
+                                </div>
+                                <div class="col-2 d-grid">
+                                    <button type="button" class="btn btn-default" data-name="btnAttachmentSearch" title="Keresés">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row mt-2">
+                                <div class="col-12" data-name="worksheet_existing_attachments">
+                                    <!--list before files-->
+                                    <span class="text-xs text-muted-custom">Nincsenek csatolmányok.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <div class="panel-card p-3">
+                            <div class="text-s fw-600 mb-1"><i class="bi bi-bell"></i> Értesítések</div>
+                            <div class="text-xs text-muted-custom mb-3">
+                                Válaszd ki, hogy a partner mely kapcsolattartói kapjanak értesítést.
+                                Az alapértelmezett kapcsolattartó mindig értesítendő.
+                            </div>
+                            <div data-name="worksheet_notification_contacts" aria-live="polite">
+                                {% include 'worksheets/_notification_contacts.html.twig' with {
+                                    partner: notificationPartner,
+                                    contacts: notificationContacts,
+                                    selectedContactIds: selectedNotificationContactIds
+                                } only %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <div class="panel-card p-3">
+                            <div class="text-s fw-600 mb-3"><i class="bi bi-info-circle"></i> Információk</div>
+                            <dl class="row g-2 text-xs mb-0">
+                                <dt class="col-5 fw-normal text-muted-custom">Létrehozva</dt>
+                                <dd class="col-7 text-end mb-0">{{ item and item.datetimeAdd ? item.datetimeAdd|date('Y-m-d H:i') : '-' }}</dd>
+
+                                <dt class="col-5 fw-normal text-muted-custom">Módosítva</dt>
+                                <dd class="col-7 text-end mb-0">{{ item and item.datetimeLast ? item.datetimeLast|date('Y-m-d H:i') : '-' }}</dd>
+
+                                <dt class="col-5 fw-normal text-muted-custom">Utoljára módosította</dt>
+                                <dd class="col-7 text-end mb-0 text-break">{{ lastEditorName|default('-') }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                {% if item and item.code %}
+                    <div class="row mb-2">
+                        <div class="col-12">
+                            <div class="panel-card p-3">
+                                <div class="text-s fw-600 mb-3"><i class="bi bi-printer-fill"></i> PDF nyomtatás</div>
+                                <a
+                                    href="{{ path('worksheet_pdf', {worksheetCode: item.code}) }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="btn btn-default btn-sm"
+                                >
+                                    <i class="bi bi-file-earmark-pdf-fill"></i> PDF nyomtatás
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<div id="attachment_viewer" class="d-none" role="dialog" aria-modal="true" aria-label="Csatolmány nézegető">
+    <button type="button" class="btn btn-light" data-name="attachment_viewer_close">
+        <i class="bi bi-x-lg"></i> Bezárás
+    </button>
+    <button type="button" data-name="attachment_viewer_navigate" data-direction="prev" aria-label="Előző csatolmány">
+        <i class="bi bi-chevron-left"></i>
+    </button>
+    <div class="attachment-viewer-stage">
+        <div class="attachment-viewer-content" data-name="attachment_viewer_content"></div>
+    </div>
+    <button type="button" data-name="attachment_viewer_navigate" data-direction="next" aria-label="Következő csatolmány">
+        <i class="bi bi-chevron-right"></i>
+    </button>
+</div>

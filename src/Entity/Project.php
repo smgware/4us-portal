@@ -23,6 +23,9 @@ class Project
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
+    #[ORM\Column(length: 255)]
+    private ?string $status = null;
+
     #[ORM\Column(name: 'datetime_add', nullable: true)]
     private ?\DateTimeImmutable $datetimeAdd = null;
 
@@ -75,6 +78,9 @@ class Project
 
         return $this;
     }
+
+    public function getStatus(): ?string { return $this->status; }
+    public function setStatus(string $status): static { $this->status = $status; return $this; }
 
     public function getDatetimeAdd(): ?\DateTimeImmutable
     {

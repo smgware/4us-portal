@@ -1,0 +1,49 @@
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="small text-muted">{{ totalRecords }} kölcsönzés</span>
+    <span class="small text-muted">Oldalanként {{ itemsPerPage }} elem</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table-default w-100">
+        <thead>
+            <tr>
+                <th class="p-2">Kód</th>
+                <th class="p-2">Partner</th>
+                <th class="p-2">Bérlés kezdete</th>
+                <th class="p-2">Bérlés vége (tervezett)</th>
+                <th class="p-2">Állapot</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rental in records %}
+                <tr>
+                    <td class="p-2 fw-semibold">{{ rental.code|default('-') }}</td>
+                    <td class="p-2">
+                        {{ rental.partner_name|default('-') }}
+                        {% if rental.partner_code %}<div class="text-muted text-xs">{{ rental.partner_code }}</div>{% endif %}
+                    </td>
+                    <td class="p-2 text-nowrap">{{ rental.datetime_rental_start ? rental.datetime_rental_start|date('Y-m-d H:i') : '-' }}</td>
+                    <td class="p-2 text-nowrap">{{ rental.datetime_rental_end ? rental.datetime_rental_end|date('Y-m-d H:i') : '-' }}</td>
+                    <td class="p-2">
+                        {% if rental.status == '1' %}
+                            <span class="badge text-bg-success">Nyitott</span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">Lezárt</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">Nincs a szűrésnek megfelelő kölcsönzés.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_machine_info_rentals',
+    queryParams: {}
+} %}

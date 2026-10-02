@@ -1,0 +1,50 @@
+{% if not partner %}
+    <div class="worksheet-notification-empty text-xs text-muted-custom">
+        <i class="bi bi-people"></i>
+        Válassz partnert a kapcsolattartók megjelenítéséhez.
+    </div>
+{% elseif contacts is empty %}
+    <div class="worksheet-notification-empty text-xs text-muted-custom">
+        <i class="bi bi-person-x"></i>
+        A kiválasztott partnerhez nincs kapcsolattartó rögzítve.
+    </div>
+{% else %}
+    <div class="d-flex flex-column gap-2">
+        {% for contact in contacts %}
+            {% set isDefault = contact.defaultContact %}
+            {% set isSelected = isDefault or contact.id in selectedContactIds %}
+            <label class="worksheet-notification-contact d-flex align-items-start gap-2 mb-0">
+                <span class="pt-1">
+                    <input
+                        type="checkbox"
+                        class="form-check-input m-0"
+                        name="notification_contact_ids[]"
+                        value="{{ contact.id }}"
+                        {{ isSelected ? 'checked' }}
+                        {{ isDefault ? 'disabled' }}
+                    >
+                    {% if isDefault %}
+                        <input type="hidden" name="notification_contact_ids[]" value="{{ contact.id }}">
+                    {% endif %}
+                </span>
+                <span class="flex-grow-1 overflow-hidden">
+                    <span class="d-flex align-items-center flex-wrap gap-1">
+                        <span class="text-s fw-600 text-break">{{ contact.name }}</span>
+                        {% if isDefault %}
+                            <span class="badge bg-primary">Alapértelmezett</span>
+                        {% endif %}
+                    </span>
+                    {% if contact.title %}
+                        <span class="d-block text-xs text-muted-custom text-break">{{ contact.title }}</span>
+                    {% endif %}
+                    <span class="d-block text-xs text-muted-custom text-break">
+                        {% if contact.email %}<i class="bi bi-envelope"></i> {{ contact.email }}{% endif %}
+                        {% if contact.email and contact.phone %}<span class="mx-1">•</span>{% endif %}
+                        {% if contact.phone %}<i class="bi bi-telephone"></i> {{ contact.phone }}{% endif %}
+                        {% if not contact.email and not contact.phone %}Nincs elérhetőség megadva.{% endif %}
+                    </span>
+                </span>
+            </label>
+        {% endfor %}
+    </div>
+{% endif %}

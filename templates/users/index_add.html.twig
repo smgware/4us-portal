@@ -2,110 +2,194 @@
     <form action="" data-name="user">
         <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
         <input type="hidden" name="image" data-name="image" value="{{ item and item.image ? item.image : '' }}">
+        <input type="hidden" name="signature" data-name="signature" value="{{ item and item.signature ? item.signature : '' }}">
 
-        <div class="row">
+        <div class="row g-3">
             <div class="col-md-8">
-                <div class="mb-3">
-                    <label class="form-label">Név</label>
-                    <input type="text" class="form-control" name="name" data-name="name" value="{{ item ? item.name : '' }}" placeholder="Add meg a nevet">
-                </div>
+                <div class="card panel-card p-3">
+                    <div class="mb-3">
+                        <label class="form-label">Név</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            name="name"
+                            data-name="name"
+                            value="{{ item ? item.name : '' }}"
+                            placeholder="Add meg a nevet"
+                        >
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" name="email" data-name="email" value="{{ item ? item.email : '' }}" placeholder="Add meg az email címet">
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input
+                            type="email"
+                            class="form-control"
+                            name="email"
+                            data-name="email"
+                            value="{{ item ? item.email : '' }}"
+                            placeholder="Add meg az email címet"
+                        >
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Felhasználónév</label>
-                    <input type="text" class="form-control" name="username" data-name="username" value="{{ item ? item.userName : '' }}" placeholder="Add meg a felhasználónevet">
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Felhasználónév</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            name="username"
+                            data-name="username"
+                            value="{{ item ? item.userName : '' }}"
+                            placeholder="Add meg a felhasználónevet"
+                        >
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Telefon</label>
-                    <input type="text" class="form-control" name="phone" data-name="phone" value="{{ item ? item.phone : '' }}" placeholder="Add meg a telefonszámot">
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telefon</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            name="phone"
+                            data-name="phone"
+                            value="{{ item ? item.phone : '' }}"
+                            placeholder="Add meg a telefonszámot"
+                        >
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Jogosultság</label>
-                    <select class="form-control" name="permission_id" data-name="permission_id">
-                        <option value="">Nincs kiválasztva</option>
-                        {% for permission in permissions %}
-                            <option value="{{ permission.id }}" {{ selectedPermissionId == permission.id ? 'selected' }}>
-                                {{ permission.title }} ({{ permission.code }})
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Jogosultság</label>
+                        <select class="form-control" name="permission_id" data-name="permission_id">
+                            <option value="">Nincs kiválasztva</option>
+                            {% for permission in permissions %}
+                                <option value="{{ permission.id }}" {{ selectedPermissionId == permission.id ? 'selected' }}>
+                                    {{ permission.title }} ({{ permission.code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Státusz</label>
-                    <select class="form-control" name="status" data-name="status">
-                        <option value="1" {{ item is null or item.status == '1' ? 'selected' }}>Aktív</option>
-                        <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
-                    </select>
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label">Státusz</label>
+                        <select class="form-control" name="status" data-name="status">
+                            <option value="1" {{ item is null or item.status == '1' ? 'selected' }}>Aktív</option>
+                            <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
+                        </select>
+                    </div>
 
-                {% if item is null %}
-                <div class="mb-3">
-                    <label class="form-label">Jelszó</label>
-                    <input type="password" class="form-control" name="password" data-name="password" autocomplete="new-password">
-                </div>
+                    {% if item is null %}
+                        <div class="mb-3">
+                            <label class="form-label">Jelszó</label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                name="password"
+                                data-name="password"
+                                autocomplete="new-password"
+                            >
+                        </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Jelszó ismét</label>
-                    <input type="password" class="form-control" name="password_again" data-name="password_again" autocomplete="new-password">
-                </div>
-                {% endif %}
+                        <div class="mb-3">
+                            <label class="form-label">Jelszó ismét</label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                name="password_again"
+                                data-name="password_again"
+                                autocomplete="new-password"
+                            >
+                        </div>
+                    {% endif %}
 
+                    <div class="row">
+                        <div class="col-12">
+                            <strong>Értesítések beállítása</strong>
+                        </div>
 
-                <div class="row">
-                    <div class="col-12"><strong>Értesítések beállítása</strong></div>
-
-                    <div class="col-12 m-2">
-                        {% for notificationEvent in notificationEvents %}
-                            <label class="row row-select rounded-3 mb-2 align-items-center" for="notification_event_{{ notificationEvent.id }}">
-                                <div class="col-1 p-2">
-                                    <input
-                                        type="checkbox"
-                                        id="notification_event_{{ notificationEvent.id }}"
-                                        data-name="user_notification_event"
-                                        value="{{ notificationEvent.id }}"
-                                        {{ notificationEvent.id in selectedNotificationEventIds ? 'checked' }}
-                                        style="height:20px;width:20px;"
-                                    >
-                                </div>
-                                <div class="col-11 py-2">
-                                    <div>
-                                        {{ notificationEvent.name }}
-                                        {% if notificationEvent.status != '1' %}
-                                            <span class="badge bg-secondary ms-1">Inaktív</span>
-                                        {% endif %}
-                                    </div>
-                                    <div class="text-xs">{{ notificationEvent.code }}</div>
-                                </div>
-                            </label>
-                        {% else %}
-                            <div class="text-muted py-2">Nincs beállítható értesítési esemény.</div>
-                        {% endfor %}
+                        <div class="col-12 mt-2">
+                            {% for notificationEvent in notificationEvents %}
+                                <label
+                                    class="row row-select rounded-3 mb-2 mx-0 align-items-center"
+                                    for="notification_event_{{ notificationEvent.id }}"
+                                >
+                                    <span class="col-1 p-2">
+                                        <input
+                                            type="checkbox"
+                                            id="notification_event_{{ notificationEvent.id }}"
+                                            data-name="user_notification_event"
+                                            value="{{ notificationEvent.id }}"
+                                            {{ notificationEvent.id in selectedNotificationEventIds ? 'checked' }}
+                                            style="height:20px;width:20px;"
+                                        >
+                                    </span>
+                                    <span class="col-11 py-2">
+                                        <span class="d-block">
+                                            {{ notificationEvent.name }}
+                                            {% if notificationEvent.status != '1' %}
+                                                <span class="badge bg-secondary ms-1">Inaktív</span>
+                                            {% endif %}
+                                        </span>
+                                        <span class="d-block text-xs">{{ notificationEvent.code }}</span>
+                                    </span>
+                                </label>
+                            {% else %}
+                                <div class="text-muted py-2">Nincs beállítható értesítési esemény.</div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4">
-                <div class="mb-3">
-                    <label class="form-label">Kép</label>
-                    <input type="file" class="form-control" accept="image/*" data-name="image_file">
+                <div class="card panel-card p-3">
+                    <div class="mb-3">
+                        <label class="form-label">Kép szerkesztése</label>
+                        <input type="file" class="form-control" accept="image/*" data-name="image_file">
+                    </div>
+
+                    <div class="card panel-card p-2" style="width:100%;max-width:300px;">
+                        {% if item and item.image %}
+                            <img
+                                src="{{ item.image }}"
+                                data-name="image_preview"
+                                alt="Felhasználói profilkép"
+                                style="width:100%;aspect-ratio:1/1;object-fit:cover;"
+                            >
+                        {% else %}
+                            <img
+                                src=""
+                                data-name="image_preview"
+                                alt="Felhasználói profilkép"
+                                style="display:none;width:100%;aspect-ratio:1/1;object-fit:cover;"
+                            >
+                            <div class="text-muted" data-name="image_empty">Nincs kép kiválasztva.</div>
+                        {% endif %}
+                    </div>
                 </div>
 
-                <div class="card panel-card p-2" style="width:300px;">
-                    {% if item and item.image %}
-                        <img src="{{ item.image }}" data-name="image_preview" alt="" style="width:100%;aspect-ratio:1/1;object-fit:cover;">
-                    {% else %}
-                        <img src="" data-name="image_preview" alt="" style="display:none;width:100%;aspect-ratio:1/1;object-fit:cover;">
-                        <div class="text-muted" data-name="image_empty">Nincs kép kiválasztva.</div>
-                    {% endif %}
-                </div>
+                <div class="card panel-card p-3 mt-3">
+                    <button type="button" class="btn btn-default btn-sm w-100" data-name="btn_set_signature">
+                        <i class="bi bi-pen"></i> Aláírás beállítása
+                    </button>
 
+                    <div
+                        class="border rounded p-2 mt-2 d-flex align-items-center justify-content-center"
+                        data-name="signature_preview_container"
+                        style="min-height:110px;background:#fff;"
+                    >
+                        <img
+                            src="{{ item and item.signature ? item.signature : '' }}"
+                            data-name="signature_preview"
+                            alt="Beállított aláírás"
+                            class="{{ item and item.signature ? '' : 'd-none' }}"
+                            style="display:block;width:100%;height:auto;max-height:140px;object-fit:contain;"
+                        >
+                        <div
+                            class="text-muted text-center {{ item and item.signature ? 'd-none' : '' }}"
+                            data-name="signature_empty"
+                        >
+                            Nincs aláírás beállítva.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </form>

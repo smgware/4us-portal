@@ -1,0 +1,62 @@
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="small text-muted">{{ totalRecords }} munkalap</span>
+    <span class="small text-muted">Oldalanként {{ itemsPerPage }} elem</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table-default w-100">
+        <thead>
+            <tr>
+                <th class="p-2">Kód</th>
+                <th class="p-2">Típus</th>
+                <th class="p-2">Megnevezés</th>
+                <th class="p-2">Partner</th>
+                <th class="p-2">Létrehozva</th>
+                <th class="p-2">Állapot</th>
+                <th class="p-2 text-end">Művelet</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for worksheet in records %}
+                <tr>
+                    <td class="p-2 fw-semibold">
+                        {{ worksheet.code|default('-') }}
+                        {% if worksheet.rental_code %}<div class="text-muted text-xs">{{ worksheet.rental_code }}</div>{% endif %}
+                    </td>
+                    <td class="p-2">{{ worksheet.worksheet_type_title|default('-') }}</td>
+                    <td class="p-2">{{ worksheet.title|default('-') }}</td>
+                    <td class="p-2">
+                        {{ worksheet.partner_name|default('-') }}
+                        {% if worksheet.partner_code %}<div class="text-muted text-xs">{{ worksheet.partner_code }}</div>{% endif %}
+                    </td>
+                    <td class="p-2 text-nowrap">{{ worksheet.datetime_add ? worksheet.datetime_add|date('Y-m-d H:i') : '-' }}</td>
+                    <td class="p-2">
+                        {% include 'worksheets/_status_badge.html.twig' with {
+                            statusCode: worksheet.worksheet_status_type_code,
+                            statusTitle: worksheet.worksheet_status_type_title
+                        } only %}
+                    </td>
+                    <td class="p-2 text-end">
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm text-warning"
+                            title="Munkalap megnyitása"
+                            data-machine-info-worksheet="{{ worksheet.id }}"
+                        ><i class="bi bi-box-arrow-up-right"></i></button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">Nincs a szűrésnek megfelelő munkalap.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_machine_info_worksheets',
+    queryParams: {}
+} %}

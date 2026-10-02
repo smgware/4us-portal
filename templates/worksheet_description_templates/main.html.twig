@@ -1,0 +1,177 @@
+<div class="page-title"><i class="bi bi-card-text"></i> Munkalap megjegyzés sablonok</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5">
+            <input
+                type="text"
+                class="form-control"
+                placeholder="Keresés..."
+                data-name="search_worksheet_description_templates_list"
+            >
+        </div>
+        <div class="col-7 text-end">
+            <button
+                type="button"
+                class="btn btn-default btn-sm"
+                data-name="btn_index_worksheet_description_templates_add"
+            ><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</button>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_worksheet_description_templates"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const listFormData = new FormData();
+        listFormData.set('filters', '{}');
+
+        new Ajax({
+            url: '{{ path('list_worksheet_description_templates') }}',
+            name: 'list_worksheet_description_templates',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: $("[data-key='list_worksheet_description_templates']"),
+            function_success: function (result) {
+                if (!result.success) {
+                    return;
+                }
+
+                this.target.html(result.content);
+                this.target.find("[data-name='list_item_btn']").unbind('click').click(function () {
+                    const mode = $(this).attr('data-mode');
+                    const key = $(this).closest("[data-name='list_item']").attr('data-key');
+
+                    if (mode === 'edit') {
+                        ajaxquery['index_worksheet_description_templates_add'].formData.set('id', key);
+                        ajaxquery['index_worksheet_description_templates_add'].send();
+                    }
+
+                    if (mode === 'delete') {
+                        alertify.confirm('Megerősítés', 'Törlöd a munkalap megjegyzéssablont?', () => {
+                            const deleteFormData = new FormData();
+                            deleteFormData.set('id', key);
+
+                            new Ajax({
+                                url: '{{ path('delete_worksheet_description_template') }}',
+                                type: 'DELETE',
+                                dataType: 'json',
+                                formData: deleteFormData,
+                                function_success: function (deleteResult) {
+                                    if (deleteResult.success) {
+                                        alertify.success('Sikeres törlés');
+                                        ajaxquery['list_worksheet_description_templates'].send();
+                                    }
+                                },
+                                function_error: function (xhr) {
+                                    alertify.error(
+                                        xhr.responseJSON?.data?.error
+                                        || 'Nem sikerült törölni a munkalap megjegyzéssablont.'
+                                    );
+                                }
+                            }).send();
+                        }, () => {});
+                    }
+                });
+
+                this.target.find('.pagination__item[href]').unbind('click').click(function (event) {
+                    event.preventDefault();
+                    const page = Number(new URL(this.href, window.location.origin).searchParams.get('page')) || 1;
+                    ajaxquery['list_worksheet_description_templates'].formData.set('page', String(page));
+                    ajaxquery['list_worksheet_description_templates'].send();
+                });
+            },
+            function_error: function (xhr) {
+                alertify.error(
+                    xhr.responseJSON?.data?.error
+                    || 'Nem sikerült betölteni a munkalap megjegyzéssablonokat.'
+                );
+            }
+        }).send();
+
+        const editorFormData = new FormData();
+        editorFormData.set('id', '');
+
+        new Ajax({
+            url: '{{ path('index_worksheet_description_templates_add') }}',
+            name: 'index_worksheet_description_templates_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: editorFormData,
+            target: null,
+            function_success: function (result) {
+                const footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</button> <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</button></div></div></div>`;
+
+                alertify.add('Munkalap megjegyzéssablon hozzáadása / módosítása', result.content)
+                    .set('movable', false)
+                    .set('resizable', false)
+                    .set('closable', false)
+                    .set('closableByEscape', false)
+                    .resizeTo('65%', '75%')
+                    .set({transition: 'zoom'})
+                    .setFooter(footer);
+
+                $(`div[data-box="${this.name}"] [data-name='alertify-cancel']`).unbind('click').click(function () {
+                    alertify.confirm('Megerősítés', 'Bezárod az ablakot?', () => alertify.add().close(), () => {});
+                });
+
+                $(`div[data-box="${this.name}"] [data-name='alertify-save']`).unbind('click').click(function () {
+                    const form = $("form[data-name='worksheet_description_template']");
+                    if (!form[0] || !form[0].reportValidity()) {
+                        return;
+                    }
+
+                    alertify.confirm('Megerősítés', 'Mented az adatokat?', () => {
+                        const saveFormData = new FormData(form[0]);
+                        new Ajax({
+                            url: '{{ path('save_worksheet_description_templates') }}',
+                            name: 'save_worksheet_description_templates',
+                            type: 'POST',
+                            dataType: 'json',
+                            formData: saveFormData,
+                            function_success: function (saveResult) {
+                                if (saveResult.success) {
+                                    alertify.add().close();
+                                    alertify.success('Sikeres mentés');
+                                    ajaxquery['list_worksheet_description_templates'].send();
+                                }
+                            },
+                            function_error: function (xhr) {
+                                alertify.error(
+                                    xhr.responseJSON?.data?.error
+                                    || 'Nem sikerült menteni a munkalap megjegyzéssablont.'
+                                );
+                            }
+                        }).send();
+                    }, () => {});
+                });
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni az űrlapot.');
+            }
+        });
+
+        $("[data-name='btn_index_worksheet_description_templates_add']").unbind('click').click(function () {
+            ajaxquery['index_worksheet_description_templates_add'].formData.set('id', '');
+            ajaxquery['index_worksheet_description_templates_add'].send();
+        });
+
+        $("[data-name='search_worksheet_description_templates_list']").unbind('keyup').keyup(function (event) {
+            if (event.key === 'Enter') {
+                const filters = JSON.parse(
+                    ajaxquery['list_worksheet_description_templates'].formData.get('filters') || '{}'
+                );
+                filters.search = $(this).val();
+                ajaxquery['list_worksheet_description_templates'].formData.set('filters', JSON.stringify(filters));
+                ajaxquery['list_worksheet_description_templates'].formData.set('page', '1');
+                ajaxquery['list_worksheet_description_templates'].send();
+            }
+        });
+    })();
+</script>

@@ -1,0 +1,154 @@
+<div class="page-title"><i class="bi bi-geo-alt"></i> Telephelyek</div>
+
+<div class="card panel-card p-2">
+    <div class="row">
+        <div class="col-5"><input type="text" class="form-control" placeholder="Keresés..." data-name="search_company_sites_list"></div>
+        <div class="col-7 text-end">
+            <button type="button" class="btn btn-default btn-sm" data-name="btn_index_company_sites_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</button>
+        </div>
+    </div>
+</div>
+
+<div class="card panel-card p-2 mt-2">
+    <div class="row">
+        <div class="col-12" data-name="ajax-content" data-key="list_company_sites"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const listFormData = new FormData();
+        listFormData.set('filters', '{}');
+
+        new Ajax({
+            url: '{{ path('list_company_sites') }}',
+            name: 'list_company_sites',
+            type: 'POST',
+            dataType: 'json',
+            formData: listFormData,
+            target: $("[data-key='list_company_sites']"),
+            function_success: function (result) {
+                if (!result.success) return;
+
+                this.target.html(result.content);
+                this.target.find("[data-name='list_item_btn']").unbind('click').click(function () {
+                    const mode = $(this).attr('data-mode');
+                    const key = $(this).closest("[data-name='list_item']").attr('data-key');
+
+                    if (mode === 'edit') {
+                        ajaxquery['index_company_sites_add'].formData.set('id', key);
+                        ajaxquery['index_company_sites_add'].send();
+                    }
+
+                    if (mode === 'delete') {
+                        alertify.confirm('Megerősítés', 'Törlöd a telephelyet?', () => {
+                            const deleteFormData = new FormData();
+                            deleteFormData.set('id', key);
+                            new Ajax({
+                                url: '{{ path('delete_company_site') }}',
+                                type: 'DELETE',
+                                dataType: 'json',
+                                formData: deleteFormData,
+                                function_success: function (deleteResult) {
+                                    if (deleteResult.success) {
+                                        alertify.success('Sikeres törlés');
+                                        ajaxquery['list_company_sites'].send();
+                                    }
+                                },
+                                function_error: function (xhr) {
+                                    alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült törölni a telephelyet.');
+                                }
+                            }).send();
+                        }, () => {});
+                    }
+                });
+
+                this.target.find('.pagination__item[href]').unbind('click').click(function (event) {
+                    event.preventDefault();
+                    const page = Number(new URL(this.href, window.location.origin).searchParams.get('page')) || 1;
+                    ajaxquery['list_company_sites'].formData.set('page', String(page));
+                    ajaxquery['list_company_sites'].send();
+                });
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a telephelyeket.');
+            }
+        }).send();
+
+        const editorFormData = new FormData();
+        editorFormData.set('id', '');
+
+        new Ajax({
+            url: '{{ path('index_company_sites_add') }}',
+            name: 'index_company_sites_add',
+            type: 'GET',
+            dataType: 'json',
+            formData: editorFormData,
+            target: null,
+            function_success: function (result) {
+                const footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</button> <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</button></div></div></div>`;
+
+                alertify.add('Telephely hozzáadása / módosítása', result.content)
+                    .set('movable', false)
+                    .set('resizable', false)
+                    .set('closable', false)
+                    .set('closableByEscape', false)
+                    .resizeTo('50%', '55%')
+                    .set({transition: 'zoom'})
+                    .setFooter(footer);
+
+                $(`div[data-box="${this.name}"] [data-name='alertify-cancel']`).unbind('click').click(function () {
+                    alertify.confirm('Megerősítés', 'Bezárod az ablakot?', () => alertify.add().close(), () => {});
+                });
+
+                $(`div[data-box="${this.name}"] [data-name='alertify-save']`).unbind('click').click(function () {
+                    const form = $("form[data-name='company_site']");
+                    const name = String(form.find("[data-name='name']").val() || '').trim();
+                    if (name === '') {
+                        alertify.alert('Hiányzó adat', 'A telephely nevének megadása kötelező.');
+                        return;
+                    }
+
+                    alertify.confirm('Megerősítés', 'Mented az adatokat?', () => {
+                        const saveFormData = new FormData(form[0]);
+                        new Ajax({
+                            url: '{{ path('save_company_sites') }}',
+                            name: 'save_company_sites',
+                            type: 'POST',
+                            dataType: 'json',
+                            formData: saveFormData,
+                            function_success: function (saveResult) {
+                                if (saveResult.success) {
+                                    alertify.add().close();
+                                    alertify.success('Sikeres mentés');
+                                    ajaxquery['list_company_sites'].send();
+                                }
+                            },
+                            function_error: function (xhr) {
+                                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült menteni a telephelyet.');
+                            }
+                        }).send();
+                    }, () => {});
+                });
+            },
+            function_error: function (xhr) {
+                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni az űrlapot.');
+            }
+        });
+
+        $("[data-name='btn_index_company_sites_add']").unbind('click').click(function () {
+            ajaxquery['index_company_sites_add'].formData.set('id', '');
+            ajaxquery['index_company_sites_add'].send();
+        });
+
+        $("[data-name='search_company_sites_list']").unbind('keyup').keyup(function (event) {
+            if (event.key === 'Enter') {
+                const filters = JSON.parse(ajaxquery['list_company_sites'].formData.get('filters') || '{}');
+                filters.search = $(this).val();
+                ajaxquery['list_company_sites'].formData.set('filters', JSON.stringify(filters));
+                ajaxquery['list_company_sites'].formData.set('page', '1');
+                ajaxquery['list_company_sites'].send();
+            }
+        });
+    })();
+</script>

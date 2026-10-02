@@ -1,0 +1,49 @@
+{% for attachment in attachments %}
+    <div class="machine-info-attachment" data-machine-attachment-id="{{ attachment.id }}">
+        <button type="button" class="machine-info-attachment__preview" data-machine-attachment-action="view" title="Megnyitás">
+            {% if attachment.isImage %}
+                <img src="{{ attachment.contentUrl }}" alt="">
+            {% elseif attachment.previewType == 'pdf' %}
+                <i class="bi bi-file-earmark-pdf"></i>
+            {% elseif attachment.previewType == 'text' %}
+                <i class="bi bi-file-earmark-text"></i>
+            {% else %}
+                <i class="bi bi-file-earmark"></i>
+            {% endif %}
+        </button>
+
+        <div class="machine-info-attachment__content">
+            <button type="button" class="btn btn-link text-start text-decoration-none p-0 w-100" data-machine-attachment-action="view">
+                <span class="d-block fw-semibold text-truncate" title="{{ attachment.originalName }}">{{ attachment.originalName }}</span>
+            </button>
+            <div class="text-muted text-xs">
+                {{ attachment.sizeFormatted }} · {{ attachment.uploadedAtFormatted|default('-') }} · {{ attachment.uploadedBy.name|default('Ismeretlen') }}
+            </div>
+            {% if attachment.description %}
+                <div class="machine-info-attachment__description text-xs mt-1">{{ attachment.description }}</div>
+            {% endif %}
+        </div>
+
+        <div class="machine-info-attachment__actions">
+            <button type="button" class="btn btn-default btn-sm" data-machine-attachment-action="download" title="Letöltés">
+                <i class="bi bi-download"></i>
+            </button>
+            <button type="button" class="btn btn-default btn-sm" data-machine-attachment-action="edit" title="Leírás szerkesztése">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-machine-attachment-action="delete" title="Törlés">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+{% else %}
+    {% if page == 1 %}
+        <div class="text-center text-muted py-4" data-machine-attachments-empty>Nincsenek csatolmányok.</div>
+    {% endif %}
+{% endfor %}
+
+{% if hasMore %}
+    <button type="button" class="btn btn-default btn-sm w-100 mt-2" data-machine-attachment-action="load-more" data-next-page="{{ page + 1 }}">
+        <i class="bi bi-plus-circle"></i> Továbbiak betöltése
+    </button>
+{% endif %}

@@ -1,3 +1,5 @@
+{% set itemData = item and item.data ? item.data : {} %}
+
 <form action="" data-name="machine">
     <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
 
@@ -7,43 +9,58 @@
     </div>
 
     <div class="mb-3">
-        <label for="" class="form-label">Kód</label>
-        <input type="text" class="form-control" name="code" data-name="code" value="{{ item ? item.code : '' }}" placeholder="Add meg a kodot">
+        <label for="machine-code" class="form-label">Kód</label>
+        <input type="text" class="form-control" id="machine-code" name="code" data-name="code" value="{{ item ? item.code : '' }}" placeholder="Add meg a kódot">
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Projekt</label>
-        <div class="machine-project-combobox" data-machine-project-combobox="form">
-            <div class="input-group">
-                <input
-                    type="text"
-                    name="project_search"
-                    class="form-control"
-                    data-name="project_search"
-                    value="{{ item and item.project ? item.project.name : '' }}"
-                    placeholder="Projekt keresése név vagy kód alapján..."
-                    autocomplete="off"
-                    role="combobox"
-                    aria-autocomplete="list"
-                    aria-controls="machine_form_project_results"
-                    aria-expanded="false"
-                >
-                <button type="button" class="btn btn-outline-secondary" data-name="combobox-clear" aria-label="Projekt törlése">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-            <input type="hidden" name="project_id" data-name="project_id" value="{{ item and item.project ? item.project.id : '' }}">
-            <div id="machine_form_project_results" class="machine-project-combobox-results list-group shadow-sm d-none" data-name="combobox-results" role="listbox"></div>
-        </div>
+        <label for="machine-serial-number" class="form-label">Gyári szám</label>
+        <input
+            type="text"
+            class="form-control"
+            id="machine-serial-number"
+            name="data[sku]"
+            data-name="sku"
+            value="{{ itemData.sku|default('') }}"
+            maxlength="255"
+            placeholder="Add meg a gyári számot"
+        >
+    </div>
+
+    <div class="mb-3">
+        <label for="machine-year" class="form-label">Évjárat</label>
+        <input
+            type="text"
+            inputmode="numeric"
+            class="form-control"
+            id="machine-year"
+            name="data[year]"
+            data-name="year"
+            value="{{ itemData.year|default('') }}"
+            maxlength="4"
+            placeholder="Add meg az évjáratot"
+        >
     </div>
 
     <div class="mb-3">
         <label for="" class="form-label">Gép kategória</label>
-        <select class="form-control" name="machine_category_id" data-name="machine_category_id">
+        <select class="form-control" name="machine_category_id" data-name="machine_category_id" required>
             <option value="">Válassz kategóriát</option>
             {% for category in categories %}
                 <option value="{{ category.id }}" {{ item and item.machineCategory and item.machineCategory.id == category.id ? 'selected' }}>
                     {{ category.title }} ({{ category.code }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="machine-company-site" class="form-label">Telephely</label>
+        <select id="machine-company-site" class="form-control" name="company_site_id" data-name="company_site_id" required>
+            <option value="">Válassz telephelyet</option>
+            {% for companySite in companySites %}
+                <option value="{{ companySite.id }}" {{ item and item.companySite and item.companySite.id == companySite.id ? 'selected' }}>
+                    {{ companySite.title }}{% if companySite.code %} ({{ companySite.code }}){% endif %}{% if companySite.status != '1' %} – inaktív{% endif %}
                 </option>
             {% endfor %}
         </select>

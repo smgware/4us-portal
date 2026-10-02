@@ -10,7 +10,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class WorksheetTypesController extends BaseController
 {
-    private const ITEMS_PER_PAGE = 4;
+    private const ITEMS_PER_PAGE = 10;
 
     #[Route('/worksheet-types', name: 'index_worksheet_types')]
     public function index(): Response
@@ -55,13 +55,21 @@ class WorksheetTypesController extends BaseController
 
         $title = (string) ($postData['title'] ?? $postData['name'] ?? '');
         $code = (string) ($postData['code'] ?? '');
+        $prefix = $this->uppercase((string) ($postData['prefix'] ?? ''));
         if ($code === '') {
             $code = strtolower(trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', $title), '-'));
+        }
+
+        if ($prefix === '' || mb_strlen($prefix) > 10) {
+            return $this->response(false, [
+                'data' => ['error' => 'A kod elotag megadasa kotelezo, es legfeljebb 10 karakter lehet.'],
+            ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
         $worksheetType
             ->setTitle($title)
             ->setCode($code)
+            ->setPrefix($prefix)
             ->setStatus((string) ($postData['status'] ?? ''));
 
         $worksheetType->setDatetimeLast(new \DateTimeImmutable());
@@ -149,5 +157,14 @@ class WorksheetTypesController extends BaseController
                 'itemsPerPage' => $list['itemsPerPage'],
             ],
         ]);
+    }
+
+    private function uppercase(string $value): string
+    {
+        $value = trim($value);
+
+        return function_exists('mb_strtoupper')
+            ? mb_strtoupper($value, 'UTF-8')
+            : strtoupper($value);
     }
 }

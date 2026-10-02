@@ -71,12 +71,14 @@ class ProjectsController extends BaseController
             $project = (new Project())
                 ->setCode($this->generateProjectCode($projectRepository))
                 ->setDatetimeAdd($now)
+                ->setStatus(1)
                 ->setUidAdd($userId);
         }
 
         $project
             ->setName($name)
             ->setDescription($this->nullableString($request->request->get('description')))
+            ->setStatus($this->nullableString($request->request->get('status')))
             ->setDatetimeLast($now)
             ->setUidLast($userId);
 

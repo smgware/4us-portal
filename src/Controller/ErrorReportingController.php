@@ -9,7 +9,6 @@ use App\Repository\WorksheetAttachmentRepository;
 use App\Repository\WorksheetRepository;
 use App\Repository\WorksheetStatusTypeRepository;
 use App\Repository\WorksheetTypeRepository;
-use App\Service\WorksheetNotificationService;
 use PHPMailer\PHPMailer\PHPMailer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -85,7 +84,6 @@ class ErrorReportingController extends AbstractController
         WorksheetRepository $worksheetRepository,
         WorksheetTypeRepository $worksheetTypeRepository,
         WorksheetStatusTypeRepository $worksheetStatusTypeRepository,
-        WorksheetNotificationService $worksheetNotificationService,
         CsrfTokenManagerInterface $csrfTokenManager
     ): JsonResponse {
         $csrfToken = (string) $request->request->get('_csrf_token', '');
@@ -96,26 +94,6 @@ class ErrorReportingController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
         $errors = [];
-
-        /*
-        $requiredFields = [
-            'Gép_száma',
-            'Hiba leírása',
-            'Cégnév',
-            'Adószám',
-            'Bejelentő neve',
-            'E-mail cím',
-            'Telefonszám',
-            'Helyszín',
-        ];
-
-
-        foreach ($requiredFields as $fieldName) {
-            if (trim((string) $request->request->get($fieldName, '')) === '') {
-                $errors[] = $fieldName . ' megadasa kotelezo.';
-            }
-        }
-        */
 
         $email = trim((string) $request->request->get('email', ''));
         if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -166,9 +144,14 @@ class ErrorReportingController extends AbstractController
             return $attachment;
         }, $attachments);
 
-        $data = $request->request->all();
-        unset($data['_csrf_token']);
-        $data['attachments'] = $attachmentsForData;
+        $errorReportingData = $request->request->all();
+        unset($errorReportingData['_csrf_token']);
+        $errorReportingData['attachments'] = $attachmentsForData;
+        $worksheetData = [
+            'source' => 'external',
+            'worksheet_type_code' => (string) $worksheetType->getCode(),
+            'error_reporting_data' => $errorReportingData,
+        ];
 
         $now = new \DateTimeImmutable();
         $worksheet = new Worksheet();
@@ -177,9 +160,10 @@ class ErrorReportingController extends AbstractController
             ->setCode($worksheetCode)
             ->setWorksheetType($worksheetType)
             ->setWorksheetStatusType($worksheetStatusType)
-            ->setData($data + ['worksheet_type_code' => $worksheetType->getCode()])
+            ->setData($worksheetData)
+            ->setStatus('1')
             ->setDatetimeAdd($now)
-            ->setDatetimeLast(null)
+            ->setDatetimeLast($now)
             ->setDatetimeOpen($now)
             ->setDatetimeClosed(null)
             ->setUidAdd(null)
@@ -191,11 +175,21 @@ class ErrorReportingController extends AbstractController
             $worksheetAttachment = new WorksheetAttachment();
             $worksheetAttachment
                 ->setWorksheet($worksheet)
-                ->setName($attachmentData['originalName'])
+                ->setName(mb_substr($attachmentData['originalName'], 0, 255))
                 ->setData([
+                    'originalName' => $attachmentData['originalName'],
+                    'storedName' => $attachmentData['fileName'],
                     'filename' => $attachmentData['fileName'],
+                    'clientMimeType' => $attachmentData['clientMimeType'],
+                    'mimeType' => $attachmentData['mimeType'],
+                    'extension' => $attachmentData['extension'],
                     'size' => $attachmentData['size'],
                     'path' => $attachmentData['path'],
+                    'sha256' => $attachmentData['sha256'],
+                    'isImage' => $attachmentData['isImage'],
+                    'isConditionImage' => false,
+                    'conditionType' => null,
+                    'uploadedAt' => $now->format(DATE_ATOM),
                 ])
                 ->setDatetimeAdd($now)
                 ->setDatetimeLast(null)
@@ -208,7 +202,7 @@ class ErrorReportingController extends AbstractController
             $worksheetAttachmentRepository->save($worksheetAttachment);
         }
 
-        $notificationResult = $worksheetNotificationService->sendForWorksheet($worksheet, true);
+        $notificationResult = [];
 
         $emailSent = false;
         $emailError = null;
@@ -270,7 +264,7 @@ class ErrorReportingController extends AbstractController
                 $mail->Subject = 'Hibabejelentés rözítve: ' . $worksheetCode;
                 $mail->Body = $this->renderView('emails/error_reporting_email_user.html.twig', [
                     'code' => $worksheetCode,
-                    'data' => $data,
+                    'data' => $errorReportingData,
                     'fieldLabels' => $fieldLabels,
                     'attachments' => $attachments,
                 ]);
@@ -318,7 +312,7 @@ class ErrorReportingController extends AbstractController
     }
 
     /**
-     * @return array<int, array{originalName: string, fileName: string, size: int, path: string}>
+     * @return array<int, array<string, mixed>>
      */
     private function storeAttachments(Request $request, string $code): array
     {
@@ -349,17 +343,38 @@ class ErrorReportingController extends AbstractController
             */
             $originalName = $file->getClientOriginalName();
             $fileSize = $file->getSize() ?? 0;
+            $extension = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
+            $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = $fileInfo !== false
+                ? (string) (finfo_file($fileInfo, $file->getPathname()) ?: 'application/octet-stream')
+                : 'application/octet-stream';
+            if ($fileInfo !== false) {
+                finfo_close($fileInfo);
+            }
             $safeName = preg_replace('/[^A-Za-z0-9._-]+/', '-', $originalName) ?: 'image';
             $fileName = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) . '-' . uniqid('', true) . '-' . $safeName;
 
             $file->move($uploadDir, $fileName);
+            $absolutePath = $uploadDir . '/' . $fileName;
 
             $attachments[] = [
                 'originalName' => $originalName,
                 'fileName' => $fileName,
+                'clientMimeType' => (string) $file->getClientMimeType(),
+                'mimeType' => strtolower($mimeType),
+                'extension' => $extension,
                 'size' => $fileSize,
                 'path' => '/uploads/worksheets/' . $code . '/' . $fileName,
-                'absolutePath' => $uploadDir . '/' . $fileName,
+                'absolutePath' => $absolutePath,
+                'sha256' => is_file($absolutePath) ? hash_file('sha256', $absolutePath) : null,
+                'isImage' => in_array(strtolower($mimeType), [
+                    'image/jpeg',
+                    'image/png',
+                    'image/gif',
+                    'image/webp',
+                    'image/bmp',
+                    'image/avif',
+                ], true),
             ];
         }
 

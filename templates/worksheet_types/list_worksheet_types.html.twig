@@ -2,6 +2,7 @@
     <table class="table-default w-100">
         <thead>
             <tr class="pt-2 pb-2">
+                <th class="p-2">Kód előtag</th>
                 <th class="p-2">Megnevezés</th>
                 <th class="p-2">Kód</th>
                 <th class="p-2">Rögzítette</th>
@@ -15,6 +16,7 @@
         <tbody>
             {% for record in records %}
                 <tr data-name="list_item" data-key="{{ record.id }}">
+                    <td>{{ record.prefix }}</td>
                     <td>{{ record.title }}</td>
                     <td>{{ record.code }}</td>
                     <td>

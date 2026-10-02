@@ -1,181 +1,317 @@
 {% extends 'base.html.twig' %}
+
 {% block body %}
-<div class="page-title"><i class="bi bi-repeat"></i> Gépkölcsönzés</div>
+    <div class="page-title"><i class="bi bi-repeat"></i> Gépkölcsönzés</div>
 
-<div class="container-fluid p-0">
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card panel-card p-2">
-                <div class="row">
-                    <div class="col-12 text-end">
-                        <div class="btn btn-default btn-sm mb-2 " data-name="btn_index_machine_rentals_add"><i class="bi bi-plus-circle-fill"></i> Új hozzáadása</div>
+    <div class="container-fluid p-0">
+        <div class="card panel-card p-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-lg-6 col-12">
+                    <label class="form-label small mb-1" for="machine-rental-list-search">Keresés</label>
+                    <div class="input-group">
+                        <input id="machine-rental-list-search" type="text" class="form-control" placeholder="Partner, gép vagy kölcsönzési kód..." data-name="search_machine_rentals_list">
+                        <button type="button" class="btn btn-outline-secondary" data-name="btn_index_machine_rentals_filter" aria-label="Keresés">
+                            <i class="bi bi-search"></i>
+                        </button>
                     </div>
+                </div>
+                <div class="col-lg-3 col-12">
+                    <label class="form-label small mb-1" for="machine-rental-list-status">Állapot</label>
+                    <select id="machine-rental-list-status" class="form-select" data-name="filter_machine_rentals_status">
+                        <option value="">Mind</option>
+                        <option value="1">Nyitott kölcsönzések</option>
+                        <option value="0">Lezárt kölcsönzések</option>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-12 text-lg-end">
+                    <button type="button" class="btn btn-default btn-sm" data-name="btn_index_machine_rentals_add">
+                        <i class="bi bi-plus-circle-fill"></i> Új hozzáadása
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="row">
-        <div class="col-12">
-            <div class="card panel-card p-2">
-                <div class="row g-2 align-items-end">
-                    <div class="col-lg-5 col-12">
-                        <span class="small">Keresés</span>
-                        <input type="text" class="form-control" placeholder="Partner, gép, kód..." data-name="search_machine_rentals_list" />
-                    </div>
-                    <div class="col-lg-3 col-12">
-                        <span class="small">Állapot</span>
-                        <select class="form-control" data-name="filter_machine_rentals_status">
-                            <option value="">Mind</option>
-                            <option value="1">Aktuális bérlések</option>
-                            <option value="0">Lezárt bérlések</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+
+        <div class="row mt-2">
+            <div class="col-12 ajax-content" data-name="index_machine_rentals_content" data-key="list_machine_rentals"></div>
         </div>
     </div>
 
-    <div class="row mt-2">
-        <div class="col-12 ajax-content" data-name="index_machine_rentals_content" data-key="list_machine_rentals"></div>
-    </div>
-</div>
+    <script>
+        (function () {
+            let currentPage = 1;
+            let editorComboboxes = [];
 
-<script>
-    (function () {
-
-        new Ajax({
-            url: '{{ path('index_machine_rentals_add') }}',
-            name: 'index_machine_rentals_add',
-            type: 'GET',
-            dataType: 'json',
-            formData: new FormData(),
-            target: null,
-            function_success: function (result) {
-                var html_footer = `<div class="container-fluid p-0" data-box="${this.name}"><div class="row"><div class="col-12 text-end"><div class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</div> <div class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</div></div></div></div>`;
-
-                alertify.add("Gépkölcsönzés", result.content)
-                    .set("movable", false)
-                    .set("resizable", false)
-                    .set("closable", false)
-                    .set('closableByEscape', false)
-                    .resizeTo("55%", "70%")
-                    .set({transition: 'zoom'})
-                    .setFooter(html_footer);
-
-                $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function () {
-                    alertify.confirm("Megerősítés", "Bezárod az ablakot?", () => {
-                        alertify.add().close();
-                    }, () => {});
-                });
-
-                $(`div[data-box="${this.name}"] .btn[data-name='alertify-save']`).unbind("click").click(function () {
-                    var errors = [];
-                    var form = $("form[data-name='machine_rental']")[0];
-                    var formData = new FormData(form);
-                    var startValue = ($("form[data-name='machine_rental'] [data-name='datetime_rental_start']").val() || '').trim();
-                    var endValue = ($("form[data-name='machine_rental'] [data-name='datetime_rental_end']").val() || '').trim();
-
-                    if (($("form[data-name='machine_rental'] [data-name='partner_id']").val() || '').trim() === '') {
-                        errors.push('A partner megadása kötelező.');
+            const listRequest = new Ajax({
+                url: '{{ path('list_machine_rentals') }}',
+                name: 'list_machine_rentals',
+                type: 'POST',
+                dataType: 'json',
+                formData: new FormData(),
+                target: $('[data-name="index_machine_rentals_content"]'),
+                function_success: function (result) {
+                    if (result.success) {
+                        this.target.html(result.content);
+                        currentPage = Number(result.data?.page || 1);
                     }
+                },
+                function_error: function (xhr) {
+                    alertify.error(getErrorMessage(xhr, 'Nem sikerült betölteni a gépkölcsönzéseket.'));
+                }
+            });
 
-                    if (($("form[data-name='machine_rental'] [data-name='machine_id']").val() || '').trim() === '') {
-                        errors.push('A gép megadása kötelező.');
-                    }
-
-                    if (startValue !== '' && endValue !== '' && new Date(endValue) < new Date(startValue)) {
-                        errors.push('A bérlés vége nem lehet korábbi, mint a kezdete.');
-                    }
-
-                    if (errors.length > 0) {
-                        alertify.alert('Hiányzó adatok', errors.join('<br>'));
+            const editorRequest = new Ajax({
+                url: '{{ path('index_machine_rentals_add') }}',
+                name: 'index_machine_rentals_add',
+                type: 'GET',
+                dataType: 'json',
+                formData: new FormData(),
+                function_success: function (result) {
+                    if (!result.success) {
+                        alertify.error(result.data?.error || 'Nem sikerült betölteni az űrlapot.');
                         return;
                     }
-
-                    alertify.confirm("Megerősítés", "Mented az adatokat?", () => {
-                        formData.set('id', $("form[data-name='machine_rental'] [data-name='id']").val());
-                        formData.set('partner_id', $("form[data-name='machine_rental'] [data-name='partner_id']").val());
-                        formData.set('machine_id', $("form[data-name='machine_rental'] [data-name='machine_id']").val());
-                        formData.set('datetime_rental_start', startValue);
-                        formData.set('datetime_rental_end', endValue);
-                        formData.set('status', $("form[data-name='machine_rental'] [data-name='status']").val() || '1');
-
-                        new Ajax({
-                            url: '{{ path('save_machine_rentals') }}',
-                            name: 'save_machine_rentals',
-                            type: 'POST',
-                            dataType: 'json',
-                            formData: formData,
-                            function_success: function (result) {
-                                if (result.success) {
-                                    alertify.add().close();
-                                    alertify.success("Sikeres mentés");
-                                    ajaxquery['list_machine_rentals'].send();
-                                }
-                            },
-                            function_error: function (xhr) {
-                                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült menteni a gépkölcsönzést.');
-                            }
-                        }).send();
-                    }, () => {});
-                });
-            },
-            function_error: function (xhr) {
-                alertify.error(xhr.responseText || 'Nem sikerült betölteni az űrlapot.');
-            }
-        });
-
-
-        new Ajax({
-            url: '{{ path('list_machine_rentals') }}',
-            name: 'list_machine_rentals',
-            type: 'POST',
-            dataType: 'json',
-            formData:  new FormData(),
-            target: $('[data-name="index_machine_rentals_content"]'),
-            function_success: function (result) {
-                if (result.success) {
-                    this.target.html(result.content);
-                    //bindMachineRentalListButtons(this.target);
+                    showEditor(result.content, result.data || {});
+                },
+                function_error: function (xhr) {
+                    alertify.error(getErrorMessage(xhr, 'Nem sikerült betölteni az űrlapot.'));
                 }
-            },
-            function_error: function (xhr) {
-                alertify.error(xhr.responseJSON?.data?.error || 'Nem sikerült betölteni a gépkölcsönzéseket.');
+            });
+
+            function loadRentals(page) {
+                const filters = {
+                    search: ($('[data-name="search_machine_rentals_list"]').val() || '').trim(),
+                    status: $('[data-name="filter_machine_rentals_status"]').val() || ''
+                };
+                listRequest.formData.set('filters', JSON.stringify(filters));
+                listRequest.formData.set('page', String(page || 1));
+                listRequest.send();
             }
-        }).send();
 
-
-
-        function refreshMachineRentalList() {
-            var filters = JSON.parse(ajaxquery['list_machine_rentals'].formData.get("filters") ?? '{}') ;
-
-            filters.search = $("[data-name='search_machine_rentals_list']").val();
-            filters.status = $("[data-name='filter_machine_rentals_status']").val();
-            ajaxquery['list_machine_rentals'].formData.set("filters", JSON.stringify(filters));
-            ajaxquery['list_machine_rentals'].url = '{{ path('list_machine_rentals') }}';
-            ajaxquery['list_machine_rentals'].send();
-        }
-
-        $("[data-name='btn_index_machine_rentals_add']").unbind("click").click(function () {
-            ajaxquery['index_machine_rentals_add'].formData.set("id", "");
-            ajaxquery['index_machine_rentals_add'].send();
-        });
-
-        $("[data-name='btn_index_machine_rentals_filter']").unbind("click").click(function () {
-            refreshMachineRentalList();
-        });
-
-        $("[data-name='filter_machine_rentals_status']").unbind("change").change(function () {
-            refreshMachineRentalList();
-        });
-
-        $("[data-name='search_machine_rentals_list']").unbind("keyup").keyup(function (event) {
-            if (event.keyCode === 13) {
-                refreshMachineRentalList();
+            function openRental(id) {
+                editorRequest.formData = new FormData();
+                editorRequest.formdata = editorRequest.formData;
+                if (id) {
+                    editorRequest.formData.set('id', String(id));
+                }
+                editorRequest.send();
             }
-        });
 
-    })();
-</script>
+            function showEditor(content, data) {
+                destroyEditorComboboxes();
+
+                const footer = `
+                    <div class="container-fluid p-0" data-box="machine-rental-editor">
+                        <div class="row">
+                            <div class="col-12 text-end">
+                                <button type="button" class="btn btn-success btn-sm" data-name="alertify-save"><i class="bi bi-check-lg"></i> Mentés</button>
+                                <button type="button" class="btn btn-secondary btn-sm" data-name="alertify-cancel">Mégse</button>
+                            </div>
+                        </div>
+                    </div>`;
+
+                alertify.add(data.id ? 'Gépkölcsönzés módosítása' : 'Új gépkölcsönzés', content)
+                    .set('movable', false)
+                    .set('resizable', true)
+                    .set('closable', false)
+                    .set('closableByEscape', false)
+                    .resizeTo('70%', '80%')
+                    .set('resizable', false)
+                    .set({ transition: 'zoom' })
+                    .setFooter(footer);
+
+                initializeEditorComboboxes();
+
+                $('[data-box="machine-rental-editor"] [data-name="alertify-cancel"]')
+                    .off('click.machineRental')
+                    .on('click.machineRental', function () {
+                        alertify.confirm('Megerősítés', 'Bezárod az ablakot?', function () {
+                            destroyEditorComboboxes();
+                            alertify.add().close();
+                        }, function () {});
+                    });
+
+                $('[data-box="machine-rental-editor"] [data-name="alertify-save"]')
+                    .off('click.machineRental')
+                    .on('click.machineRental', saveRental);
+
+                $('form[data-name="machine_rental"] [data-name="btn_inner_show_worksheet"]')
+                    .off('click.machineRental')
+                    .on('click.machineRental', function () {
+                        const worksheetId = Number($(this).attr('data-worksheet-id'));
+                        if (worksheetId > 0) {
+                            openWorksheetEditor(worksheetId);
+                        }
+                    });
+            }
+
+            function initializeEditorComboboxes() {
+                const $form = $('form[data-name="machine_rental"]');
+                const rentalId = Number($form.find('[name="id"]').val()) || null;
+
+                editorComboboxes = [
+                    new AjaxCombobox($form.find('[data-machine-rental-combobox="partner"]'), {
+                        endpoint: '{{ path('list_machine_rental_partner_select_list') }}',
+                        requestName: 'machine_rental_partner_combobox_' + Date.now(),
+                        emptyText: 'Nincs a keresésnek megfelelő partner.'
+                    }),
+                    new AjaxCombobox($form.find('[data-machine-rental-combobox="machine"]'), {
+                        endpoint: '{{ path('list_machine_rental_machine_select_list') }}',
+                        requestName: 'machine_rental_machine_combobox_' + Date.now(),
+                        emptyText: 'Nincs a keresésnek megfelelő gép.',
+                        getFilters: function () {
+                            return { rental_id: rentalId };
+                        }
+                    }),
+                    new AjaxCombobox($form.find('[data-machine-rental-combobox="project"]'), {
+                        endpoint: '{{ path('list_machine_rental_project_select_list') }}',
+                        requestName: 'machine_rental_project_combobox_' + Date.now(),
+                        emptyText: 'Nincs a keresésnek megfelelő projekt.'
+                    })
+                ];
+            }
+
+            function destroyEditorComboboxes() {
+                editorComboboxes.forEach(function (combobox) {
+                    combobox.destroy();
+                });
+                editorComboboxes = [];
+            }
+
+            function saveRental() {
+                const $form = $('form[data-name="machine_rental"]');
+                if (!$form.length) {
+                    return;
+                }
+
+                const partnerId = ($form.find('[name="partner_id"]').val() || '').trim();
+                const machineId = ($form.find('[name="machine_id"]').val() || '').trim();
+                const projectSearch = ($form.find('[data-machine-rental-combobox="project"] [data-ajax-combobox-search]').val() || '').trim();
+                const projectId = ($form.find('[name="project_id"]').val() || '').trim();
+                const start = ($form.find('[name="datetime_rental_start"]').val() || '').trim();
+                const end = ($form.find('[name="datetime_rental_end"]').val() || '').trim();
+                const errors = [];
+
+                if (!partnerId) errors.push('A partner megadása kötelező.');
+                if (!machineId) errors.push('A gép megadása kötelező.');
+                if (projectSearch && !projectId) errors.push('Válassz projektet a találati listából.');
+                if (!start) errors.push('A bérlés kezdetének megadása kötelező.');
+                if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
+                    errors.push('A bérlés tervezett vége nem lehet korábbi, mint a kezdete.');
+                }
+
+                if (errors.length) {
+                    alertify.alert('Hiányzó vagy hibás adatok', errors.join('<br>'));
+                    return;
+                }
+
+                alertify.confirm('Megerősítés', 'Mented a gépkölcsönzést?', function () {
+                    const formData = new FormData($form[0]);
+                    const $saveButton = $('[data-box="machine-rental-editor"] [data-name="alertify-save"]');
+
+                    new Ajax({
+                        url: '{{ path('save_machine_rentals') }}',
+                        name: 'save_machine_rentals_' + Date.now(),
+                        type: 'POST',
+                        dataType: 'json',
+                        formData: formData,
+                        function_prepare: function () {
+                            $saveButton.prop('disabled', true);
+                        },
+                        function_success: function (result) {
+                            if (!result.success) {
+                                $saveButton.prop('disabled', false);
+                                alertify.error(result.data?.error || 'Nem sikerült menteni a gépkölcsönzést.');
+                                return;
+                            }
+
+                            const worksheetId = Number(result.data?.worksheet_id || 0);
+                            destroyEditorComboboxes();
+                            alertify.add().close();
+                            alertify.success('Sikeres gépkölcsönzés- és munkalapmentés.');
+                            loadRentals(currentPage);
+
+                            if (worksheetId > 0) {
+                                openWorksheetEditor(worksheetId);
+                            }
+                        },
+                        function_error: function (xhr) {
+                            $saveButton.prop('disabled', false);
+                            alertify.error(getErrorMessage(xhr, 'Nem sikerült menteni a gépkölcsönzést.'));
+                        }
+                    }).send();
+                }, function () {});
+            }
+
+            function openWorksheetEditor(worksheetId) {
+                const formData = new FormData();
+                formData.set('worksheet_id', String(worksheetId));
+
+                new Ajax({
+                    url: '{{ path('index_worksheets_add') }}',
+                    name: 'machine_rental_open_worksheet_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    function_success: function (result) {
+                        if (!result.success) {
+                            alertify.error(result.data?.error || 'A munkalap nem nyitható meg.');
+                            return;
+                        }
+
+                        $('#worksheet_add_content').remove();
+                        $('<div>', {
+                            id: 'worksheet_add_content',
+                            html: result.content
+                        }).appendTo('body');
+                    },
+                    function_error: function (xhr) {
+                        alertify.error(getErrorMessage(xhr, 'A munkalap nem nyitható meg.'));
+                    }
+                }).send();
+            }
+
+            function getErrorMessage(xhr, fallback) {
+                return xhr?.responseJSON?.data?.error || xhr?.responseJSON?.message || fallback;
+            }
+
+            $('[data-name="btn_index_machine_rentals_add"]')
+                .off('click.machineRental')
+                .on('click.machineRental', function () { openRental(null); });
+
+            $('[data-name="btn_index_machine_rentals_filter"]')
+                .off('click.machineRental')
+                .on('click.machineRental', function () { loadRentals(1); });
+
+            $('[data-name="filter_machine_rentals_status"]')
+                .off('change.machineRental')
+                .on('change.machineRental', function () { loadRentals(1); });
+
+            $('[data-name="search_machine_rentals_list"]')
+                .off('keydown.machineRental')
+                .on('keydown.machineRental', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        loadRentals(1);
+                    }
+                });
+
+            $('[data-name="index_machine_rentals_content"]')
+                .off('click.machineRental')
+                .on('click.machineRental', '[data-machine-rental-action]', function () {
+                    const action = $(this).attr('data-machine-rental-action');
+                    if (action === 'edit') {
+                        openRental(Number($(this).attr('data-rental-id')));
+                    } else if (action === 'worksheet') {
+                        openWorksheetEditor(Number($(this).attr('data-worksheet-id')));
+                    }
+                })
+                .on('click.machineRental', '.pagination a', function (event) {
+                    event.preventDefault();
+                    const url = new URL(this.href, window.location.origin);
+                    loadRentals(Number(url.searchParams.get('page')) || 1);
+                });
+
+            loadRentals(1);
+        })();
+    </script>
 {% endblock %}

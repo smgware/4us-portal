@@ -1,212 +1,628 @@
-<div class="container-fluid p-0">
+<style>
+    .machine-info-view .machine-info-label { color: var(--muted); font-size: .78rem; }
+    .machine-info-view .machine-info-value { font-weight: 600; overflow-wrap: anywhere; }
+    .machine-info-view .machine-info-current-rental {
+        height: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--field-bg);
+    }
+    .machine-info-view .machine-info-list-loading { min-height: 90px; }
+    .machine-info-view .ajax-combobox__results { z-index: 30; }
+    .machine-info-view .machine-info-attachment {
+        display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+        padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--field-bg);
+    }
+    .machine-info-view .machine-info-attachment + .machine-info-attachment { margin-top: 8px; }
+    .machine-info-view .machine-info-attachment__preview {
+        width: 64px; height: 64px; border: 0; border-radius: 10px; padding: 0; display: flex;
+        align-items: center; justify-content: center; overflow: hidden; color: var(--text); background: var(--grayblue);
+    }
+    .machine-info-view .machine-info-attachment__preview img { width: 100%; height: 100%; object-fit: cover; }
+    .machine-info-view .machine-info-attachment__preview i { font-size: 2rem; }
+    .machine-info-view .machine-info-attachment__content { min-width: 0; }
+    .machine-info-view .machine-info-attachment__description { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .machine-info-view .machine-info-attachment__actions { display: flex; gap: 4px; }
+    .machine-attachment-viewer {
+        position: fixed; inset: 0; z-index: 12000; background: rgba(8, 15, 28, .94); color: #fff;
+    }
+    .machine-attachment-viewer__stage {
+        position: absolute; inset: 0; display: grid; grid-template-columns: 72px minmax(0, 1fr) 72px;
+        align-items: center; padding: 70px 12px 30px;
+    }
+    .machine-attachment-viewer__content { min-width: 0; max-height: calc(100vh - 110px); text-align: center; }
+    .machine-attachment-viewer__content img {
+        max-width: 100%; max-height: calc(100vh - 235px); object-fit: contain; border-radius: 10px;
+    }
+    .machine-attachment-viewer__content iframe {
+        width: min(1100px, 100%); height: calc(100vh - 235px); border: 0; border-radius: 10px; background: #fff;
+    }
+    .machine-attachment-viewer__file-icon { font-size: min(25vw, 180px); }
+    .machine-attachment-viewer__caption {
+        max-width: 1100px; margin: 12px auto 0; padding: 10px 14px; border-radius: 10px; background: rgba(0, 0, 0, .58);
+    }
+    .machine-attachment-viewer [data-viewer-action="close"] { position: fixed; top: 16px; right: 16px; z-index: 2; }
+    .machine-attachment-viewer [data-viewer-action="navigate"] {
+        height: 100%; border: 0; color: #fff; background: transparent; font-size: 2.3rem;
+    }
+    .machine-upload-preview {
+        width: 68px; height: 68px; border-radius: 10px; overflow: hidden; background: var(--grayblue);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .machine-upload-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .machine-upload-preview i { font-size: 2rem; }
+    @media (max-width: 767px) {
+        .machine-info-view .machine-info-attachment { grid-template-columns: 52px minmax(0, 1fr); }
+        .machine-info-view .machine-info-attachment__preview { width: 52px; height: 52px; }
+        .machine-info-view .machine-info-attachment__actions { grid-column: 1 / -1; justify-content: flex-end; }
+        .machine-attachment-viewer__stage { grid-template-columns: 45px minmax(0, 1fr) 45px; padding-inline: 2px; }
+    }
+</style>
+
+<div class="container-fluid p-0 machine-info-view" id="machine-info-{{ machine.id }}" data-machine-id="{{ machine.id }}">
     <div class="row g-2">
         <div class="col-12">
             <div class="card panel-card p-3">
-                <div class="row g-3 align-items-start">
-                    <div class="col-lg-8 col-12">
-                        <div class="page-title mb-2">Gép információk</div>
-                        <div class="row g-2">
+                <div class="row g-3 align-items-stretch">
+                    <div class="col-xl-8 col-12">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                            <div class="page-title mb-0"><i class="bi bi-gear-wide-connected"></i> Gép információk</div>
+                            <button type="button" class="btn btn-default btn-sm" data-machine-info-action="print-qr">
+                                <i class="bi bi-qr-code"></i> Hibabejelentő QR-kód nyomtatása
+                            </button>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-lg-4 col-md-6 col-12"><div class="machine-info-label">Megnevezés</div><div class="machine-info-value">{{ machine.title|default('-') }}</div></div>
+                            <div class="col-lg-4 col-md-6 col-12"><div class="machine-info-label">Kód</div><div class="machine-info-value">{{ machine.code|default('-') }}</div></div>
+                            <div class="col-lg-4 col-md-6 col-12"><div class="machine-info-label">Kategória</div><div class="machine-info-value">{{ machine.machineCategory ? machine.machineCategory.title : '-' }}</div></div>
                             <div class="col-lg-4 col-md-6 col-12">
-                                <span class="small text-muted">Megnevezés</span>
-                                <div class="fw-semibold">{{ machine.title|default('-') }}</div>
+                                <div class="machine-info-label">Státusz</div>
+                                {% if machine.status == '1' %}<span class="badge text-bg-success">Aktív</span>{% else %}<span class="badge text-bg-secondary">Inaktív</span>{% endif %}
                             </div>
                             <div class="col-lg-4 col-md-6 col-12">
-                                <span class="small text-muted">Kód</span>
-                                <div class="fw-semibold">{{ machine.code|default('-') }}</div>
+                                <div class="machine-info-label">Kiadva</div>
+                                {% if open_machine_rental %}<span class="badge text-bg-warning">Igen</span>{% else %}<span class="badge text-bg-success">Nem</span>{% endif %}
                             </div>
-                            <div class="col-lg-4 col-md-6 col-12">
-                                <span class="small text-muted">Kategória</span>
-                                <div class="fw-semibold">{{ machine.machineCategory ? machine.machineCategory.title : '-' }}</div>
-                            </div>
-                            <div class="col-lg-4 col-md-6 col-12">
-                                <span class="small text-muted">Státusz</span>
-                                <div>
-                                    {% if machine.status == '1' %}
-                                        <span class="btn btn-sm btn-success">aktív</span>
-                                    {% else %}
-                                        <span class="btn btn-sm btn-danger">inaktív</span>
-                                    {% endif %}
+                            <div class="col-lg-4 col-md-6 col-12"><div class="machine-info-label">Utolsó módosítás</div><div class="machine-info-value">{{ machine.datetimeLast ? machine.datetimeLast|date('Y-m-d H:i') : '-' }}</div></div>
+                            <div class="col-12">
+                                <label class="machine-info-label mb-1" for="machine-company-site-{{ machine.id }}">Telephely</label>
+                                <div class="input-group">
+                                    <select id="machine-company-site-{{ machine.id }}" class="form-control" data-machine-company-site required>
+                                        <option value="">Válassz telephelyet</option>
+                                        {% for companySite in company_sites %}
+                                            <option value="{{ companySite.id }}" {{ machine.companySite and machine.companySite.id == companySite.id ? 'selected' }}>
+                                                {{ companySite.title }}{% if companySite.code %} ({{ companySite.code }}){% endif %}{% if companySite.status != '1' %} – inaktív{% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-success" data-machine-info-action="save-site"><i class="bi bi-floppy"></i> Mentés</button>
                                 </div>
-                            </div>
-                            <div class="col-lg-4 col-md-6 col-12">
-                                <span class="small text-muted">Kiadva</span>
-                                <div>
-                                    {% if open_machine_rental %}
-                                        <span class="btn btn-sm btn-warning">igen</span>
-                                    {% else %}
-                                        <span class="btn btn-sm btn-success">nem</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col-lg-4 col-md-6 col-12">
-                                <span class="small text-muted">Utolsó módositás</span>
-                                <div class="fw-semibold">{{ machine.datetimeLast ? machine.datetimeLast|date('Y-m-d H:i') : '-' }}</div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-4 col-12">
-                        <div class="page-title mb-2">Aktuális kölcsönzés</div>
-                        {% if open_machine_rental %}
-                            <div class="row g-2">
-                                <div class="col-12">
-                                    <span class="small text-muted">Kölcsönzés kód</span>
-                                    <div class="fw-semibold">{{ open_machine_rental.code|default('-') }}</div>
+                    <div class="col-xl-4 col-12">
+                        <div class="machine-info-current-rental p-3">
+                            <div class="page-title mb-3"><i class="bi bi-repeat"></i> Aktuális kölcsönzés</div>
+                            {% if open_machine_rental %}
+                                <div class="row g-2">
+                                    <div class="col-12"><div class="machine-info-label">Kölcsönzési kód</div><div class="machine-info-value">{{ open_machine_rental.code|default('-') }}</div></div>
+                                    <div class="col-12">
+                                        <div class="machine-info-label">Partner</div><div class="machine-info-value">{{ open_machine_rental.partner_name|default('-') }}</div>
+                                        {% if open_machine_rental.partner_code %}<div class="text-muted text-xs">{{ open_machine_rental.partner_code }}</div>{% endif %}
+                                    </div>
+                                    <div class="col-md-6 col-12"><div class="machine-info-label">Bérlés kezdete</div><div class="machine-info-value">{{ open_machine_rental.datetime_rental_start ? open_machine_rental.datetime_rental_start|date('Y-m-d H:i') : '-' }}</div></div>
+                                    <div class="col-md-6 col-12"><div class="machine-info-label">Tervezett vége</div><div class="machine-info-value">{{ open_machine_rental.datetime_rental_end ? open_machine_rental.datetime_rental_end|date('Y-m-d H:i') : '-' }}</div></div>
                                 </div>
-                                <div class="col-12">
-                                    <span class="small text-muted">Partner</span>
-                                    <div class="fw-semibold">{{ open_machine_rental.partner_name|default('-') }}</div>
-                                </div>
-                                <div class="col-12">
-                                    <span class="small text-muted">Kezdete</span>
-                                    <div class="fw-semibold">{{ open_machine_rental.datetime_rental_start ? open_machine_rental.datetime_rental_start|date('Y-m-d H:i') : '-' }}</div>
-                                </div>
-                            </div>
-                        {% else %}
-                            <div class="text-muted">Nincs információ</div>
-                        {% endif %}
-                    </div>
-
-                    <div class="col-lg-4 col-12">
-                        <div class="btn btn-default btn-sm" data-name="print_qr_code_error_reporting"><i class="bi bi-qr-code"></i> Hibabejelentő QR kód nyomtatása</div>
+                            {% else %}
+                                <div class="text-muted py-3">A gépnek nincs nyitott kölcsönzése.</div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-6">
-            <div class="card panel-card p-3">
-                <div class="page-title mb-2">Kölcsönzések</div>
-                <div class="table-responsive">
-                    <table class="table-default w-100">
-                        <thead>
-                            <tr>
-                                <th class="p-2">Kód</th>
-                                <th class="p-2">Partner</th>
-                                <th class="p-2">Kezdete</th>
-                                <th class="p-2">Vége</th>
-                                <th class="p-2">Állapot</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rental in machine_rentals %}
-                                <tr>
-                                    <td>{{ rental.code|default('-') }}</td>
-                                    <td>{{ rental.partner_name|default('-') }}</td>
-                                    <td>{{ rental.datetime_rental_start ? rental.datetime_rental_start|date('Y-m-d H:i') : '-' }}</td>
-                                    <td>{{ rental.datetime_rental_end ? rental.datetime_rental_end|date('Y-m-d H:i') : '-' }}</td>
-                                    <td>
-                                        {% if rental.datetime_rental_end is empty %}
-                                            <span class="btn btn-sm btn-success">nyitott</span>
-                                        {% else %}
-                                            <span class="btn btn-sm btn-danger">lezárt</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center py-3 text-muted">Nincsenek előzmények</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6">
-            <div class="card panel-card p-3">
-                <div class="page-title mb-2">Hibajegyek</div>
-                <div class="table-responsive">
-                    <table class="table-default w-100">
-                        <thead>
-                            <tr>
-                                <th class="p-2">Kód</th>
-                                <th class="p-2">Megnevezés</th>
-                                <th class="p-2">Partner</th>
-                                <th class="p-2">Létrehozva</th>
-                                <th class="p-2">Állapot</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for worksheet in worksheets_error_reporting %}
-                                <tr>
-                                    <td>{{ worksheet.code|default('-') }}</td>
-                                    <td>{{ worksheet.title|default('-') }}</td>
-                                    <td>{{ worksheet.partner_name|default('-') }}</td>
-                                    <td>{{ worksheet.datetime_add ? worksheet.datetime_add|date('Y-m-d H:i') : '-' }}</td>
-                                    <td>
-                                        {% include 'worksheets/_status_badge.html.twig' with {
-                                            statusCode: worksheet.worksheet_status_type_code,
-                                            statusTitle: worksheet.worksheet_status_type_title
-                                        } only %}
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center py-3 text-muted">Nincsenek előzmények</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6 col-12">
-            <div class="card panel-card p-3">
-                <div class="page-title mb-2">Átadási munkalapok</div>
-                {% include 'machines/_info_worksheet_table.html.twig' with { records: worksheets_handover } only %}
-            </div>
-        </div>
-
-        <div class="col-lg-6 col-12">
-            <div class="card panel-card p-3">
-                <div class="page-title mb-2">Visszaveteli munkalapok</div>
-                {% include 'machines/_info_worksheet_table.html.twig' with { records: worksheets_machine_return } only %}
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-2">
         <div class="col-12">
             <div class="card panel-card p-3">
-                <div class="row">
-                    <div class="col-12" data-name="ajax-content" data-key="main_machines_attachments">betöltés...</div>
+                <div class="page-title mb-3"><i class="bi bi-clock-history"></i> Kölcsönzések</div>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-lg-5 col-12">
+                        <label class="text-xs" for="machine-rental-search-{{ machine.id }}">Keresés</label>
+                        <div class="input-group">
+                            <input id="machine-rental-search-{{ machine.id }}" type="text" class="form-control" placeholder="Kölcsönzési kód vagy partner..." data-machine-rental-search>
+                            <button type="button" class="btn btn-default" data-machine-info-action="search-rentals" title="Keresés"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-lg-5 col-12">
+                        <label class="text-xs" for="machine-rental-partner-search-{{ machine.id }}">Partner</label>
+                        <div class="ajax-combobox" data-machine-info-combobox="rental-partner">
+                            <div class="input-group">
+                                <input id="machine-rental-partner-search-{{ machine.id }}" type="text" class="form-control" placeholder="Partner keresése..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" data-ajax-combobox-search>
+                                <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Partner szűrő törlése"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                            <input type="hidden" value="" data-ajax-combobox-value>
+                            <div class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-12 text-lg-end"><button type="button" class="btn btn-secondary btn-sm" data-machine-info-action="reset-rentals"><i class="bi bi-arrow-counterclockwise"></i> Szűrők törlése</button></div>
                 </div>
+                <div data-machine-rentals-list class="machine-info-list-loading"></div>
+            </div>
+        </div>
 
-             </div>
+        <div class="col-12">
+            <div class="card panel-card p-3">
+                <div class="page-title mb-3"><i class="bi bi-clipboard-check"></i> Munkalapok</div>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-xl-4 col-lg-6 col-12">
+                        <label class="text-xs" for="machine-worksheet-search-{{ machine.id }}">Keresés kódra</label>
+                        <div class="input-group">
+                            <input id="machine-worksheet-search-{{ machine.id }}" type="text" class="form-control" placeholder="Munkalapkód vagy megnevezés..." data-machine-worksheet-search>
+                            <button type="button" class="btn btn-default" data-machine-info-action="search-worksheets" title="Keresés"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-xl-4 col-lg-6 col-12">
+                        <label class="text-xs" for="machine-worksheet-partner-search-{{ machine.id }}">Partner</label>
+                        <div class="ajax-combobox" data-machine-info-combobox="worksheet-partner">
+                            <div class="input-group">
+                                <input id="machine-worksheet-partner-search-{{ machine.id }}" type="text" class="form-control" placeholder="Partner keresése..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" data-ajax-combobox-search>
+                                <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Partner szűrő törlése"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                            <input type="hidden" value="" data-ajax-combobox-value>
+                            <div class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-lg-8 col-12">
+                        <label class="text-xs" for="machine-worksheet-type-{{ machine.id }}">Típus</label>
+                        <select id="machine-worksheet-type-{{ machine.id }}" class="form-select" data-machine-worksheet-type>
+                            <option value="">Minden kapcsolódó munkalap</option>
+                            {% for worksheetType in worksheet_filter_types %}
+                                <option value="{{ worksheetType.code }}">{{ worksheetType.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-xl-1 col-lg-4 col-12 text-lg-end"><button type="button" class="btn btn-secondary btn-sm" data-machine-info-action="reset-worksheets" title="Szűrők törlése"><i class="bi bi-arrow-counterclockwise"></i></button></div>
+                </div>
+                <div data-machine-worksheets-list class="machine-info-list-loading"></div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card panel-card p-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="page-title mb-0"><i class="bi bi-paperclip"></i> Csatolmányok</div>
+                    <button type="button" class="btn btn-default btn-sm" data-machine-info-action="upload-attachments"><i class="bi bi-plus-circle-fill"></i> Új csatolmány feltöltése</button>
+                </div>
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-lg-8 col-12">
+                        <label class="text-xs" for="machine-attachment-search-{{ machine.id }}">Keresés</label>
+                        <div class="input-group">
+                            <input id="machine-attachment-search-{{ machine.id }}" type="text" class="form-control" placeholder="Fájlnév vagy leírás..." data-machine-attachment-search>
+                            <button type="button" class="btn btn-default" data-machine-info-action="search-attachments"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-12 text-lg-end"><span class="small text-muted" data-machine-attachment-count></span></div>
+                </div>
+                <div data-machine-attachments-list class="machine-info-list-loading"></div>
+            </div>
         </div>
     </div>
 </div>
 
+<div class="machine-attachment-viewer d-none" data-machine-attachment-viewer role="dialog" aria-modal="true" aria-label="Csatolmány nézegető">
+    <button type="button" class="btn btn-light" data-viewer-action="close"><i class="bi bi-x-lg"></i> Bezárás</button>
+    <div class="machine-attachment-viewer__stage">
+        <button type="button" data-viewer-action="navigate" data-direction="prev" aria-label="Előző csatolmány"><i class="bi bi-chevron-left"></i></button>
+        <div class="machine-attachment-viewer__content" data-viewer-content></div>
+        <button type="button" data-viewer-action="navigate" data-direction="next" aria-label="Következő csatolmány"><i class="bi bi-chevron-right"></i></button>
+    </div>
+</div>
 
 <script>
-    $("[data-name='print_qr_code_error_reporting']").unbind("click").click(function (event) {
+    (() => {
+        if (typeof window.destroyMachineInfoView === 'function') window.destroyMachineInfoView();
 
-        window.open("{{ path('print_qr_code_error_reporting', {id: machine.id}) }}", '_blank');
+        const machineId = {{ machine.id }};
+        const root = $('#machine-info-' + machineId).last();
+        if (!root.length) return;
 
-    });
+        const instanceKey = machineId + '_' + Date.now();
+        const namespace = '.machineInfo' + instanceKey;
+        const maxAttachmentSize = {{ max_attachment_file_size }};
+        const maxAttachmentSizeLabel = {{ ((max_attachment_file_size / 1024 / 1024)|round(0, 'floor') ~ ' MB')|json_encode|raw }};
+        const routes = {
+            rentals: {{ path('list_machine_info_rentals')|json_encode|raw }},
+            worksheets: {{ path('list_machine_info_worksheets')|json_encode|raw }},
+            partnerOptions: {{ path('list_machine_rental_partner_select_list')|json_encode|raw }},
+            companySite: {{ path('update_machine_company_site')|json_encode|raw }},
+            worksheetEditor: {{ path('index_worksheets_add')|json_encode|raw }},
+            attachments: {{ path('list_machine_attachments')|json_encode|raw }},
+            attachmentUpload: {{ path('upload_machine_attachment')|json_encode|raw }},
+            attachmentDescription: {{ path('update_machine_attachment_description')|json_encode|raw }},
+            attachmentDelete: {{ path('delete_machine_attachment')|json_encode|raw }},
+            qr: {{ path('print_qr_code_error_reporting', {id: machine.id})|json_encode|raw }}
+        };
+        const state = {comboboxes: [], attachmentItems: [], appendAttachments: false, viewerIndex: 0, viewerBodyOverflow: '', uploadCleanup: null};
+        const viewer = $('[data-machine-attachment-viewer]').last().detach().appendTo(document.body);
 
-    //load attachmetns main
-    var formData = new FormData();
-
-    formData.append("machine_id", "{{ machine.id }}");
-
-    new Ajax({
-        url: '{{ path('main_machines_attachments') }}',
-        name: 'main_machines_attachments',
-        type: 'POST',
-        dataType: 'json',
-        formData: formData,
-        target: $("[data-key='main_machines_attachments']"),
-        function_success: function (result) {
-            this.target.html(result.content);
-        },
-        function_error: function (xhr) {
-            alertify.error(errorMessage(xhr, ''));
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'})[character]);
         }
-    }).send();
+        function escapeAttribute(value) { return escapeHtml(value); }
+        function errorMessage(xhr, fallback) { return xhr?.responseJSON?.data?.error || xhr?.responseJSON?.message || xhr?.message || fallback; }
+        function loading(target) { target.html('<div class="p-3 text-center text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Betöltés...</div>'); }
 
+        const rentalsRequest = new Ajax({
+            url: routes.rentals, name: 'machine_info_rentals_' + instanceKey, type: 'POST', dataType: 'json', formData: new FormData(), target: root.find('[data-machine-rentals-list]'),
+            function_prepare: function () { loading(this.target); },
+            function_success: function (result) {
+                if (!result.success) { alertify.error(result.data?.error || 'Nem sikerült betölteni a kölcsönzéseket.'); return; }
+                this.target.html(result.content);
+            },
+            function_error: function (xhr, status) {
+                if (status === 'abort') return;
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni a kölcsönzéseket.'));
+            }
+        });
+        function loadRentals(page = 1) {
+            rentalsRequest.formData.set('machine_id', String(machineId));
+            rentalsRequest.formData.set('page', String(page));
+            rentalsRequest.formData.set('filters', JSON.stringify({
+                search: String(root.find('[data-machine-rental-search]').val() || '').trim(),
+                partner_id: root.find('[data-machine-info-combobox="rental-partner"] [data-ajax-combobox-value]').val() || ''
+            }));
+            rentalsRequest.send();
+        }
 
+        const worksheetsRequest = new Ajax({
+            url: routes.worksheets, name: 'machine_info_worksheets_' + instanceKey, type: 'POST', dataType: 'json', formData: new FormData(), target: root.find('[data-machine-worksheets-list]'),
+            function_prepare: function () { loading(this.target); },
+            function_success: function (result) {
+                if (!result.success) { alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalapokat.'); return; }
+                this.target.html(result.content);
+            },
+            function_error: function (xhr, status) {
+                if (status === 'abort') return;
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni a munkalapokat.'));
+            }
+        });
+        function loadWorksheets(page = 1) {
+            worksheetsRequest.formData.set('machine_id', String(machineId));
+            worksheetsRequest.formData.set('page', String(page));
+            worksheetsRequest.formData.set('filters', JSON.stringify({
+                search: String(root.find('[data-machine-worksheet-search]').val() || '').trim(),
+                partner_id: root.find('[data-machine-info-combobox="worksheet-partner"] [data-ajax-combobox-value]').val() || '',
+                worksheet_type_code: root.find('[data-machine-worksheet-type]').val() || ''
+            }));
+            worksheetsRequest.send();
+        }
 
+        const attachmentsRequest = new Ajax({
+            url: routes.attachments, name: 'machine_info_attachments_' + instanceKey, type: 'POST', dataType: 'json', formData: new FormData(), target: root.find('[data-machine-attachments-list]'),
+            function_prepare: function () { if (!state.appendAttachments) loading(this.target); },
+            function_success: function (result) {
+                if (!result.success) { alertify.error(result.data?.error || 'Nem sikerült betölteni a csatolmányokat.'); return; }
+                const items = Array.isArray(result.data?.items) ? result.data.items : [];
+                if (state.appendAttachments) {
+                    this.target.find('[data-machine-attachment-action="load-more"]').remove();
+                    this.target.find('[data-machine-attachments-empty]').remove();
+                    this.target.append(result.content);
+                    const byId = new Map(state.attachmentItems.map(item => [Number(item.id), item]));
+                    items.forEach(item => byId.set(Number(item.id), item));
+                    state.attachmentItems = Array.from(byId.values());
+                } else {
+                    this.target.html(result.content);
+                    state.attachmentItems = items;
+                }
+                root.find('[data-machine-attachment-count]').text((result.data?.totalRecords || 0) + ' csatolmány');
+                state.appendAttachments = false;
+            },
+            function_error: function (xhr, status) {
+                state.appendAttachments = false;
+                if (status === 'abort') return;
+                alertify.error(errorMessage(xhr, 'Nem sikerült betölteni a csatolmányokat.'));
+            }
+        });
+        attachmentsRequest.formData.set('machine_id', String(machineId));
+        attachmentsRequest.formData.set('filters', JSON.stringify({search: ''}));
+        function loadAttachments(page = 1, append = false) {
+            state.appendAttachments = append;
+            attachmentsRequest.formData.set('machine_id', String(machineId));
+            attachmentsRequest.formData.set('page', String(page));
+            attachmentsRequest.send();
+        }
+        function applyAttachmentFilter() {
+            const request = ajaxquery[attachmentsRequest.name];
+            let filters = {};
+            try { filters = JSON.parse(request.formData.get('filters') || '{}'); } catch (error) {}
+            filters.search = String(root.find('[data-machine-attachment-search]').val() || '').trim();
+            request.formData.set('filters', JSON.stringify(filters));
+            loadAttachments(1, false);
+        }
+        function reloadAttachmentsWithSavedFilters() {
+            const request = ajaxquery[attachmentsRequest.name];
+            const savedFilters = request.formData.get('filters') || '{}';
+            request.formData.set('filters', savedFilters);
+            loadAttachments(1, false);
+        }
+
+        function initializeComboboxes() {
+            const common = {endpoint: routes.partnerOptions, emptyText: 'Nincs a keresésnek megfelelő partner.', inactiveTitle: 'Inaktív partner'};
+            state.comboboxes.push(new AjaxCombobox(root.find('[data-machine-info-combobox="rental-partner"]'), Object.assign({}, common, {
+                requestName: 'machine_info_rental_partner_' + instanceKey, onSelect: () => loadRentals(1), onClear: () => loadRentals(1)
+            })));
+            state.comboboxes.push(new AjaxCombobox(root.find('[data-machine-info-combobox="worksheet-partner"]'), Object.assign({}, common, {
+                requestName: 'machine_info_worksheet_partner_' + instanceKey, onSelect: () => loadWorksheets(1), onClear: () => loadWorksheets(1)
+            })));
+        }
+
+        function saveCompanySite() {
+            const button = root.find('[data-machine-info-action="save-site"]');
+            const companySiteId = String(root.find('[data-machine-company-site]').val() || '').trim();
+            if (companySiteId === '') {
+                alertify.error('A telephely megadása kötelező.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.set('machine_id', String(machineId));
+            formData.set('company_site_id', companySiteId);
+            new Ajax({
+                url: routes.companySite, name: 'machine_info_company_site_' + instanceKey + '_' + Date.now(), type: 'POST', dataType: 'json', formData: formData,
+                function_prepare: function () { button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Mentés...'); },
+                function_success: function (result) {
+                    if (!result.success) { alertify.error(result.data?.error || 'A telephely mentése nem sikerült.'); return; }
+                    root.find('[data-machine-company-site]').val(String(result.data?.company_site_id || ''));
+                    alertify.success('A telephely mentve.');
+                },
+                function_error: function (xhr) { alertify.error(errorMessage(xhr, 'A telephely mentése nem sikerült.')); },
+                function_complete: function () { button.prop('disabled', false).html('<i class="bi bi-floppy"></i> Mentés'); }
+            }).send();
+        }
+
+        function openWorksheet(worksheetId) {
+            const formData = new FormData();
+            formData.set('worksheet_id', String(worksheetId));
+            new Ajax({
+                url: routes.worksheetEditor, name: 'machine_info_open_worksheet_' + instanceKey + '_' + Date.now(), type: 'POST', dataType: 'json', formData: formData,
+                function_success: function (result) {
+                    if (!result.success) { alertify.error(result.data?.error || 'A munkalap nem nyitható meg.'); return; }
+                    $('#worksheet_add_content').remove();
+                    $('<div>', {id: 'worksheet_add_content', html: result.content}).appendTo('body');
+                },
+                function_error: function (xhr) { alertify.error(errorMessage(xhr, 'A munkalap nem nyitható meg.')); }
+            }).send();
+        }
+
+        function findAttachment(id) { return state.attachmentItems.find(item => Number(item.id) === Number(id)); }
+        function openDescriptionEditor(item) {
+            const dialogKey = 'machine-attachment-description-' + instanceKey + '-' + item.id;
+            const content = `<div class="p-2"><div class="fw-semibold text-break mb-2">${escapeHtml(item.originalName || item.name)}</div><label class="form-label" for="${dialogKey}">Leírás</label><textarea id="${dialogKey}" class="form-control" rows="7" maxlength="5000">${escapeHtml(item.description || '')}</textarea></div>`;
+            const footer = `<div class="container-fluid p-0" data-box="${dialogKey}"><div class="text-end"><button type="button" class="btn btn-success btn-sm" data-action="save">Mentés</button> <button type="button" class="btn btn-secondary btn-sm" data-action="cancel">Mégse</button></div></div>`;
+            alertify.add('Csatolmány leírása', content).set('movable', false).set('resizable', false).set('closable', false).set('closableByEscape', false).resizeTo('600px', '430px').setFooter(footer);
+            $(`[data-box="${dialogKey}"] [data-action="cancel"]`).off('click').on('click', () => alertify.add().close());
+            $(`[data-box="${dialogKey}"] [data-action="save"]`).off('click').on('click', function () {
+                const button = $(this);
+                const formData = new FormData();
+                formData.set('machine_id', String(machineId));
+                formData.set('attachment_id', String(item.id));
+                formData.set('description', String($('#' + dialogKey).val() || '').trim());
+                new Ajax({
+                    url: routes.attachmentDescription, name: 'machine_attachment_description_' + instanceKey + '_' + Date.now(), type: 'POST', dataType: 'json', formData: formData,
+                    function_prepare: function () { button.prop('disabled', true); },
+                    function_success: function (result) {
+                        if (!result.success) { button.prop('disabled', false); alertify.error(result.data?.error || 'A leírás mentése nem sikerült.'); return; }
+                        alertify.add().close(); alertify.success('A leírás mentve.'); reloadAttachmentsWithSavedFilters();
+                    },
+                    function_error: function (xhr) { button.prop('disabled', false); alertify.error(errorMessage(xhr, 'A leírás mentése nem sikerült.')); }
+                }).send();
+            });
+        }
+
+        function deleteAttachment(item) {
+            alertify.confirm('Megerősítés', `Törlöd ezt a csatolmányt?<br><strong>${escapeHtml(item.originalName || item.name)}</strong>`, function () {
+                const formData = new FormData();
+                formData.set('machine_id', String(machineId));
+                formData.set('attachment_id', String(item.id));
+                new Ajax({
+                    url: routes.attachmentDelete, name: 'delete_machine_attachment_' + instanceKey + '_' + Date.now(), type: 'POST', dataType: 'json', formData: formData,
+                    function_success: function (result) {
+                        if (!result.success) { alertify.error(result.data?.error || 'A csatolmány törlése nem sikerült.'); return; }
+                        alertify.success('A csatolmány törölve.'); reloadAttachmentsWithSavedFilters();
+                    },
+                    function_error: function (xhr) { alertify.error(errorMessage(xhr, 'A csatolmány törlése nem sikerült.')); }
+                }).send();
+            }, function () {});
+        }
+
+        function openViewer(item) {
+            const index = state.attachmentItems.findIndex(candidate => Number(candidate.id) === Number(item.id));
+            if (index < 0) return;
+            state.viewerIndex = index;
+            state.viewerBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            viewer.removeClass('d-none');
+            renderViewer();
+        }
+        function closeViewer() { viewer.addClass('d-none'); document.body.style.overflow = state.viewerBodyOverflow || ''; }
+        function moveViewer(direction) {
+            if (!state.attachmentItems.length) return;
+            state.viewerIndex = (state.viewerIndex + direction + state.attachmentItems.length) % state.attachmentItems.length;
+            renderViewer();
+        }
+        function renderViewer() {
+            const item = state.attachmentItems[state.viewerIndex];
+            if (!item) { closeViewer(); return; }
+            let visual = '<i class="bi bi-file-earmark machine-attachment-viewer__file-icon"></i><div class="mt-2">Ehhez a fájltípushoz nincs böngészős előnézet.</div>';
+            if (item.previewType === 'image') visual = `<img src="${escapeAttribute(item.contentUrl)}" alt="${escapeAttribute(item.originalName || '')}">`;
+            else if (item.previewType === 'pdf' || item.previewType === 'text') visual = `<iframe src="${escapeAttribute(item.contentUrl)}" title="${escapeAttribute(item.originalName || 'Csatolmány')}"></iframe>`;
+            const description = item.description ? `<div class="mt-1"><span class="text-white-50">Leírás:</span> ${escapeHtml(item.description)}</div>` : '';
+            viewer.find('[data-viewer-content]').html(`${visual}<div class="machine-attachment-viewer__caption"><div class="fw-semibold text-break">${escapeHtml(item.originalName || item.name || 'Csatolmány')}</div>${description}<div class="small text-white-50 mt-1">${escapeHtml(item.sizeFormatted || '')} · ${state.viewerIndex + 1} / ${state.attachmentItems.length}</div><button type="button" class="btn btn-light btn-sm mt-2" data-viewer-download="${escapeAttribute(item.downloadUrl)}"><i class="bi bi-download"></i> Letöltés</button></div>`);
+            viewer.find('[data-viewer-action="navigate"]').toggle(state.attachmentItems.length > 1);
+        }
+
+        function openUploadDialog() {
+            const dialogKey = 'machine-attachment-upload-' + instanceKey + '-' + Date.now();
+            const content = `<div class="container-fluid p-2" data-machine-upload="${dialogKey}"><div class="d-flex flex-wrap align-items-center gap-2"><button type="button" class="btn btn-default btn-sm" data-upload-action="browse"><i class="bi bi-folder2-open"></i> Fájlok tallózása</button><input type="file" multiple class="d-none" data-upload-input><span class="text-muted small">Legfeljebb ${escapeHtml(maxAttachmentSizeLabel)} fájlonként</span></div><div class="mt-3" data-upload-list><div class="text-center text-muted py-5">Nincs kiválasztott fájl.</div></div></div>`;
+            const footer = `<div class="container-fluid p-0" data-box="${dialogKey}"><div class="text-end"><button type="button" class="btn btn-success btn-sm" data-upload-action="start"><i class="bi bi-cloud-arrow-up"></i> Feltöltés</button> <button type="button" class="btn btn-secondary btn-sm" data-upload-action="cancel">Mégse</button></div></div>`;
+            alertify.add('Új csatolmányok feltöltése', content).set('movable', false).set('resizable', false).set('closable', false).set('closableByEscape', false).maximize().setFooter(footer);
+
+            const uploadRoot = $(`[data-machine-upload="${dialogKey}"]`);
+            const footerRoot = $(`[data-box="${dialogKey}"]`);
+            const selected = [];
+            let uploading = false;
+            function cleanupUpload() {
+                selected.forEach(item => { if (item.previewUrl) URL.revokeObjectURL(item.previewUrl); });
+                state.uploadCleanup = null;
+            }
+            state.uploadCleanup = cleanupUpload;
+            function updateUploadButton(done = null, total = selected.length, percentage = null) {
+                const button = footerRoot.find('[data-upload-action="start"]');
+                if (!uploading) { button.html('<i class="bi bi-cloud-arrow-up"></i> Feltöltés' + (total ? ` (${total})` : '')); return; }
+                if (done === null) done = selected.filter(item => item.status === 'done').length;
+                button.html(`<span class="spinner-border spinner-border-sm me-1"></span>Feltöltés ${done}/${total}${percentage === null ? '' : ` · ${percentage}%`}`);
+            }
+            function renderSelected() {
+                const target = uploadRoot.find('[data-upload-list]');
+                if (!selected.length) { target.html('<div class="text-center text-muted py-5">Nincs kiválasztott fájl.</div>'); updateUploadButton(); return; }
+                target.html(selected.map(item => {
+                    const preview = item.previewUrl ? `<img src="${escapeAttribute(item.previewUrl)}" alt="">` : '<i class="bi bi-file-earmark"></i>';
+                    const statusClass = item.status === 'done' ? 'text-success' : (item.status === 'error' ? 'text-danger' : 'text-muted');
+                    const status = item.status === 'done' ? 'Feltöltve' : (item.status === 'error' ? escapeHtml(item.error || 'Sikertelen') : (item.status === 'uploading' ? 'Feltöltés...' : 'Várakozik'));
+                    return `<div class="row g-2 align-items-center border rounded p-2 mb-2" data-upload-item="${item.id}"><div class="col-auto"><div class="machine-upload-preview">${preview}</div></div><div class="col-md-4 col"><div class="fw-semibold text-break">${escapeHtml(item.file.name)}</div><div class="small ${statusClass}" data-upload-status>${status}</div></div><div class="col-md col-12"><label class="text-xs">Leírás</label><textarea class="form-control" rows="2" maxlength="5000" data-upload-description ${item.status === 'done' ? 'disabled' : ''}>${escapeHtml(item.description)}</textarea></div><div class="col-auto"><button type="button" class="btn btn-outline-danger btn-sm" data-upload-action="remove" ${uploading || item.status === 'done' ? 'disabled' : ''}><i class="bi bi-trash"></i></button></div><div class="col-12"><div class="progress" style="height:6px;"><div class="progress-bar ${item.status === 'error' ? 'bg-danger' : 'bg-success'}" style="width:${item.progress || 0}%" data-upload-progress></div></div></div></div>`;
+                }).join(''));
+                updateUploadButton();
+            }
+            function setItemProgress(item, percentage) {
+                item.progress = Math.max(0, Math.min(100, Math.round(Number(percentage) || 0)));
+                uploadRoot.find(`[data-upload-item="${item.id}"] [data-upload-progress]`).css('width', item.progress + '%');
+            }
+            function uploadOne(item, completed, total) {
+                return new Promise((resolve, reject) => {
+                    const formData = new FormData();
+                    formData.set('machine_id', String(machineId));
+                    formData.set('attachment', item.file, item.file.name);
+                    formData.set('description', item.description || '');
+                    formData.set('last_modified', String(item.file.lastModified || ''));
+                    new Ajax({
+                        url: routes.attachmentUpload, name: 'upload_machine_attachment_' + instanceKey + '_' + item.id, type: 'POST', dataType: 'json', formData: formData,
+                        function_xhr: function () {
+                            const xhr = $.ajaxSettings.xhr();
+                            if (xhr.upload) xhr.upload.addEventListener('progress', event => {
+                                if (!event.lengthComputable) return;
+                                const percentage = Math.min(99, Math.round(event.loaded / event.total * 100));
+                                setItemProgress(item, percentage); updateUploadButton(completed, total, percentage);
+                            });
+                            return xhr;
+                        },
+                        function_success: function (result) { if (!result.success) reject(new Error(result.data?.error || 'A feltöltés nem sikerült.')); else resolve(result); },
+                        function_error: function (xhr) { reject(new Error(errorMessage(xhr, 'A feltöltés nem sikerült.'))); }
+                    }).send();
+                });
+            }
+
+            uploadRoot.find('[data-upload-action="browse"]').off('click').on('click', () => uploadRoot.find('[data-upload-input]').trigger('click'));
+            uploadRoot.find('[data-upload-input]').off('change').on('change', function () {
+                Array.from(this.files || []).forEach(file => {
+                    if (file.size > maxAttachmentSize) { alertify.alert('Túl nagy fájl', `${escapeHtml(file.name)} legfeljebb ${escapeHtml(maxAttachmentSizeLabel)} lehet.`); return; }
+                    const isImage = String(file.type || '').startsWith('image/');
+                    selected.push({id: Math.random().toString(16).slice(2) + Date.now(), file, description: '', previewUrl: isImage ? URL.createObjectURL(file) : '', status: 'pending', progress: 0, error: ''});
+                });
+                this.value = '';
+                renderSelected();
+            });
+            uploadRoot.off('input' + namespace).on('input' + namespace, '[data-upload-description]', function () {
+                const id = String($(this).closest('[data-upload-item]').attr('data-upload-item'));
+                const item = selected.find(candidate => candidate.id === id);
+                if (item) item.description = String($(this).val() || '');
+            });
+            uploadRoot.on('click' + namespace, '[data-upload-action="remove"]', function () {
+                const id = String($(this).closest('[data-upload-item]').attr('data-upload-item'));
+                const index = selected.findIndex(candidate => candidate.id === id);
+                if (index < 0) return;
+                if (selected[index].previewUrl) URL.revokeObjectURL(selected[index].previewUrl);
+                selected.splice(index, 1); renderSelected();
+            });
+            footerRoot.find('[data-upload-action="cancel"]').off('click').on('click', function () {
+                if (uploading) return;
+                cleanupUpload(); alertify.add().close();
+            });
+            footerRoot.find('[data-upload-action="start"]').off('click').on('click', async function () {
+                const pending = selected.filter(item => item.status !== 'done');
+                if (!pending.length) { alertify.warning('Válassz legalább egy feltöltendő fájlt.'); return; }
+                uploading = true;
+                footerRoot.find('button').prop('disabled', true);
+                uploadRoot.find('[data-upload-action="browse"], [data-upload-action="remove"], [data-upload-description]').prop('disabled', true);
+                let completed = selected.filter(item => item.status === 'done').length;
+                const failures = [];
+                updateUploadButton(completed, selected.length, 0);
+                for (const item of pending) {
+                    item.status = 'uploading'; item.error = ''; renderSelected();
+                    try { await uploadOne(item, completed, selected.length); item.status = 'done'; setItemProgress(item, 100); completed++; }
+                    catch (error) { item.status = 'error'; item.error = error?.message || 'A feltöltés nem sikerült.'; failures.push(item.file.name); }
+                    renderSelected(); updateUploadButton(completed, selected.length, null);
+                }
+                uploading = false;
+                if (!failures.length) {
+                    cleanupUpload(); alertify.add().close(); alertify.success('Minden csatolmány feltöltve.'); reloadAttachmentsWithSavedFilters(); return;
+                }
+                footerRoot.find('button').prop('disabled', false);
+                uploadRoot.find('[data-upload-action="browse"]').prop('disabled', false);
+                uploadRoot.find('[data-upload-item]').each(function () {
+                    const item = selected.find(candidate => candidate.id === String($(this).attr('data-upload-item')));
+                    if (item?.status !== 'done') $(this).find('[data-upload-action="remove"], [data-upload-description]').prop('disabled', false);
+                });
+                updateUploadButton();
+                alertify.error('Néhány csatolmány feltöltése nem sikerült. A hibás fájlok újrapróbálhatók.');
+            });
+            renderSelected();
+        }
+
+        root.on('click' + namespace, '[data-machine-info-action="print-qr"]', () => window.open(routes.qr, '_blank'));
+        root.on('click' + namespace, '[data-machine-info-action="save-site"]', saveCompanySite);
+        root.on('click' + namespace, '[data-machine-info-action="search-rentals"]', () => loadRentals(1));
+        root.on('keydown' + namespace, '[data-machine-rental-search]', event => { if (event.key === 'Enter') { event.preventDefault(); loadRentals(1); } });
+        root.on('click' + namespace, '[data-machine-info-action="reset-rentals"]', function () { root.find('[data-machine-rental-search]').val(''); state.comboboxes[0]?.clear(); });
+        root.on('click' + namespace, '[data-machine-rentals-list] .pagination a', function (event) { event.preventDefault(); loadRentals(Number(new URL(this.href, window.location.origin).searchParams.get('page')) || 1); });
+        root.on('click' + namespace, '[data-machine-info-action="search-worksheets"]', () => loadWorksheets(1));
+        root.on('keydown' + namespace, '[data-machine-worksheet-search]', event => { if (event.key === 'Enter') { event.preventDefault(); loadWorksheets(1); } });
+        root.on('change' + namespace, '[data-machine-worksheet-type]', () => loadWorksheets(1));
+        root.on('click' + namespace, '[data-machine-info-action="reset-worksheets"]', function () { root.find('[data-machine-worksheet-search], [data-machine-worksheet-type]').val(''); state.comboboxes[1]?.clear(); });
+        root.on('click' + namespace, '[data-machine-worksheets-list] .pagination a', function (event) { event.preventDefault(); loadWorksheets(Number(new URL(this.href, window.location.origin).searchParams.get('page')) || 1); });
+        root.on('click' + namespace, '[data-machine-info-worksheet]', function () { openWorksheet(Number($(this).attr('data-machine-info-worksheet'))); });
+        root.on('click' + namespace, '[data-machine-info-action="search-attachments"]', applyAttachmentFilter);
+        root.on('keydown' + namespace, '[data-machine-attachment-search]', event => { if (event.key === 'Enter') { event.preventDefault(); applyAttachmentFilter(); } });
+        root.on('click' + namespace, '[data-machine-info-action="upload-attachments"]', openUploadDialog);
+        root.on('click' + namespace, '[data-machine-attachment-action]', function () {
+            const action = String($(this).attr('data-machine-attachment-action'));
+            if (action === 'load-more') { loadAttachments(Number($(this).attr('data-next-page')) || 1, true); return; }
+            const item = findAttachment(Number($(this).closest('[data-machine-attachment-id]').attr('data-machine-attachment-id')));
+            if (!item) return;
+            if (action === 'view') openViewer(item);
+            if (action === 'download') window.open(item.downloadUrl, '_blank');
+            if (action === 'edit') openDescriptionEditor(item);
+            if (action === 'delete') deleteAttachment(item);
+        });
+        viewer.on('click' + namespace, '[data-viewer-action="close"]', closeViewer);
+        viewer.on('click' + namespace, '[data-viewer-action="navigate"]', function () { moveViewer($(this).attr('data-direction') === 'prev' ? -1 : 1); });
+        viewer.on('click' + namespace, '[data-viewer-download]', function () { window.open(String($(this).attr('data-viewer-download') || ''), '_blank'); });
+        viewer.on('click' + namespace, function (event) { if (event.target === this) closeViewer(); });
+        $(document).on('keydown' + namespace, function (event) {
+            if (viewer.hasClass('d-none')) return;
+            if (event.key === 'Escape') closeViewer();
+            if (event.key === 'ArrowLeft') moveViewer(-1);
+            if (event.key === 'ArrowRight') moveViewer(1);
+        });
+
+        window.destroyMachineInfoView = function () {
+            state.comboboxes.forEach(combobox => combobox.destroy());
+            [rentalsRequest, worksheetsRequest, attachmentsRequest].forEach(request => { if (request.ajax && request.ajax.readyState !== 4) request.ajax.abort(); });
+            state.uploadCleanup?.();
+            closeViewer();
+            root.off(namespace); viewer.off(namespace).remove(); $(document).off(namespace);
+            window.destroyMachineInfoView = null;
+        };
+
+        initializeComboboxes();
+        loadRentals(1);
+        loadWorksheets(1);
+        loadAttachments(1, false);
+    })();
 </script>

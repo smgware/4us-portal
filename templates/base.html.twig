@@ -31,6 +31,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
     <link href="{{ asset('css/base.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/ajax-combobox.css') }}" rel="stylesheet">
 
     <link href="{{ asset('js/alertify/css/alertify.css') }}" rel="stylesheet">
     <link href="{{ asset('js/alertify/css/themes/bootstrap-dark.css') }}" rel="stylesheet">
@@ -41,6 +42,7 @@
 
     <script src="{{ asset('js/base.js') }}"></script>
     <script src="{{ asset('js/ajax.js') }}"></script>
+    <script src="{{ asset('js/ajax-combobox.js') }}"></script>
 </head>
 <body>
     <div class="overlay" id="menuOverlay"></div>
@@ -61,6 +63,22 @@
                 <span class="menu-text">Munkalapok</span>
             </a>
 
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a href="{{ path('index_machines') }}" class="{{ app.request.attributes.get('_route') == 'index_machines' ? 'active' : '' }}">
+                    <i class="bi bi-gear-wide-connected"></i>
+                    <span class="menu-text">Gépnyilvántartás</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a href="{{ path('index_machine_rentals') }}" class="{{ app.request.attributes.get('_route') == 'index_machine_rentals' ? 'active' : '' }}">
+                    <i class="bi bi-repeat"></i>
+                    <span class="menu-text">Gépkölcsönzés</span>
+                </a>
+            {% endif %}
+
+
             {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
                 <a href="{{ path('index_partners') }}" class="{{ app.request.attributes.get('_route') == 'index_partners' ? 'active' : '' }}">
                     <i class="bi bi-people-fill"></i>
@@ -68,41 +86,11 @@
                 </a>
             {% endif %}
 
-
             {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
                 <a href="{{ path('index_projects') }}" class="{{ app.request.attributes.get('_route') == 'index_projects' ? 'active' : '' }}">
                     <i class="bi bi-collection"></i>
                     <span class="menu-text">Projektek</span>
                 </a>
-            {% endif %}
-
-            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
-            <a href="{{ path('index_machines') }}" class="{{ app.request.attributes.get('_route') == 'index_machines' ? 'active' : '' }}">
-                <i class="bi bi-gear-wide-connected"></i>
-                <span class="menu-text">Gépnyilvántartás</span>
-            </a>
-            {% endif %}
-
-            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
-            <a href="{{ path('index_machine_rentals') }}" class="{{ app.request.attributes.get('_route') == 'index_machine_rentals' ? 'active' : '' }}">
-                <i class="bi bi-repeat"></i>
-                <span class="menu-text">Gépkölcsönzés</span>
-            </a>
-            {% endif %}
-
-
-            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
-                <a href="{{ path('index_quotes') }}" class="{{ app.request.attributes.get('_route') == 'index_quotes' ? 'active' : '' }}">
-                    <i class="bi bi-file-ruled-fill"></i>
-                    <span class="menu-text">Árajánlatok</span>
-                </a>
-            {% endif %}
-
-            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
-            <a href="{{ path('index_reports') }}" class="{{ app.request.attributes.get('_route') == 'index_reports' ? 'active' : '' }}">
-                <i class="bi bi-bar-chart-line"></i>
-                <span class="menu-text">Riportok</span>
-            </a>
             {% endif %}
 
             {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
@@ -149,7 +137,7 @@
             -->
 
 
-            <div class="user-info" id="userInfo">
+            <div class="user-info panel-card" id="userInfo">
                 <div>
                     <div class="user-name">{{ fullName }}</div>
                     <div class="user-role">{{ permissionTitle }}</div>

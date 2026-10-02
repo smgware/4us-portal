@@ -5,6 +5,7 @@
                 <th class="p-2">Kód</th>
                 <th class="p-2">Név</th>
                 <th class="p-2">Megjegyzés</th>
+                <th class="p-2">Státusz</th>
                 <th class="p-2">#</th>
             </tr>
         </thead>
@@ -14,6 +15,7 @@
                     <td>{{ record.code }}</td>
                     <td>{{ record.name }}</td>
                     <td>{{ record.description|default('-') }}</td>
+                    <td>{{ record.status == 1 ? '<div class="btn btn-sm btn-success">aktív</div>' : '<div class="btn btn-sm btn-danger">inaktív</div>' }}</td>
                     <td>
                         <!-- <button type="button" class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="info" title="Információ"><i class="bi bi-info-circle-fill"></i></button> -->
                         <button type="button" class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit" title="Szerkesztés"><i class="bi bi-pencil-square"></i></button>

@@ -3,12 +3,14 @@
 namespace App\Entity;
 
 use App\Repository\MachineAttachmentRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: MachineAttachmentRepository::class)]
 #[ORM\Table(name: 'machine_attachment')]
 #[ORM\Index(name: 'IDX_MACHINE_ATTACHMENT_MACHINE', columns: ['machine_id'])]
 #[ORM\Index(name: 'IDX_MACHINE_ATTACHMENT_DATETIME_ADD', columns: ['datetime_add'])]
+#[ORM\Index(name: 'IDX_MACHINE_ATTACHMENT_STATUS', columns: ['status'])]
 class MachineAttachment
 {
     #[ORM\Id]
@@ -23,10 +25,10 @@ class MachineAttachment
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
-    #[ORM\Column(nullable: true)]
+    #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $data = null;
 
     #[ORM\Column(name: 'uid_add', nullable: true)]
@@ -44,116 +46,23 @@ class MachineAttachment
     #[ORM\Column(length: 1, options: ['default' => '1'])]
     private string $status = '1';
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
-
-    public function getMachine(): ?Machine
-    {
-        return $this->machine;
-    }
-
-    public function setMachine(?Machine $machine): static
-    {
-        $this->machine = $machine;
-
-        return $this;
-    }
-
-    public function getName(): ?string
-    {
-        return $this->name;
-    }
-
-    public function setName(string $name): static
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function setDescription(?string $description): static
-    {
-        $this->description = $description;
-
-        return $this;
-    }
-
-    public function getData(): ?array
-    {
-        return $this->data;
-    }
-
-    public function setData(?array $data): static
-    {
-        $this->data = $data;
-
-        return $this;
-    }
-
-    public function getUidAdd(): ?int
-    {
-        return $this->uidAdd;
-    }
-
-    public function setUidAdd(?int $uidAdd): static
-    {
-        $this->uidAdd = $uidAdd;
-
-        return $this;
-    }
-
-    public function getUidLast(): ?int
-    {
-        return $this->uidLast;
-    }
-
-    public function setUidLast(?int $uidLast): static
-    {
-        $this->uidLast = $uidLast;
-
-        return $this;
-    }
-
-    public function getDatetimeAdd(): ?\DateTimeImmutable
-    {
-        return $this->datetimeAdd;
-    }
-
-    public function setDatetimeAdd(?\DateTimeImmutable $datetimeAdd): static
-    {
-        $this->datetimeAdd = $datetimeAdd;
-
-        return $this;
-    }
-
-    public function getDatetimeLast(): ?\DateTimeImmutable
-    {
-        return $this->datetimeLast;
-    }
-
-    public function setDatetimeLast(?\DateTimeImmutable $datetimeLast): static
-    {
-        $this->datetimeLast = $datetimeLast;
-
-        return $this;
-    }
-
-    public function getStatus(): string
-    {
-        return $this->status;
-    }
-
-    public function setStatus(string $status): static
-    {
-        $this->status = $status;
-
-        return $this;
-    }
+    public function getId(): ?int { return $this->id; }
+    public function getMachine(): ?Machine { return $this->machine; }
+    public function setMachine(?Machine $machine): static { $this->machine = $machine; return $this; }
+    public function getName(): ?string { return $this->name; }
+    public function setName(string $name): static { $this->name = $name; return $this; }
+    public function getDescription(): ?string { return $this->description; }
+    public function setDescription(?string $description): static { $this->description = $description; return $this; }
+    public function getData(): ?array { return $this->data; }
+    public function setData(?array $data): static { $this->data = $data; return $this; }
+    public function getUidAdd(): ?int { return $this->uidAdd; }
+    public function setUidAdd(?int $uidAdd): static { $this->uidAdd = $uidAdd; return $this; }
+    public function getUidLast(): ?int { return $this->uidLast; }
+    public function setUidLast(?int $uidLast): static { $this->uidLast = $uidLast; return $this; }
+    public function getDatetimeAdd(): ?\DateTimeImmutable { return $this->datetimeAdd; }
+    public function setDatetimeAdd(?\DateTimeImmutable $datetimeAdd): static { $this->datetimeAdd = $datetimeAdd; return $this; }
+    public function getDatetimeLast(): ?\DateTimeImmutable { return $this->datetimeLast; }
+    public function setDatetimeLast(?\DateTimeImmutable $datetimeLast): static { $this->datetimeLast = $datetimeLast; return $this; }
+    public function getStatus(): string { return $this->status; }
+    public function setStatus(string $status): static { $this->status = $status; return $this; }
 }

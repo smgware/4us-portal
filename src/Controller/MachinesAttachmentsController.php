@@ -6,6 +6,7 @@ use App\Entity\Machine;
 use App\Entity\MachineAttachment;
 use App\Repository\MachineAttachmentRepository;
 use App\Repository\MachineRepository;
+use App\Repository\UserRepository;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,65 +16,20 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class MachinesAttachmentsController extends BaseController
 {
-    private const ITEMS_PER_PAGE = 20;
-    private const MAX_ATTACHMENT_FILE_SIZE = 268435456; // 256 MB
+    private const ITEMS_PER_PAGE = 5;
+    private const MAX_ATTACHMENT_FILE_SIZE = 268435456;
     private const ATTACHMENTS_DIRECTORY = 'uploads/machines';
 
-    #[Route('/machines/attachments/add', name: 'index_machines_attachment_add', methods: ['POST'])]
-    public function index_machines_attachment_add(
+    #[Route('/machines/attachments/list', name: 'list_machine_attachments', methods: ['POST'])]
+    public function listAttachments(
         Request $request,
         MachineRepository $machineRepository,
+        MachineAttachmentRepository $attachmentRepository,
+        UserRepository $userRepository,
     ): Response {
         $machine = $this->findRequestedMachine($request, $machineRepository);
-        if ($machine === null) {
-            return $this->response(false, [
-                'data' => ['error' => 'A gép nem található.'],
-            ], 'json', Response::HTTP_NOT_FOUND);
-        }
-
-        return $this->response(true, [
-            'template' => 'machines_attachments/index_add.html.twig',
-            'templateData' => [
-                'machine_id' => $machine->getId(),
-                'max_attachment_file_size' => self::MAX_ATTACHMENT_FILE_SIZE,
-            ],
-            'data' => [
-                'machine_id' => $machine->getId(),
-                'max_attachment_file_size' => self::MAX_ATTACHMENT_FILE_SIZE,
-            ],
-        ]);
-    }
-
-    #[Route('/machines/attachments/main', name: 'main_machines_attachments', methods: ['POST'])]
-    public function main_machines_attachments(
-        Request $request,
-        MachineRepository $machineRepository,
-    ): Response {
-        $machine = $this->findRequestedMachine($request, $machineRepository);
-        if ($machine === null) {
-            return $this->response(false, [
-                'data' => ['error' => 'A gép nem található.'],
-            ], 'json', Response::HTTP_NOT_FOUND);
-        }
-
-        return $this->response(true, [
-            'template' => 'machines_attachments/main.html.twig',
-            'templateData' => ['machine_id' => $machine->getId()],
-            'data' => ['machine_id' => $machine->getId()],
-        ]);
-    }
-
-    #[Route('/machines/attachments/list', name: 'list_machines_attachments_list', methods: ['POST'])]
-    public function list_machines_attachments_list(
-        Request $request,
-        MachineRepository $machineRepository,
-        MachineAttachmentRepository $machineAttachmentRepository,
-    ): Response {
-        $machine = $this->findRequestedMachine($request, $machineRepository);
-        if ($machine === null) {
-            return $this->response(false, [
-                'data' => ['error' => 'A gép nem található.'],
-            ], 'json', Response::HTTP_NOT_FOUND);
+        if (!$machine) {
+            return $this->machineNotFoundResponse();
         }
 
         $filters = json_decode((string) $request->request->get('filters', '{}'), true);
@@ -83,275 +39,402 @@ class MachinesAttachmentsController extends BaseController
             ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
-        $pageRaw = $request->request->get('page', $request->query->get('page', 1));
-        $page = is_numeric($pageRaw) ? (int) $pageRaw : 1;
-        $list = $machineAttachmentRepository->findList($machine, $filters, $page, self::ITEMS_PER_PAGE);
-
-        foreach ($list['records'] as &$record) {
-            $record['formatted_size'] = $this->formatFileSize((int) ($record['data']['size'] ?? 0));
-        }
-        unset($record);
+        $page = max(1, (int) $request->request->get('page', 1));
+        $list = $attachmentRepository->findPage($machine, $filters, $page, self::ITEMS_PER_PAGE);
+        $items = array_map(
+            fn (MachineAttachment $attachment): array => $this->serializeAttachment($attachment, $userRepository),
+            $list['records'],
+        );
 
         return $this->response(true, [
-            'template' => 'machines_attachments/list_machines_attachments_list.html.twig',
+            'template' => 'machines_attachments/_list.html.twig',
             'templateData' => [
-                'attachments' => $list['records'],
-                'machine_id' => $machine->getId(),
+                'attachments' => $items,
                 'page' => $list['page'],
-                'totalPages' => $list['totalPages'],
-                'totalRecords' => $list['totalRecords'],
-                'itemsPerPage' => $list['itemsPerPage'],
+                'hasMore' => $list['hasMore'],
             ],
             'data' => [
-                'machine_id' => $machine->getId(),
+                'items' => $items,
                 'page' => $list['page'],
-                'totalPages' => $list['totalPages'],
+                'hasMore' => $list['hasMore'],
                 'totalRecords' => $list['totalRecords'],
-                'itemsPerPage' => $list['itemsPerPage'],
             ],
         ]);
     }
 
-    #[Route('/machines/attachments/save', name: 'save_machine_attachments', methods: ['POST'])]
-    public function save_machine_attachments(
+    #[Route('/machines/attachments/upload', name: 'upload_machine_attachment', methods: ['POST'])]
+    public function uploadAttachment(
         Request $request,
         MachineRepository $machineRepository,
-        MachineAttachmentRepository $machineAttachmentRepository,
+        MachineAttachmentRepository $attachmentRepository,
+        UserRepository $userRepository,
     ): Response {
+        $maximumFileSize = self::maximumFileSize();
         $contentLength = (int) $request->server->get('CONTENT_LENGTH', 0);
         if ($contentLength > 0 && $request->request->count() === 0 && $request->files->count() === 0) {
             return $this->response(false, [
                 'data' => [
-                    'error' => 'A feltöltési kérés túl nagy. A csatolmány legfeljebb 256 MB lehet.',
-                    'max_file_size' => self::MAX_ATTACHMENT_FILE_SIZE,
+                    'error' => 'A feltöltési kérés túl nagy. Egy csatolmány legfeljebb ' . $this->formatFileSize($maximumFileSize) . ' lehet.',
+                    'maxFileSize' => $maximumFileSize,
                 ],
             ], 'json', Response::HTTP_REQUEST_ENTITY_TOO_LARGE);
         }
 
         $machine = $this->findRequestedMachine($request, $machineRepository);
-        if ($machine === null) {
-            return $this->response(false, [
-                'data' => ['error' => 'A gép nem található.'],
-            ], 'json', Response::HTTP_NOT_FOUND);
+        if (!$machine) {
+            return $this->machineNotFoundResponse();
         }
 
-        $operation = mb_strtolower(trim((string) $request->request->get('function', 'add')));
-        if (!in_array($operation, ['add', 'delete'], true)) {
-            return $this->response(false, [
-                'data' => ['error' => 'Érvénytelen csatolmány művelet.'],
-            ], 'json', Response::HTTP_BAD_REQUEST);
-        }
-
-        if ($operation === 'delete') {
-            $attachmentId = $request->request->get('id');
-            $attachment = is_numeric($attachmentId)
-                ? $machineAttachmentRepository->find((int) $attachmentId)
-                : null;
-
-            if ($attachment === null || $attachment->getMachine()?->getId() !== $machine->getId()) {
-                return $this->response(false, [
-                    'data' => ['error' => 'A csatolmány nem található.'],
-                ], 'json', Response::HTTP_NOT_FOUND);
-            }
-
-            $filePath = $this->resolveAttachmentPath($attachment->getData() ?? []);
-            if ($filePath !== null && is_file($filePath) && !unlink($filePath)) {
-                return $this->response(false, [
-                    'data' => ['error' => 'A csatolmány fájlja nem törölhető.'],
-                ], 'json', Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
-
-            $machineAttachmentRepository->delete($attachment);
-
-            return $this->response(true, [
-                'data' => ['id' => (int) $attachmentId, 'deleted' => true],
-            ]);
-        }
-
-        $file = $request->files->get('file');
+        $file = $request->files->get('attachment');
         if (!$file instanceof UploadedFile || !$file->isValid()) {
+            $message = $file instanceof UploadedFile
+                ? $file->getErrorMessage()
+                : 'Nincs feltöltendő fájl.';
+
             return $this->response(false, [
-                'data' => ['error' => 'A feltöltendő fájl hiányzik vagy hibás.'],
+                'data' => ['error' => $message],
             ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
-        if (($file->getSize() ?? 0) > self::MAX_ATTACHMENT_FILE_SIZE) {
+        $fileSize = (int) ($file->getSize() ?? 0);
+        if ($fileSize > $maximumFileSize) {
             return $this->response(false, [
                 'data' => [
-                    'error' => 'A csatolmány legfeljebb 256 MB lehet.',
-                    'max_file_size' => self::MAX_ATTACHMENT_FILE_SIZE,
+                    'error' => 'Egy csatolmány legfeljebb ' . $this->formatFileSize($maximumFileSize) . ' lehet.',
+                    'maxFileSize' => $maximumFileSize,
                 ],
             ], 'json', Response::HTTP_REQUEST_ENTITY_TOO_LARGE);
         }
 
-        $name = mb_substr(trim((string) $request->request->get('name', $file->getClientOriginalName())), 0, 255);
-        if ($name === '') {
-            $name = mb_substr($file->getClientOriginalName() ?: 'csatolmány', 0, 255);
+        $originalName = trim($file->getClientOriginalName());
+        if ($originalName === '') {
+            $originalName = 'csatolmany';
         }
-        $description = mb_substr(trim((string) $request->request->get('description', '')), 0, 255);
+        $displayName = mb_substr($originalName, 0, 255);
+        $description = mb_substr(trim((string) $request->request->get('description', '')), 0, 5000);
 
         try {
-            $storedFile = $this->storeAttachmentFile($file, $machine->getCode() ?: ('machine-' . $machine->getId()));
+            $storedFile = $this->storeFile($file, $machine);
         } catch (\RuntimeException $exception) {
             return $this->response(false, [
                 'data' => ['error' => $exception->getMessage()],
-            ], 'json', Response::HTTP_BAD_REQUEST);
+            ], 'json', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         $now = new \DateTimeImmutable();
         $attachment = (new MachineAttachment())
             ->setMachine($machine)
-            ->setName($name)
+            ->setName($displayName)
             ->setDescription($description !== '' ? $description : null)
             ->setData([
-                'filename' => $storedFile['fileName'],
-                'size' => $storedFile['size'],
-                'path' => $storedFile['path'],
-                'type' => $storedFile['mimeType'],
+                'originalName' => $originalName,
+                'storedName' => $storedFile['storedName'],
+                'clientMimeType' => (string) $file->getClientMimeType(),
+                'mimeType' => $storedFile['mimeType'],
+                'extension' => $storedFile['extension'],
+                'size' => $fileSize,
+                'path' => $storedFile['relativePath'],
+                'sha256' => hash_file('sha256', $storedFile['absolutePath']) ?: null,
+                'clientLastModified' => $this->positiveInt($request->request->get('last_modified')),
+                'isImage' => $this->isSafeInlineImage($storedFile['mimeType']),
+                'uploadedAt' => $now->format(DATE_ATOM),
             ])
-            ->setDatetimeAdd($now)
-            ->setDatetimeLast($now)
             ->setUidAdd($this->getUser()?->getId())
             ->setUidLast($this->getUser()?->getId())
+            ->setDatetimeAdd($now)
+            ->setDatetimeLast($now)
             ->setStatus('1');
 
         try {
-            $machineAttachmentRepository->save($attachment);
+            $attachmentRepository->save($attachment);
         } catch (\Throwable $exception) {
             if (is_file($storedFile['absolutePath'])) {
                 @unlink($storedFile['absolutePath']);
             }
 
-            throw $exception;
+            return $this->response(false, [
+                'data' => ['error' => 'A csatolmány adatai nem menthetők.'],
+            ], 'json', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return $this->response(true, [
             'data' => [
-                'machine_id' => $machine->getId(),
-                'attachment' => $this->serializeAttachment($attachment),
+                'attachment' => $this->serializeAttachment($attachment, $userRepository),
+                'maxFileSize' => $maximumFileSize,
             ],
         ]);
     }
 
-    #[Route('/machines/attachments/file', name: 'get_machine_attachment', methods: ['GET'])]
-    public function getMachineAttachment(
+    #[Route('/machines/attachments/description', name: 'update_machine_attachment_description', methods: ['POST'])]
+    public function updateDescription(
         Request $request,
-        MachineAttachmentRepository $machineAttachmentRepository,
+        MachineRepository $machineRepository,
+        MachineAttachmentRepository $attachmentRepository,
+        UserRepository $userRepository,
     ): Response {
-        $id = $request->query->getInt('id');
-        $attachment = $id > 0 ? $machineAttachmentRepository->find($id) : null;
-        if ($attachment === null) {
-            return new Response('Attachment not found.', Response::HTTP_NOT_FOUND);
+        $machine = $this->findRequestedMachine($request, $machineRepository);
+        if (!$machine) {
+            return $this->machineNotFoundResponse();
         }
 
-        $filePath = $this->resolveAttachmentPath($attachment->getData() ?? []);
-        if ($filePath === null) {
-            return new Response('Attachment file not found.', Response::HTTP_NOT_FOUND);
+        $attachment = $this->findActiveAttachment($request, $machine, $attachmentRepository);
+        if (!$attachment) {
+            return $this->attachmentNotFoundResponse();
         }
 
-        $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
-        $fileName = $attachment->getName() ?: basename($filePath);
-        $fallbackFileName = preg_replace('/[^A-Za-z0-9._-]+/', '-', $fileName) ?: 'attachment';
-        $disposition = $request->query->getBoolean('download')
-            ? ResponseHeaderBag::DISPOSITION_ATTACHMENT
-            : ResponseHeaderBag::DISPOSITION_INLINE;
+        $description = mb_substr(trim((string) $request->request->get('description', '')), 0, 5000);
+        $attachment
+            ->setDescription($description !== '' ? $description : null)
+            ->setUidLast($this->getUser()?->getId())
+            ->setDatetimeLast(new \DateTimeImmutable());
+        $attachmentRepository->save($attachment);
 
-        $response = new BinaryFileResponse($filePath);
-        $response->headers->set('Content-Type', $mimeType);
-        $response->setContentDisposition($disposition, $fileName, $fallbackFileName);
+        return $this->response(true, [
+            'data' => ['attachment' => $this->serializeAttachment($attachment, $userRepository)],
+        ]);
+    }
+
+    #[Route('/machines/attachments/delete', name: 'delete_machine_attachment', methods: ['POST', 'DELETE'])]
+    public function deleteAttachment(
+        Request $request,
+        MachineRepository $machineRepository,
+        MachineAttachmentRepository $attachmentRepository,
+    ): Response {
+        $machine = $this->findRequestedMachine($request, $machineRepository);
+        if (!$machine) {
+            return $this->machineNotFoundResponse();
+        }
+
+        $attachment = $this->findActiveAttachment($request, $machine, $attachmentRepository);
+        if (!$attachment) {
+            return $this->attachmentNotFoundResponse();
+        }
+
+        $attachmentId = (int) $attachment->getId();
+        $absolutePath = $this->resolveAttachmentPath((string) (($attachment->getData() ?? [])['path'] ?? ''));
+        $attachmentRepository->delete($attachment);
+        if ($absolutePath && is_file($absolutePath)) {
+            @unlink($absolutePath);
+        }
+
+        return $this->response(true, [
+            'data' => ['id' => $attachmentId, 'deleted' => true],
+        ]);
+    }
+
+    #[Route('/machines/attachments/file/{id}', name: 'machine_attachment_file', methods: ['GET'], requirements: ['id' => '\\d+'])]
+    public function attachmentFile(
+        int $id,
+        Request $request,
+        MachineAttachmentRepository $attachmentRepository,
+    ): Response {
+        $attachment = $attachmentRepository->find($id);
+        if (!$attachment || $attachment->getStatus() !== '1') {
+            return new Response('A csatolmány nem található.', Response::HTTP_NOT_FOUND);
+        }
+
+        $data = $attachment->getData() ?? [];
+        $absolutePath = $this->resolveAttachmentPath((string) ($data['path'] ?? ''));
+        if (!$absolutePath) {
+            return new Response('A csatolmány fájlja nem található.', Response::HTTP_NOT_FOUND);
+        }
+
+        $mimeType = strtolower((string) ($data['mimeType'] ?? $data['type'] ?? ''));
+        if ($mimeType === '' || $mimeType === 'application/octet-stream') {
+            $mimeType = $this->detectFileMimeType($absolutePath);
+        }
+        $inline = $request->query->getBoolean('inline') && $this->isSafeInlinePreview($mimeType);
+        $originalName = (string) ($data['originalName'] ?? $attachment->getName() ?? 'csatolmany');
+        $fallbackName = preg_replace('/[^A-Za-z0-9._-]+/', '-', $originalName) ?: 'attachment';
+
+        $response = new BinaryFileResponse($absolutePath);
+        $response->headers->set('Content-Type', $mimeType ?: 'application/octet-stream');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->setContentDisposition(
+            $inline ? ResponseHeaderBag::DISPOSITION_INLINE : ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            $originalName,
+            $fallbackName,
+        );
 
         return $response;
     }
 
     private function findRequestedMachine(Request $request, MachineRepository $machineRepository): ?Machine
     {
-        $machineId = $request->request->get(
-            'machine_id',
-            $request->query->get('machine_id', $request->query->get('machineId', '')),
-        );
+        $machineId = $this->positiveInt($request->request->get('machine_id'));
 
-        return is_numeric($machineId) ? $machineRepository->find((int) $machineId) : null;
+        return $machineId ? $machineRepository->find($machineId) : null;
+    }
+
+    private function findActiveAttachment(
+        Request $request,
+        Machine $machine,
+        MachineAttachmentRepository $attachmentRepository,
+    ): ?MachineAttachment {
+        $attachmentId = $this->positiveInt($request->request->get('attachment_id'));
+        $attachment = $attachmentId ? $attachmentRepository->find($attachmentId) : null;
+
+        if (
+            !$attachment
+            || $attachment->getStatus() !== '1'
+            || $attachment->getMachine()?->getId() !== $machine->getId()
+        ) {
+            return null;
+        }
+
+        return $attachment;
     }
 
     /**
-     * @return array{fileName: string, originalName: string, size: int, mimeType: string, path: string, absolutePath: string}
+     * @return array{storedName: string, extension: string, mimeType: string, relativePath: string, absolutePath: string}
      */
-    private function storeAttachmentFile(UploadedFile $file, string $machineCode): array
+    private function storeFile(UploadedFile $file, Machine $machine): array
     {
-        $safeMachineCode = preg_replace('/[^A-Za-z0-9._-]+/', '-', $machineCode) ?: 'machine';
-        $relativeDirectory = self::ATTACHMENTS_DIRECTORY . '/' . $safeMachineCode . '/attachments';
-        $uploadDirectory = $this->getParameter('kernel.project_dir') . '/' . $relativeDirectory;
+        $originalName = trim($file->getClientOriginalName());
+        $extension = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
+        $safeExtension = preg_replace('/[^a-z0-9]+/', '', $extension) ?: '';
+        $baseName = (string) pathinfo($originalName, PATHINFO_FILENAME);
+        $safeBaseName = preg_replace('/[^A-Za-z0-9._-]+/', '-', $baseName) ?: 'file';
+        $safeBaseName = trim(substr($safeBaseName, 0, 100), '.-_') ?: 'file';
+        $storedName = bin2hex(random_bytes(12)) . '-' . $safeBaseName;
+        if ($safeExtension !== '') {
+            $storedName .= '.' . $safeExtension;
+        }
 
-        if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0775, true) && !is_dir($uploadDirectory)) {
+        $safeMachineCode = preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) $machine->getCode());
+        $machineDirectory = $machine->getId() . ($safeMachineCode ? '-' . $safeMachineCode : '');
+        $relativeDirectory = self::ATTACHMENTS_DIRECTORY . '/' . $machineDirectory;
+        $absoluteDirectory = $this->getParameter('kernel.project_dir') . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, $relativeDirectory);
+        if (!is_dir($absoluteDirectory) && !mkdir($absoluteDirectory, 0775, true) && !is_dir($absoluteDirectory)) {
             throw new \RuntimeException('Nem sikerült létrehozni a feltöltési mappát.');
         }
 
-        $originalName = $file->getClientOriginalName() ?: 'attachment';
-        $safeName = preg_replace('/[^A-Za-z0-9._-]+/', '-', $originalName) ?: 'attachment';
-        $fileName = uniqid('', true) . '-' . $safeName;
-        $size = (int) ($file->getSize() ?? 0);
-        $detectedMimeType = function_exists('mime_content_type')
-            ? mime_content_type($file->getPathname())
-            : false;
-        $mimeType = (string) ($detectedMimeType ?: $file->getClientMimeType() ?: 'application/octet-stream');
-
+        $mimeType = $this->detectUploadedFileMimeType($file);
         try {
-            $file->move($uploadDirectory, $fileName);
+            $file->move($absoluteDirectory, $storedName);
         } catch (\Throwable $exception) {
             throw new \RuntimeException('Nem sikerült elmenteni a csatolmányt.', 0, $exception);
         }
 
+        $absolutePath = $absoluteDirectory . DIRECTORY_SEPARATOR . $storedName;
+
         return [
-            'fileName' => $fileName,
-            'originalName' => $originalName,
-            'size' => $size,
+            'storedName' => $storedName,
+            'extension' => $safeExtension,
             'mimeType' => $mimeType,
-            'path' => '/' . str_replace('\\', '/', $relativeDirectory . '/' . $fileName),
-            'absolutePath' => $uploadDirectory . '/' . $fileName,
+            'relativePath' => $relativeDirectory . '/' . $storedName,
+            'absolutePath' => $absolutePath,
         ];
     }
 
-    private function resolveAttachmentPath(array $data): ?string
+    private function detectUploadedFileMimeType(UploadedFile $file): string
     {
-        $path = trim((string) ($data['path'] ?? ''));
-        if ($path === '') {
+        return $this->detectFileMimeType($file->getPathname());
+    }
+
+    private function detectFileMimeType(string $path): string
+    {
+        $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
+        if ($fileInfo === false) {
+            return (string) (mime_content_type($path) ?: 'application/octet-stream');
+        }
+
+        try {
+            return strtolower((string) (finfo_file($fileInfo, $path) ?: 'application/octet-stream'));
+        } finally {
+            finfo_close($fileInfo);
+        }
+    }
+
+    private function isSafeInlineImage(string $mimeType): bool
+    {
+        return in_array(strtolower($mimeType), [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'image/bmp',
+            'image/avif',
+        ], true);
+    }
+
+    private function isSafeInlinePreview(string $mimeType): bool
+    {
+        return $this->isSafeInlineImage($mimeType)
+            || in_array(strtolower($mimeType), ['application/pdf', 'text/plain'], true);
+    }
+
+    private function resolveAttachmentPath(string $relativePath): ?string
+    {
+        $relativePath = ltrim(str_replace('\\', '/', trim($relativePath)), '/');
+        if ($relativePath === '') {
             return null;
         }
 
         $projectDirectory = (string) $this->getParameter('kernel.project_dir');
-        $candidate = $projectDirectory . '/' . ltrim(str_replace('\\', '/', $path), '/');
-        $resolvedPath = realpath($candidate);
-        $allowedRoot = realpath($projectDirectory . '/' . self::ATTACHMENTS_DIRECTORY);
-
-        if ($resolvedPath === false || $allowedRoot === false || !is_file($resolvedPath)) {
+        $allowedRoot = realpath($projectDirectory . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, self::ATTACHMENTS_DIRECTORY));
+        $candidate = realpath($projectDirectory . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+        if ($allowedRoot === false || $candidate === false || !is_file($candidate)) {
             return null;
         }
 
-        $normalizedPath = strtolower(str_replace('\\', '/', $resolvedPath));
         $normalizedRoot = strtolower(rtrim(str_replace('\\', '/', $allowedRoot), '/'));
+        $normalizedCandidate = strtolower(str_replace('\\', '/', $candidate));
 
-        return str_starts_with($normalizedPath, $normalizedRoot . '/') ? $resolvedPath : null;
+        return str_starts_with($normalizedCandidate, $normalizedRoot . '/') ? $candidate : null;
     }
 
-    private function serializeAttachment(MachineAttachment $attachment): array
+    private function serializeAttachment(MachineAttachment $attachment, UserRepository $userRepository): array
     {
+        $data = $attachment->getData() ?? [];
+        $mimeType = strtolower((string) ($data['mimeType'] ?? $data['type'] ?? 'application/octet-stream'));
+        $originalName = (string) ($data['originalName'] ?? $attachment->getName() ?? 'csatolmany');
+        $size = (int) ($data['size'] ?? 0);
+        $userId = $attachment->getUidAdd() ?? $attachment->getUidLast();
+        $user = $userId ? $userRepository->find($userId) : null;
+        $previewType = $this->isSafeInlineImage($mimeType)
+            ? 'image'
+            : ($mimeType === 'application/pdf' ? 'pdf' : ($mimeType === 'text/plain' ? 'text' : 'file'));
+
         return [
             'id' => $attachment->getId(),
-            'machine_id' => $attachment->getMachine()?->getId(),
             'name' => $attachment->getName(),
+            'originalName' => $originalName,
             'description' => $attachment->getDescription(),
-            'data' => $attachment->getData() ?? [],
-            'datetime_add' => $attachment->getDatetimeAdd()?->format(\DateTimeInterface::ATOM),
-            'status' => $attachment->getStatus(),
+            'mimeType' => $mimeType,
+            'extension' => (string) ($data['extension'] ?? pathinfo($originalName, PATHINFO_EXTENSION)),
+            'size' => $size,
+            'sizeFormatted' => $this->formatFileSize($size),
+            'sha256' => $data['sha256'] ?? null,
+            'previewType' => $previewType,
+            'isImage' => $previewType === 'image',
+            'isPreviewable' => $previewType !== 'file',
+            'uploadedAt' => $attachment->getDatetimeAdd()?->format(DATE_ATOM),
+            'uploadedAtFormatted' => $attachment->getDatetimeAdd()?->format('Y-m-d H:i'),
+            'uploadedBy' => [
+                'id' => $user?->getId(),
+                'name' => $user?->getName() ?: $user?->getUserName() ?: 'Ismeretlen',
+            ],
+            'contentUrl' => $this->generateUrl('machine_attachment_file', [
+                'id' => $attachment->getId(),
+                'inline' => 1,
+            ]),
+            'downloadUrl' => $this->generateUrl('machine_attachment_file', [
+                'id' => $attachment->getId(),
+                'download' => 1,
+            ]),
         ];
     }
 
     private function formatFileSize(int $bytes): string
     {
+        if ($bytes >= 1073741824) {
+            return round($bytes / 1073741824, 1) . ' GB';
+        }
         if ($bytes >= 1048576) {
             return round($bytes / 1048576, 1) . ' MB';
         }
-
         if ($bytes >= 1024) {
             return round($bytes / 1024, 1) . ' KB';
         }
@@ -359,4 +442,27 @@ class MachinesAttachmentsController extends BaseController
         return $bytes . ' B';
     }
 
+    public static function maximumFileSize(): int
+    {
+        return min(self::MAX_ATTACHMENT_FILE_SIZE, (int) UploadedFile::getMaxFilesize());
+    }
+
+    private function positiveInt(mixed $value): ?int
+    {
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    private function machineNotFoundResponse(): Response
+    {
+        return $this->response(false, [
+            'data' => ['error' => 'A gép nem található.'],
+        ], 'json', Response::HTTP_NOT_FOUND);
+    }
+
+    private function attachmentNotFoundResponse(): Response
+    {
+        return $this->response(false, [
+            'data' => ['error' => 'A csatolmány nem található.'],
+        ], 'json', Response::HTTP_NOT_FOUND);
+    }
 }

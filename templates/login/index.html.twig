@@ -2,12 +2,47 @@
 {% block title %}Belépés{% endblock %}
 {% block body %}
 
+    <style>
+        .login-video-background {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            background: #000;
+            pointer-events: none;
+            filter:blur(3px);
+        }
+
+        .login-video-background video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .login-video-background::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .58);
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+
+    <div class="login-video-background" aria-hidden="true">
+        <video autoplay muted loop playsinline preload="auto">
+            <source src="{{ asset('video/welcome.mp4') }}" type="video/mp4">
+        </video>
+    </div>
+
     <main class="page">
         <div class="container-fluid">
             <div class="row align-items-center g-5">
                 <div class="col-lg-5 brand-block mb-0 pb-0">
                     <img src="{{ asset('img/logo_4us.png') }}" alt="Portal logó" class="portal-logo">
-                    <h1 class="welcome-title">Üdvözlünk újra!</h1>
                 </div>
 
                 <div class="col-lg-7 mt-2 d-flex justify-content-center">
@@ -23,27 +58,7 @@
         </div>
     </main>
 
-    <script src="{{ asset('js/vanta/three.min.js') }}"></script>
-    <script src="{{ asset('js/vanta/vanta.fog.min.js') }}"></script>
     <script>
-        if (window.VANTA && window.VANTA.FOG) {
-            window.VANTA.FOG({
-                el: '#app',
-                mouseControls: true,
-                touchControls: true,
-                gyroControls: false,
-                minHeight: 200.00,
-                minWidth: 200.00,
-                highlightColor: 0x13345d,
-                midtoneColor: 0x333333,
-                lowlightColor: 0x888888,
-                baseColor: 0x0,
-                blurFactor: 0.95,
-                zoom: 0.8,
-                speed: 5
-            });
-        }
-
         (function () {
             const authContainer = $('[data-name="container-auth"]');
             const routes = {

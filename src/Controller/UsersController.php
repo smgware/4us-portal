@@ -191,6 +191,27 @@ class UsersController extends BaseController
 
         $permission = $permissionId > 0 ? $permissionRepository->find($permissionId) : null;
 
+        $signature = (string) ($postData['signature'] ?? '');
+        if ($signature !== '') {
+            $signaturePrefix = 'data:image/png;base64,';
+            if (!str_starts_with($signature, $signaturePrefix)) {
+                return $this->response(false, [
+                    'data' => ['error' => 'Az aláírás formátuma érvénytelen.'],
+                ], 'json', Response::HTTP_BAD_REQUEST);
+            }
+
+            $signatureBinary = base64_decode(substr($signature, strlen($signaturePrefix)), true);
+            if (
+                $signatureBinary === false
+                || !str_starts_with($signatureBinary, "\x89PNG\r\n\x1a\n")
+                || strlen($signatureBinary) > 2 * 1024 * 1024
+            ) {
+                return $this->response(false, [
+                    'data' => ['error' => 'Az aláírás képe érvénytelen vagy túl nagy.'],
+                ], 'json', Response::HTTP_BAD_REQUEST);
+            }
+        }
+
         $user
             ->setName($name)
             ->setEmail($email)
@@ -198,6 +219,7 @@ class UsersController extends BaseController
             ->setPermission($permission)
             ->setPhone((string) ($postData['phone'] ?? '') ?: null)
             ->setImage((string) ($postData['image'] ?? '') ?: null)
+            ->setSignature($signature !== '' ? $signature : null)
             ->setStatus((string) ($postData['status'] ?? '1'));
 
         if ($password !== '') {

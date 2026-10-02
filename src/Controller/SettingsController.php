@@ -32,6 +32,22 @@ class SettingsController extends BaseController
         ]);
     }
 
+    #[Route('/settings/company-sites', name: 'main_settings_company_sites')]
+    public function settingsCompanySites(): Response
+    {
+        return $this->response(true, [
+            'template' => 'company_sites/main.html.twig',
+        ]);
+    }
+
+    #[Route('/settings/worksheet-description-templates', name: 'main_settings_worksheet_description_templates')]
+    public function settingsWorksheetDescriptionTemplates(): Response
+    {
+        return $this->response(true, [
+            'template' => 'worksheet_description_templates/main.html.twig',
+        ]);
+    }
+
     #[Route('/settings/permissions', name: 'main_settings_permissions')]
     public function settings_permissions(): Response
     {

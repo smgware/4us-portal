@@ -1,0 +1,114 @@
+<div class="d-flex flex-wrap align-items-center gap-2 p-2 mb-3 border rounded-3 bg-body-tertiary shadow-sm" aria-label="Állapotjelmagyarázat">
+    <span class="d-inline-flex align-items-center gap-2 px-2 text-secondary small fw-semibold">
+        <i class="bi bi-info-circle" aria-hidden="true"></i> Jelmagyarázat
+    </span>
+    <span class="d-inline-flex align-items-center gap-2 px-3 py-1 border border-success-subtle rounded-pill bg-success-subtle text-success fw-semibold small">
+        <i class="bi bi-circle-fill" aria-hidden="true"></i> Új / Nyitott
+    </span>
+
+    <span class="d-inline-flex align-items-center gap-2 px-3 py-1 border border-warning-subtle rounded-pill bg-warning-subtle text-warning-emphasis fw-semibold small">
+        <i class="bi bi-hourglass-split text-warning" aria-hidden="true"></i> Folyamatban lévő
+    </span>
+    <span class="d-inline-flex align-items-center gap-2 px-3 py-1 border border-secondary-subtle rounded-pill bg-secondary-subtle text-secondary fw-semibold small">
+        <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Lezárt
+    </span>
+</div>
+
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+            <tr>
+                <th class="p-2">Kód</th>
+                <th class="p-2">Munkalap</th>
+                <th class="p-2">Típus</th>
+                <th class="p-2">Partner / gép</th>
+                <th class="p-2">Projekt</th>
+                <th class="p-2">Módosította</th>
+                <th class="p-2">Módosítva</th>
+                <th class="p-2">Állapot</th>
+                <th class="p-2">#</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in records %}
+                {% set statusCode = record.worksheet_status_type_code|default('')|upper %}
+                {% set datesMatch = record.datetime_add and record.datetime_last and (record.datetime_add|date('U')) == (record.datetime_last|date('U')) %}
+                {% set statusTextClass = 'btn-success' %}
+                {% if statusCode == 'OPEN' %}
+                    {% set statusTextClass = datesMatch ? 'btn-success' : 'btn-warning' %}
+                {% elseif statusCode == 'NEW' and datesMatch %}
+                    {% set statusTextClass = 'btn-success' %}
+                {% elseif statusCode == 'UNDER_REPAIR' %}
+                    {% set statusTextClass = 'btn-warning' %}
+                {% elseif statusCode in ['CLOSED', 'TAKEN_BACK', 'REPAIRED_RETURNED'] %}
+                    {% set statusTextClass = 'btn-secondary' %}
+                {% endif %}
+
+                <tr data-name="list_item" data-key="{{ record.id }}" data-status="{{ statusCode|lower }}">
+                    <td>{{ record.code }}</td>
+                    <td>
+                        <div class="fw-600">{{ record.title }}</div>
+                        {% if record.data.note|default('') %}
+                            <div class="text-xs text-muted-custom text-truncate" style="max-width: 260px;" title="{{ record.data.note }}">{{ record.data.note }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ record.worksheet_type_title }}
+                        {% if record.data.source|default('') == 'external' %}
+                            <span class="text-xs text-secondary">(hiba bejelentés)</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>{{ record.partner_name|default('-') }}</div>
+                        {% if record.data.machine|default('') %}
+                            <div class="text-xs text-muted-custom"><i class="bi bi-truck"></i> {{ record.data.machine }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ record.project_name|default('-') }}
+                        {% if record.project_code|default('') %}
+                            <div class="text-xs text-muted-custom">{{ record.project_code }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ record.user_editor_name|default(record.user_editor_username|default('-')) }}</td>
+                    <td>{{ record.datetime_last ? record.datetime_last|date('Y-m-d H:i') : (record.datetime_add ? record.datetime_add|date('Y-m-d H:i') : '-') }}</td>
+                    <td>
+                        <div class="btn btn-sm {{ statusTextClass }}">
+                            {{ record.worksheet_status_type_title }}
+                            {% if statusCode in ['CLOSED', 'TAKEN_BACK', 'REPAIRED_RETURNED'] %}
+                                <i class="fa fa-check-circle bi bi-check-circle-fill ms-1" aria-hidden="true"></i>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit" title="Szerkesztés">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm"
+                            data-name="list_item_btn"
+                            data-mode="print"
+                            data-url="{{ path('worksheet_pdf', {worksheetCode: record.code}) }}"
+                            title="Nyomtatás"
+                        >
+                            <i class="bi bi-printer-fill"></i>
+                        </button>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="9" class="text-center py-4">Nincs megjeleníthető munkalap.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'list_worksheets_list',
+    queryParams: app.request.query.all
+} %}

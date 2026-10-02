@@ -1,0 +1,40 @@
+<form action="" data-name="company_site">
+    <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
+
+    <div class="mb-3">
+        <label for="company-site-name" class="form-label">Név</label>
+        <input
+            id="company-site-name"
+            type="text"
+            class="form-control"
+            name="name"
+            data-name="name"
+            maxlength="255"
+            value="{{ item ? item.title : '' }}"
+            placeholder="Add meg a telephely nevét"
+            required
+        >
+    </div>
+
+    <div class="mb-3">
+        <label for="company-site-code" class="form-label">Kód</label>
+        <input
+            id="company-site-code"
+            type="text"
+            class="form-control"
+            name="code"
+            data-name="code"
+            maxlength="255"
+            value="{{ item ? item.code : '' }}"
+            placeholder="Add meg a telephely kódját"
+        >
+    </div>
+
+    <div class="mb-3">
+        <label for="company-site-status" class="form-label">Státusz</label>
+        <select id="company-site-status" class="form-control" name="status" data-name="status">
+            <option value="1" {{ item is null or item.status == '1' ? 'selected' }}>Aktív</option>
+            <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
+        </select>
+    </div>
+</form>

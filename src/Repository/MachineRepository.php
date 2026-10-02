@@ -3,7 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\Machine;
+use App\Entity\MachineRental;
 use App\Entity\User;
+use App\Entity\Worksheet;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -36,19 +38,51 @@ class MachineRepository extends ServiceEntityRepository
         }
     }
 
-    public function findAvailableForRental(?int $excludeRentalId = null): array
-    {
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select('machine')
-            ->from(Machine::class, 'machine')
-            ->andWhere('NOT EXISTS (SELECT openRental.id FROM App\Entity\MachineRental openRental WHERE openRental.machine = machine AND openRental.datetimeRentalEnd IS NULL' . ($excludeRentalId !== null && $excludeRentalId > 0 ? ' AND openRental.id != :excludeRentalId' : '') . ')')
-            ->orderBy('machine.code', 'ASC');
+    public function findForMachineRentalSelect(
+        string $search,
+        ?int $excludeRentalId = null,
+        int $limit = 20,
+    ): array {
+        $limit = max(1, min(50, $limit));
+        $openRentalCondition = 'openRental.machine = machine AND openRental.status = :openStatus';
+        if ($excludeRentalId !== null && $excludeRentalId > 0) {
+            $openRentalCondition .= ' AND openRental.id != :excludeRentalId';
+        }
+
+        $qb = $this->createQueryBuilder('machine')
+            ->select([
+                'machine.id AS id',
+                'machine.title AS title',
+                'machine.code AS code',
+                'machine.status AS status',
+                'machineCategory.title AS category_title',
+                'machineCategory.code AS category_code',
+                'companySite.title AS company_site_title',
+                'companySite.code AS company_site_code',
+                '(SELECT COUNT(openRental.id) FROM ' . MachineRental::class . ' openRental WHERE ' . $openRentalCondition . ') AS open_rental_count',
+            ])
+            ->leftJoin('machine.machineCategory', 'machineCategory')
+            ->leftJoin('machine.companySite', 'companySite')
+            ->setParameter('openStatus', '1');
 
         if ($excludeRentalId !== null && $excludeRentalId > 0) {
             $qb->setParameter('excludeRentalId', $excludeRentalId);
         }
 
-        return $qb->getQuery()->getResult();
+        $search = trim($search);
+        if ($search !== '') {
+            $qb
+                ->andWhere('(machine.title LIKE :search OR machine.code LIKE :search OR machineCategory.title LIKE :search OR machineCategory.code LIKE :search OR companySite.title LIKE :search OR companySite.code LIKE :search)')
+                ->setParameter('search', '%' . $search . '%');
+        }
+
+        return $qb
+            ->orderBy('machine.status', 'DESC')
+            ->addOrderBy('machine.title', 'ASC')
+            ->addOrderBy('machine.code', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
     }
 
     public function findForWorksheetSelect(string $search, int $limit = 20): array
@@ -59,63 +93,25 @@ class MachineRepository extends ServiceEntityRepository
                 'machine.id AS id',
                 'machine.title AS title',
                 'machine.code AS code',
+                'machine.status AS status',
                 'machineCategory.title AS category_title',
                 'machineCategory.code AS category_code',
-            ])
-            ->leftJoin('machine.machineCategory', 'machineCategory');
-
-        $search = trim($search);
-        if ($search !== '') {
-            $qb
-                ->andWhere('(machine.title LIKE :search OR machine.code LIKE :search OR machineCategory.title LIKE :search OR machineCategory.code LIKE :search)')
-                ->setParameter('search', '%' . $search . '%');
-        }
-
-        return $qb
-            ->orderBy('machine.title', 'ASC')
-            ->addOrderBy('machine.code', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getArrayResult();
-    }
-
-    public function findForMachineRentalSelect(
-        string $search,
-        ?int $excludeRentalId = null,
-        int $limit = 20,
-    ): array {
-        $limit = max(1, min(50, $limit));
-        $openRentalCondition = 'openRental.machine = machine AND openRental.datetimeRentalEnd IS NULL';
-
-        if ($excludeRentalId !== null && $excludeRentalId > 0) {
-            $openRentalCondition .= ' AND openRental.id != :excludeRentalId';
-        }
-
-        $qb = $this->createQueryBuilder('machine')
-            ->select([
-                'machine.id AS id',
-                'machine.title AS title',
-                'machine.code AS code',
-                'machineCategory.title AS category_title',
-                'machineCategory.code AS category_code',
+                'companySite.title AS company_site_title',
+                'companySite.code AS company_site_code',
             ])
             ->leftJoin('machine.machineCategory', 'machineCategory')
-            ->andWhere('NOT EXISTS (SELECT openRental.id FROM App\Entity\MachineRental openRental WHERE ' . $openRentalCondition . ')');
-
-        if ($excludeRentalId !== null && $excludeRentalId > 0) {
-            $qb->setParameter('excludeRentalId', $excludeRentalId);
-        }
+            ->leftJoin('machine.companySite', 'companySite');
 
         $search = trim($search);
         if ($search !== '') {
             $qb
-                ->andWhere('(machine.title LIKE :search OR machine.code LIKE :search OR machineCategory.title LIKE :search OR machineCategory.code LIKE :search)')
+                ->andWhere('(machine.title LIKE :search OR machine.code LIKE :search OR machineCategory.title LIKE :search OR machineCategory.code LIKE :search OR companySite.title LIKE :search OR companySite.code LIKE :search)')
                 ->setParameter('search', '%' . $search . '%');
         }
 
         return $qb
-            ->orderBy('machine.title', 'ASC')
-            ->addOrderBy('machine.code', 'ASC')
+            ->orderBy('machine.status', 'DESC')
+            ->addOrderBy('machine.title', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()
             ->getArrayResult();
@@ -129,14 +125,14 @@ class MachineRepository extends ServiceEntityRepository
         $qb = $this->entityManager->createQueryBuilder()
             ->from(Machine::class, 'machine')
             ->leftJoin('machine.machineCategory', 'machineCategory')
-            ->leftJoin('machine.project', 'project')
+            ->leftJoin('machine.companySite', 'companySite')
             ->leftJoin(User::class, 'userOwner', 'WITH', 'userOwner.id = machine.uidAdd')
             ->leftJoin(User::class, 'userEditor', 'WITH', 'userEditor.id = machine.uidLast');
 
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
             $qb
-                ->andWhere('(machine.title LIKE :search OR machine.code LIKE :search OR machineCategory.title LIKE :search OR machineCategory.code LIKE :search OR project.name LIKE :search OR project.code LIKE :search)')
+                ->andWhere('(machine.title LIKE :search OR machine.code LIKE :search OR machineCategory.title LIKE :search OR machineCategory.code LIKE :search OR companySite.title LIKE :search OR companySite.code LIKE :search)')
                 ->setParameter('search', '%' . $search . '%');
         }
 
@@ -147,24 +143,28 @@ class MachineRepository extends ServiceEntityRepository
                 ->setParameter('machineCategoryId', (int) $machineCategoryId);
         }
 
-        $projectId = $filters['project_id'] ?? null;
-        if (is_numeric($projectId) && (int) $projectId > 0) {
+        $companySiteId = $filters['company_site_id'] ?? null;
+        if (is_numeric($companySiteId) && (int) $companySiteId > 0) {
             $qb
-                ->andWhere('project.id = :projectId')
-                ->setParameter('projectId', (int) $projectId);
+                ->andWhere('companySite.id = :companySiteId')
+                ->setParameter('companySiteId', (int) $companySiteId);
         }
+
+        $finalWorksheetStatusCodes = "'CLOSED', 'TAKEN_BACK', 'REPAIRED_RETURNED', 'RETURNED', 'REPAIRED_ISSUED'";
+        $openRentalExists = "EXISTS (SELECT rentalFilter.id FROM " . MachineRental::class . " rentalFilter WHERE rentalFilter.machine = machine AND rentalFilter.status = '1' AND NOT EXISTS (SELECT returnFilter.id FROM " . Worksheet::class . " returnFilter INNER JOIN returnFilter.worksheetType returnFilterType INNER JOIN returnFilter.worksheetStatusType returnFilterStatus WHERE returnFilter.machineRentalId = rentalFilter.id AND returnFilter.status = '1' AND returnFilterType.code = 'MACHINE_RETURN' AND returnFilterStatus.code IN (" . $finalWorksheetStatusCodes . ")))";
+        $openErrorExists = "EXISTS (SELECT errorFilter.id FROM " . Worksheet::class . " errorFilter INNER JOIN errorFilter.worksheetType errorFilterType INNER JOIN errorFilter.worksheetStatusType errorFilterStatus WHERE errorFilter.status = '1' AND errorFilterStatus.code NOT IN (" . $finalWorksheetStatusCodes . ") AND errorFilterType.code IN ('ERROR_REPORTING', 'ERROR_REPORT') AND errorFilter.machineId = machine.id)";
 
         $type = trim((string) ($filters['type'] ?? ''));
         if ($type === 'free') {
-            $qb->andWhere('NOT EXISTS (SELECT freeOpenRental.id FROM App\Entity\MachineRental freeOpenRental WHERE freeOpenRental.machine = machine AND freeOpenRental.datetimeRentalEnd IS NULL)');
+            $qb
+                ->andWhere('NOT ' . $openRentalExists)
+                ->andWhere('NOT ' . $openErrorExists);
         } elseif ($type === 'issued') {
             $qb
-                ->andWhere('EXISTS (SELECT issuedOpenRental.id FROM App\Entity\MachineRental issuedOpenRental WHERE issuedOpenRental.machine = machine AND issuedOpenRental.datetimeRentalEnd IS NULL)')
-                ->andWhere("NOT EXISTS (SELECT issuedErrorWorksheet.id FROM App\Entity\Worksheet issuedErrorWorksheet INNER JOIN issuedErrorWorksheet.worksheetType issuedErrorWorksheetType INNER JOIN issuedErrorWorksheet.worksheetStatusType issuedErrorWorksheetStatusType WHERE issuedErrorWorksheetStatusType.code NOT IN ('CLOSED', 'RETURNED', 'REPAIRED_ISSUED') AND issuedErrorWorksheetType.code IN ('ERROR_REPORTING', 'ERROR_REPORT') AND (IDENTITY(issuedErrorWorksheet.machineRental) IN (SELECT issuedErrorRental.id FROM App\Entity\MachineRental issuedErrorRental WHERE issuedErrorRental.machine = machine) OR issuedErrorWorksheet.data LIKE CONCAT('%\"machine_id\":\"', machine.id, '\"%') OR issuedErrorWorksheet.data LIKE CONCAT('%\"machine_id\":', machine.id, '%') OR issuedErrorWorksheet.data LIKE CONCAT('%\"machine_code\":\"', machine.code, '\"%')))");
+                ->andWhere($openRentalExists)
+                ->andWhere('NOT ' . $openErrorExists);
         } elseif ($type === 'repair') {
-            $qb
-                ->andWhere('EXISTS (SELECT repairOpenRental.id FROM App\Entity\MachineRental repairOpenRental WHERE repairOpenRental.machine = machine AND repairOpenRental.datetimeRentalEnd IS NULL)')
-                ->andWhere("EXISTS (SELECT repairErrorWorksheet.id FROM App\Entity\Worksheet repairErrorWorksheet INNER JOIN repairErrorWorksheet.worksheetType repairErrorWorksheetType INNER JOIN repairErrorWorksheet.worksheetStatusType repairErrorWorksheetStatusType WHERE repairErrorWorksheetStatusType.code NOT IN ('CLOSED', 'RETURNED', 'REPAIRED_ISSUED') AND repairErrorWorksheetType.code IN ('ERROR_REPORTING', 'ERROR_REPORT') AND (IDENTITY(repairErrorWorksheet.machineRental) IN (SELECT repairErrorRental.id FROM App\Entity\MachineRental repairErrorRental WHERE repairErrorRental.machine = machine) OR repairErrorWorksheet.data LIKE CONCAT('%\"machine_id\":\"', machine.id, '\"%') OR repairErrorWorksheet.data LIKE CONCAT('%\"machine_id\":', machine.id, '%') OR repairErrorWorksheet.data LIKE CONCAT('%\"machine_code\":\"', machine.code, '\"%')))");
+            $qb->andWhere($openErrorExists);
         }
 
         $countQb = clone $qb;
@@ -192,17 +192,15 @@ class MachineRepository extends ServiceEntityRepository
                 'machineCategory.id AS machine_category_id',
                 'machineCategory.title AS machine_category_title',
                 'machineCategory.code AS machine_category_code',
-                'project.id AS project_id',
-                'project.name AS project_name',
-                'project.code AS project_code',
-                'userOwner.id AS user_owner_id',
+                'companySite.id AS company_site_id',
+                'companySite.title AS company_site_title',
+                'companySite.code AS company_site_code',
                 'userOwner.name AS user_owner_name',
                 'userOwner.userName AS user_owner_username',
-                'userEditor.id AS user_editor_id',
                 'userEditor.name AS user_editor_name',
                 'userEditor.userName AS user_editor_username',
-                "(SELECT COUNT(DISTINCT openRental.id) FROM App\Entity\MachineRental openRental WHERE openRental.machine = machine AND openRental.datetimeRentalEnd IS NULL) AS open_rental_count",
-                "(SELECT COUNT(DISTINCT errorWorksheet.id) FROM App\Entity\Worksheet errorWorksheet INNER JOIN errorWorksheet.worksheetType errorWorksheetType INNER JOIN errorWorksheet.worksheetStatusType errorWorksheetStatusType WHERE errorWorksheetStatusType.code NOT IN ('CLOSED', 'RETURNED', 'REPAIRED_ISSUED') AND errorWorksheetType.code IN ('ERROR_REPORTING', 'ERROR_REPORT') AND (IDENTITY(errorWorksheet.machineRental) IN (SELECT errorRental.id FROM App\Entity\MachineRental errorRental WHERE errorRental.machine = machine) OR errorWorksheet.data LIKE CONCAT('%\"machine_id\":\"', machine.id, '\"%') OR errorWorksheet.data LIKE CONCAT('%\"machine_id\":', machine.id, '%') OR errorWorksheet.data LIKE CONCAT('%\"machine_code\":\"', machine.code, '\"%'))) AS open_error_reporting_count",
+                "(SELECT COUNT(openRental.id) FROM " . MachineRental::class . " openRental WHERE openRental.machine = machine AND openRental.status = '1' AND NOT EXISTS (SELECT returnedRental.id FROM " . Worksheet::class . " returnedRental INNER JOIN returnedRental.worksheetType returnedRentalType INNER JOIN returnedRental.worksheetStatusType returnedRentalStatus WHERE returnedRental.machineRentalId = openRental.id AND returnedRental.status = '1' AND returnedRentalType.code = 'MACHINE_RETURN' AND returnedRentalStatus.code IN (" . $finalWorksheetStatusCodes . "))) AS open_rental_count",
+                "(SELECT COUNT(errorWorksheet.id) FROM " . Worksheet::class . " errorWorksheet INNER JOIN errorWorksheet.worksheetType errorWorksheetType INNER JOIN errorWorksheet.worksheetStatusType errorWorksheetStatusType WHERE errorWorksheet.status = '1' AND errorWorksheetStatusType.code NOT IN (" . $finalWorksheetStatusCodes . ") AND errorWorksheetType.code IN ('ERROR_REPORTING', 'ERROR_REPORT') AND errorWorksheet.machineId = machine.id) AS open_error_reporting_count",
             ])
             ->orderBy('machine.id', 'DESC')
             ->setFirstResult($offset)

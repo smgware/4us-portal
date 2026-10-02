@@ -49,7 +49,7 @@ class WorksheetTypeRepository extends ServiceEntityRepository
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
             $qb
-                ->andWhere('worksheetType.title LIKE :search OR worksheetType.code LIKE :search')
+                ->andWhere('worksheetType.title LIKE :search OR worksheetType.code LIKE :search OR worksheetType.prefix LIKE :search')
                 ->setParameter('search', '%' . $search . '%');
         }
 
@@ -69,6 +69,7 @@ class WorksheetTypeRepository extends ServiceEntityRepository
                 'worksheetType.id AS id',
                 'worksheetType.title AS title',
                 'worksheetType.code AS code',
+                'worksheetType.prefix AS prefix',
                 'worksheetType.uidAdd AS uid_add',
                 'worksheetType.uidLast AS uid_last',
                 'worksheetType.datetimeAdd AS datetime_add',

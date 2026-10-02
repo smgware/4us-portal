@@ -1,0 +1,44 @@
+<form action="" data-name="worksheet_description_template">
+    <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
+
+    <div class="mb-3">
+        <label for="worksheet-description-template-title" class="form-label">Cím</label>
+        <input
+            id="worksheet-description-template-title"
+            type="text"
+            class="form-control"
+            name="title"
+            data-name="title"
+            maxlength="255"
+            value="{{ item ? item.title : '' }}"
+            placeholder="Add meg a sablon címét"
+            required
+        >
+    </div>
+
+    <div class="mb-3">
+        <label for="worksheet-description-template-description" class="form-label">Leírás</label>
+        <textarea
+            id="worksheet-description-template-description"
+            class="form-control"
+            name="description"
+            data-name="description"
+            rows="12"
+            placeholder="Add meg a munkalapon használható hosszabb megjegyzésszöveget"
+            required
+        >{{ item ? item.description : '' }}</textarea>
+    </div>
+
+    <div class="mb-3">
+        <label for="worksheet-description-template-status" class="form-label">Státusz</label>
+        <select
+            id="worksheet-description-template-status"
+            class="form-control"
+            name="status"
+            data-name="status"
+        >
+            <option value="1" {{ item is null or item.status == '1' ? 'selected' }}>Aktív</option>
+            <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
+        </select>
+    </div>
+</form>

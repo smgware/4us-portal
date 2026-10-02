@@ -14,7 +14,8 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class WorksheetStatusTypesController extends BaseController
 {
-    private const ITEMS_PER_PAGE = 10;
+    private const ITEMS_PER_PAGE = 25;
+    private const NON_EDITABLE_STATUS_CODES = ['CLOSED', 'TAKEN_BACK', 'REPAIRED_RETURNED'];
 
     #[Route('/worksheet-status-types', name: 'index_worksheet_status_types')]
     public function index(WorksheetTypeRepository $worksheetTypeRepository): Response
@@ -48,6 +49,11 @@ class WorksheetStatusTypesController extends BaseController
             ],
             'data' => [
                 'mode' => $item ? 'update' : 'insert',
+                'save_enabled' => !$item || !in_array(
+                    (string) $item->getCode(),
+                    self::NON_EDITABLE_STATUS_CODES,
+                    true,
+                ),
             ],
         ]);
     }
@@ -61,6 +67,22 @@ class WorksheetStatusTypesController extends BaseController
     ): Response {
         $idRaw = $request->request->get('id');
         $id = is_numeric($idRaw) ? (int) $idRaw : 0;
+        $worksheetStatusType = $id > 0 ? $worksheetStatusTypeRepository->find($id) : null;
+        if ($id > 0 && !$worksheetStatusType) {
+            return $this->response(false, [
+                'data' => ['error' => 'A munkalap státusz nem található.'],
+            ], 'json', Response::HTTP_NOT_FOUND);
+        }
+        if ($worksheetStatusType && in_array(
+            (string) $worksheetStatusType->getCode(),
+            self::NON_EDITABLE_STATUS_CODES,
+            true,
+        )) {
+            return $this->response(false, [
+                'data' => ['error' => 'Ez a munkalap státusz nem módosítható.'],
+            ], 'json', Response::HTTP_CONFLICT);
+        }
+
         $worksheetTypeId = $request->request->getInt('worksheet_type_id');
         $title = trim((string) $request->request->get('name', ''));
         $code = $this->uppercase(trim((string) $request->request->get('code', '')));
@@ -76,13 +98,6 @@ class WorksheetStatusTypesController extends BaseController
             return $this->response(false, [
                 'data' => ['error' => 'A kiválasztott munkalaptípus nem található.'],
             ], 'json', Response::HTTP_BAD_REQUEST);
-        }
-
-        $worksheetStatusType = $id > 0 ? $worksheetStatusTypeRepository->find($id) : null;
-        if ($id > 0 && !$worksheetStatusType) {
-            return $this->response(false, [
-                'data' => ['error' => 'A munkalap státusz nem található.'],
-            ], 'json', Response::HTTP_NOT_FOUND);
         }
 
         if (

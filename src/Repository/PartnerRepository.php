@@ -47,6 +47,7 @@ class PartnerRepository extends ServiceEntityRepository
                 'partner.taxNumber AS tax_number',
                 'partner.city AS city',
                 'partner.address AS address',
+                'partner.status AS status',
             ]);
 
         $search = trim($search);
@@ -57,7 +58,8 @@ class PartnerRepository extends ServiceEntityRepository
         }
 
         return $qb
-            ->orderBy('partner.name', 'ASC')
+            ->orderBy('partner.status', 'DESC')
+            ->addOrderBy('partner.name', 'ASC')
             ->addOrderBy('partner.code', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()

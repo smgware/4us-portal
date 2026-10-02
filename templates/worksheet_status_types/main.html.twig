@@ -78,9 +78,12 @@
                 const dialogTitle = result.data?.mode === 'update'
                     ? 'Munkalap státusz szerkesztése'
                     : 'Munkalap státusz hozzáadása';
+                const saveButton = result.data?.save_enabled === false
+                    ? ''
+                    : '<button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</button>';
                 const footer = `<div class="container-fluid p-0" data-box="${this.name}">
                     <div class="row"><div class="col-12 text-end">
-                        <button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">Mentés</button>
+                        ${saveButton}
                         <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">Mégse</button>
                     </div></div>
                 </div>`;

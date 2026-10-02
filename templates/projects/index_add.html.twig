@@ -24,5 +24,14 @@
                 rows="5"
             >{{ item ? item.description : '' }}</textarea>
         </div>
+
+        <div class="col-12 mb-3">
+            <label class="form-label">Státusz</label>
+            <select class="form-control" name="status" data-name="status">
+                <option value="1" {{ item and item.status == '1' ? 'selected' }}>Aktív</option>
+                <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
+            </select>
+        </div>
+
     </div>
 </form>

@@ -3,18 +3,16 @@
 namespace App\Repository;
 
 use App\Entity\Machine;
-use App\Entity\PartnerContact;
+use App\Entity\MachineRental;
 use App\Entity\User;
 use App\Entity\Worksheet;
-use App\Entity\WorksheetAttachment;
+use App\Entity\WorksheetType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 
 class WorksheetRepository extends ServiceEntityRepository
 {
-    private const CLOSED_STATUS_CODES = ['CLOSED', 'RETURNED', 'REPAIRED_ISSUED'];
-
     private EntityManagerInterface $entityManager;
 
     public function __construct(ManagerRegistry $registry)
@@ -41,66 +39,19 @@ class WorksheetRepository extends ServiceEntityRepository
         }
     }
 
-    public function findInfoByMachine(Machine $machine, array $worksheetTypeCodes = [], int $limit = 10): array
+    public function findOneByRentalAndType(int $machineRentalId, WorksheetType $worksheetType): ?Worksheet
     {
-        $machineId = (string) $machine->getId();
-        $machineCode = (string) $machine->getCode();
-        $machineConditions = [
-            'machineRental.machine = :machine',
-            'worksheet.data LIKE :machineIdQuoted',
-            'worksheet.data LIKE :machineIdNumber',
-        ];
-
-        if ($machineCode !== '') {
-            $machineConditions[] = 'worksheet.data LIKE :machineCode';
-        }
-
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select([
-                'worksheet.id AS id',
-                'worksheet.title AS title',
-                'worksheet.code AS code',
-                'worksheet.data AS data',
-                'worksheet.datetimeAdd AS datetime_add',
-                'worksheet.datetimeOpen AS datetime_open',
-                'worksheet.datetimeClosed AS datetime_closed',
-                'worksheet.datetimeLast AS datetime_last',
-                'worksheetStatusType.id AS worksheet_status_type_id',
-                'worksheetStatusType.code AS worksheet_status_type_code',
-                'worksheetStatusType.title AS worksheet_status_type_title',
-                'worksheetType.id AS worksheet_type_id',
-                'worksheetType.title AS worksheet_type_title',
-                'worksheetType.code AS worksheet_type_code',
-                'partner.id AS partner_id',
-                'partner.code AS partner_code',
-                'partner.name AS partner_name',
-                'machineRental.id AS rental_id',
-                'machineRental.code AS rental_code',
-            ])
-            ->from(Worksheet::class, 'worksheet')
-            ->leftJoin('worksheet.worksheetType', 'worksheetType')
-            ->leftJoin('worksheet.worksheetStatusType', 'worksheetStatusType')
-            ->leftJoin('worksheet.partner', 'partner')
-            ->leftJoin('worksheet.machineRental', 'machineRental')
-            ->andWhere(implode(' OR ', $machineConditions))
-            ->setParameter('machine', $machine)
-            ->setParameter('machineIdQuoted', '%"machine_id":"' . $machineId . '"%')
-            ->setParameter('machineIdNumber', '%"machine_id":' . $machineId . '%')
-            ->orderBy('worksheet.datetimeAdd', 'DESC')
-            ->addOrderBy('worksheet.id', 'DESC')
-            ->setMaxResults($limit);
-
-        if ($machineCode !== '') {
-            $qb->setParameter('machineCode', '%"machine_code":"' . $machineCode . '"%');
-        }
-
-        if ($worksheetTypeCodes !== []) {
-            $qb
-                ->andWhere('worksheetType.code IN (:worksheetTypeCodes)')
-                ->setParameter('worksheetTypeCodes', $worksheetTypeCodes);
-        }
-
-        return $qb->getQuery()->getArrayResult();
+        return $this->createQueryBuilder('worksheet')
+            ->andWhere('worksheet.machineRentalId = :machineRentalId')
+            ->andWhere('worksheet.worksheetType = :worksheetType')
+            ->andWhere('worksheet.status = :active')
+            ->setParameter('machineRentalId', $machineRentalId)
+            ->setParameter('worksheetType', $worksheetType)
+            ->setParameter('active', '1')
+            ->orderBy('worksheet.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     public function findList(array $filters, int $page, int $itemsPerPage): array
@@ -110,16 +61,18 @@ class WorksheetRepository extends ServiceEntityRepository
 
         $qb = $this->entityManager->createQueryBuilder()
             ->from(Worksheet::class, 'worksheet')
-            ->leftJoin('worksheet.worksheetType', 'worksheetType')
-            ->leftJoin('worksheet.worksheetStatusType', 'worksheetStatusType')
+            ->innerJoin('worksheet.worksheetType', 'worksheetType')
+            ->innerJoin('worksheet.worksheetStatusType', 'worksheetStatusType')
             ->leftJoin('worksheet.partner', 'partner')
             ->leftJoin(User::class, 'userOwner', 'WITH', 'userOwner.id = worksheet.uidAdd')
-            ->leftJoin(User::class, 'userEditor', 'WITH', 'userEditor.id = worksheet.uidLast');
+            ->leftJoin(User::class, 'userEditor', 'WITH', 'userEditor.id = worksheet.uidLast')
+            ->andWhere('worksheet.status = :active')
+            ->setParameter('active', '1');
 
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
             $qb
-                ->andWhere('worksheet.title LIKE :search OR worksheet.code LIKE :search OR worksheetType.title LIKE :search OR worksheetType.code LIKE :search OR worksheetStatusType.title LIKE :search OR worksheetStatusType.code LIKE :search OR partner.name LIKE :search OR partner.code LIKE :search')
+                ->andWhere('(worksheet.title LIKE :search OR worksheet.code LIKE :search OR worksheetType.title LIKE :search OR worksheetType.code LIKE :search OR worksheetStatusType.title LIKE :search OR worksheetStatusType.code LIKE :search OR partner.name LIKE :search OR partner.code LIKE :search)')
                 ->setParameter('search', '%' . $search . '%');
         }
 
@@ -137,52 +90,11 @@ class WorksheetRepository extends ServiceEntityRepository
                 ->setParameter('allowedWorksheetTypeCodes', $allowedWorksheetTypeCodes);
         }
 
-        $dateFrom = $this->parseDateTimeFilter((string) ($filters['date_from'] ?? ''));
-        if ($dateFrom) {
+        $worksheetStatusTypeCode = trim((string) ($filters['worksheet_status_type_code'] ?? ''));
+        if ($worksheetStatusTypeCode !== '') {
             $qb
-                ->andWhere('worksheet.datetimeAdd >= :dateFrom')
-                ->setParameter('dateFrom', $dateFrom);
-        }
-
-        $dateTo = $this->parseDateTimeFilter((string) ($filters['date_to'] ?? ''));
-        if ($dateTo) {
-            $qb
-                ->andWhere('worksheet.datetimeAdd <= :dateTo')
-                ->setParameter('dateTo', $dateTo);
-        }
-
-        $company = trim((string) ($filters['company'] ?? ''));
-        if ($company !== '') {
-            $qb
-                ->andWhere('partner.name LIKE :company OR worksheet.data LIKE :company')
-                ->setParameter('company', '%' . $company . '%');
-        }
-
-        $status = trim((string) ($filters['status'] ?? ''));
-        if ($status === 'action' || $status === 'open') {
-            $qb
-                ->andWhere('worksheetStatusType.code NOT IN (:closedStatusCodes)')
-                ->setParameter('closedStatusCodes', self::CLOSED_STATUS_CODES);
-        } elseif ($status === 'closed') {
-            $qb
-                ->andWhere('worksheetStatusType.code IN (:closedStatusCodes)')
-                ->setParameter('closedStatusCodes', self::CLOSED_STATUS_CODES);
-        } elseif ($status === 'new') {
-            $qb
-                ->andWhere('worksheetStatusType.code IN (:newStatusCodes)')
-                ->setParameter('newStatusCodes', ['NEW', 'OPEN']);
-        } elseif ($status === 'inprogress') {
-            $qb
-                ->andWhere('worksheetStatusType.code = :inprogressStatus')
-                ->setParameter('inprogressStatus', 'UNDER_REPAIR');
-        } elseif ($status === 'returned') {
-            $qb
-                ->andWhere('worksheetStatusType.code = :returnedStatus')
-                ->setParameter('returnedStatus', 'RETURNED');
-        } elseif ($status === 'repaired_issued') {
-            $qb
-                ->andWhere('worksheetStatusType.code = :repairedIssuedStatus')
-                ->setParameter('repairedIssuedStatus', 'REPAIRED_ISSUED');
+                ->andWhere('worksheetStatusType.code = :worksheetStatusTypeCode')
+                ->setParameter('worksheetStatusTypeCode', $worksheetStatusTypeCode);
         }
 
         $countQb = clone $qb;
@@ -202,25 +114,23 @@ class WorksheetRepository extends ServiceEntityRepository
                 'worksheet.title AS title',
                 'worksheet.code AS code',
                 'worksheet.data AS data',
-                'worksheet.uidAdd AS uid_add',
-                'worksheet.uidLast AS uid_last',
+                'worksheet.machineId AS machine_id',
+                'worksheet.machineRentalId AS machine_rental_id',
                 'worksheet.datetimeAdd AS datetime_add',
                 'worksheet.datetimeLast AS datetime_last',
                 'worksheet.datetimeOpen AS datetime_open',
                 'worksheet.datetimeClosed AS datetime_closed',
-                'worksheetStatusType.id AS worksheet_status_type_id',
-                'worksheetStatusType.code AS worksheet_status_type_code',
-                'worksheetStatusType.title AS worksheet_status_type_title',
                 'worksheetType.id AS worksheet_type_id',
                 'worksheetType.title AS worksheet_type_title',
                 'worksheetType.code AS worksheet_type_code',
+                'worksheetStatusType.id AS worksheet_status_type_id',
+                'worksheetStatusType.title AS worksheet_status_type_title',
+                'worksheetStatusType.code AS worksheet_status_type_code',
                 'partner.id AS partner_id',
-                'partner.code AS partner_code',
                 'partner.name AS partner_name',
-                'userOwner.id AS user_owner_id',
+                'partner.code AS partner_code',
                 'userOwner.name AS user_owner_name',
                 'userOwner.userName AS user_owner_username',
-                'userEditor.id AS user_editor_id',
                 'userEditor.name AS user_editor_name',
                 'userEditor.userName AS user_editor_username',
             ])
@@ -230,6 +140,8 @@ class WorksheetRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
 
+        $records = $this->appendLatestPartnerProjects($records);
+
         return [
             'records' => $records,
             'page' => $page,
@@ -239,138 +151,229 @@ class WorksheetRepository extends ServiceEntityRepository
         ];
     }
 
-    public function findWorksheetAttachments(array $filters, int $page, int $itemsPerPage): array
+    private function appendLatestPartnerProjects(array $records): array
     {
-        $page = max(1, $page);
-        $itemsPerPage = max(1, $itemsPerPage);
-
-        $qb = $this->entityManager->createQueryBuilder()
-            ->from(WorksheetAttachment::class, 'worksheetAttachment')
-            ->leftJoin(User::class, 'userOwner', 'WITH', 'userOwner.id = worksheetAttachment.uidAdd')
-            ->leftJoin(User::class, 'userEditor', 'WITH', 'userEditor.id = worksheetAttachment.uidLast');
-
-        $worksheetIdRaw = $filters['worksheet_id'] ?? null;
-        $worksheetId = is_numeric($worksheetIdRaw) ? (int) $worksheetIdRaw : 0;
-        if ($worksheetId > 0) {
-            $qb
-                ->andWhere('IDENTITY(worksheetAttachment.worksheet) = :worksheetId')
-                ->setParameter('worksheetId', $worksheetId);
-        } else {
-            $qb->andWhere('1 = 0');
+        $partnerIds = array_values(array_unique(array_filter(array_map(
+            static fn (array $record): int => (int) ($record['partner_id'] ?? 0),
+            $records,
+        ))));
+        if ($partnerIds === []) {
+            return $records;
         }
 
-        $search = trim((string) ($filters['search'] ?? ''));
-        if ($search !== '') {
-            $qb
-                ->andWhere('(worksheetAttachment.name LIKE :search OR worksheetAttachment.description LIKE :search OR worksheetAttachment.status LIKE :search OR userOwner.name LIKE :search OR userOwner.userName LIKE :search)')
-                ->setParameter('search', '%' . $search . '%');
-        }
-
-        $status = trim((string) ($filters['status'] ?? ''));
-        if ($status !== '') {
-            $qb
-                ->andWhere('worksheetAttachment.status = :attachmentStatus')
-                ->setParameter('attachmentStatus', $status);
-        }
-
-        $countQb = clone $qb;
-        $totalRecords = (int) $countQb
-            ->select('COUNT(worksheetAttachment.id)')
-            ->resetDQLPart('orderBy')
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        $totalPages = max(1, (int) ceil($totalRecords / $itemsPerPage));
-        $page = min($page, $totalPages);
-        $offset = ($page - 1) * $itemsPerPage;
-
-        $records = $qb
+        $rentals = $this->entityManager->createQueryBuilder()
             ->select([
-                'worksheetAttachment.id AS id',
-                'IDENTITY(worksheetAttachment.worksheet) AS worksheet_id',
-                'worksheetAttachment.name AS name',
-                'worksheetAttachment.description AS description',
-                'worksheetAttachment.data AS data',
-                'worksheetAttachment.status AS status',
-                'worksheetAttachment.uidAdd AS uid_add',
-                'worksheetAttachment.uidLast AS uid_last',
-                'worksheetAttachment.datetimeAdd AS datetime_add',
-                'worksheetAttachment.datetimeLast AS datetime_last',
-                'worksheetAttachment.datetimeOpen AS datetime_open',
-                'worksheetAttachment.datetimeClosed AS datetime_closed',
-                'userOwner.id AS user_owner_id',
-                'userOwner.name AS user_owner_name',
-                'userOwner.userName AS user_owner_username',
-                'userEditor.id AS user_editor_id',
-                'userEditor.name AS user_editor_name',
-                'userEditor.userName AS user_editor_username',
+                'partner.id AS partner_id',
+                'project.name AS project_name',
+                'project.code AS project_code',
             ])
-            ->orderBy('worksheetAttachment.datetimeAdd', 'DESC')
-            ->addOrderBy('worksheetAttachment.id', 'DESC')
-            ->setFirstResult($offset)
-            ->setMaxResults($itemsPerPage)
+            ->from(MachineRental::class, 'machineRental')
+            ->innerJoin('machineRental.partner', 'partner')
+            ->leftJoin('machineRental.project', 'project')
+            ->andWhere('partner.id IN (:partnerIds)')
+            ->setParameter('partnerIds', $partnerIds)
+            ->orderBy('partner.id', 'ASC')
+            ->addOrderBy('machineRental.datetimeRentalStart', 'DESC')
+            ->addOrderBy('machineRental.id', 'DESC')
             ->getQuery()
             ->getArrayResult();
 
-        return [
-            'records' => $records,
-            'page' => $page,
-            'totalPages' => $totalPages,
-            'totalRecords' => $totalRecords,
-            'itemsPerPage' => $itemsPerPage,
-        ];
+        $projectsByPartnerId = [];
+        foreach ($rentals as $rental) {
+            $partnerId = (int) $rental['partner_id'];
+            if (!array_key_exists($partnerId, $projectsByPartnerId)) {
+                $projectsByPartnerId[$partnerId] = [
+                    'name' => $rental['project_name'],
+                    'code' => $rental['project_code'],
+                ];
+            }
+        }
+
+        foreach ($records as &$record) {
+            $project = $projectsByPartnerId[(int) ($record['partner_id'] ?? 0)] ?? null;
+            $record['project_name'] = $project['name'] ?? null;
+            $record['project_code'] = $project['code'] ?? null;
+        }
+        unset($record);
+
+        return $records;
     }
 
-
-    public function findWorksheetPartnerContacts(array $filters, int $page, int $itemsPerPage): array
+    /**
+     * @param string[] $worksheetTypeCodes
+     *
+     * @return array<string, int>
+     */
+    public function countNewOrOpenByWorksheetTypeCodes(array $worksheetTypeCodes): array
     {
+        if ($worksheetTypeCodes === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('worksheet')
+            ->select('worksheetType.code AS worksheet_type_code, COUNT(worksheet.id) AS worksheet_count')
+            ->innerJoin('worksheet.worksheetType', 'worksheetType')
+            ->innerJoin('worksheet.worksheetStatusType', 'worksheetStatusType')
+            ->andWhere('worksheet.status = :active')
+            ->andWhere('worksheetType.code IN (:worksheetTypeCodes)')
+            ->andWhere('worksheetStatusType.code IN (:openStatusCodes)')
+            ->setParameter('active', '1')
+            ->setParameter('worksheetTypeCodes', $worksheetTypeCodes)
+            ->setParameter('openStatusCodes', ['NEW', 'OPEN'])
+            ->groupBy('worksheetType.code')
+            ->getQuery()
+            ->getArrayResult();
+
+        $counts = array_fill_keys($worksheetTypeCodes, 0);
+        foreach ($rows as $row) {
+            $counts[(string) $row['worksheet_type_code']] = (int) $row['worksheet_count'];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param object $machine Any machine-like object exposing getId().
+     * @param string[] $worksheetTypeCodes
+     */
+    public function findInfoByMachine(object $machine, array $worksheetTypeCodes, int $limit = 10): array
+    {
+        if (!method_exists($machine, 'getId') || !$machine->getId() || $worksheetTypeCodes === []) {
+            return [];
+        }
+
+        return $this->createQueryBuilder('worksheet')
+            ->select([
+                'worksheet.id AS id',
+                'worksheet.code AS code',
+                'worksheet.title AS title',
+                'worksheet.datetimeAdd AS datetime_add',
+                'worksheet.datetimeLast AS datetime_last',
+                'worksheetStatusType.title AS status_title',
+                'worksheetStatusType.code AS status_code',
+            ])
+            ->innerJoin('worksheet.worksheetType', 'worksheetType')
+            ->innerJoin('worksheet.worksheetStatusType', 'worksheetStatusType')
+            ->andWhere('worksheet.machineId = :machineId')
+            ->andWhere('worksheetType.code IN (:worksheetTypeCodes)')
+            ->andWhere('worksheet.status = :active')
+            ->setParameter('machineId', (int) $machine->getId())
+            ->setParameter('worksheetTypeCodes', $worksheetTypeCodes)
+            ->setParameter('active', '1')
+            ->orderBy('worksheet.id', 'DESC')
+            ->setMaxResults(max(1, $limit))
+            ->getQuery()
+            ->getArrayResult();
+    }
+
+    /**
+     * @param string[] $worksheetTypeCodes
+     */
+    public function findInfoPageByMachine(
+        Machine $machine,
+        array $worksheetTypeCodes,
+        array $filters,
+        int $page,
+        int $itemsPerPage = 5,
+    ): array {
         $page = max(1, $page);
         $itemsPerPage = max(1, $itemsPerPage);
+        $machineId = (int) $machine->getId();
+        $machineCode = trim((string) $machine->getCode());
 
-        $qb = $this->entityManager->createQueryBuilder()
-            ->from(PartnerContact::class, 'partnerContact');
+        $qb = $this->createQueryBuilder('worksheet')
+            ->innerJoin('worksheet.worksheetType', 'worksheetType')
+            ->innerJoin('worksheet.worksheetStatusType', 'worksheetStatusType')
+            ->leftJoin('worksheet.partner', 'partner')
+            ->leftJoin(
+                MachineRental::class,
+                'machineRental',
+                'WITH',
+                'machineRental.id = worksheet.machineRentalId',
+            )
+            ->leftJoin('machineRental.partner', 'rentalPartner')
+            ->andWhere('worksheetType.code IN (:worksheetTypeCodes)')
+            ->andWhere('worksheet.status = :active')
+            ->setParameter('machineId', $machineId)
+            ->setParameter('machine', $machine)
+            ->setParameter('machineIdQuoted', '%"machine_id":"' . $machineId . '"%')
+            ->setParameter('machineIdQuotedSpaced', '%"machine_id": "' . $machineId . '"%')
+            ->setParameter('machineIdNumber', '%"machine_id":' . $machineId . ',%')
+            ->setParameter('machineIdNumberSpaced', '%"machine_id": ' . $machineId . ',%')
+            ->setParameter('machineIdNumberLast', '%"machine_id":' . $machineId . '}%')
+            ->setParameter('machineIdNumberLastSpaced', '%"machine_id": ' . $machineId . '}%')
+            ->setParameter('worksheetTypeCodes', $worksheetTypeCodes)
+            ->setParameter('active', '1');
+
+        $machineConditions = [
+            'worksheet.machineId = :machineId',
+            'machineRental.machine = :machine',
+            'worksheet.data LIKE :machineIdQuoted',
+            'worksheet.data LIKE :machineIdQuotedSpaced',
+            'worksheet.data LIKE :machineIdNumber',
+            'worksheet.data LIKE :machineIdNumberSpaced',
+            'worksheet.data LIKE :machineIdNumberLast',
+            'worksheet.data LIKE :machineIdNumberLastSpaced',
+        ];
+
+        if ($machineCode !== '') {
+            $machineConditions[] = 'worksheet.data LIKE :machineCode';
+            $machineConditions[] = 'worksheet.data LIKE :machineCodeSpaced';
+            $qb
+                ->setParameter('machineCode', '%"machine_code":"' . $machineCode . '"%')
+                ->setParameter('machineCodeSpaced', '%"machine_code": "' . $machineCode . '"%');
+        }
+
+        $qb->andWhere('(' . implode(' OR ', $machineConditions) . ')');
+
+        $search = mb_substr(trim((string) ($filters['search'] ?? '')), 0, 100);
+        if ($search !== '') {
+            $qb
+                ->andWhere('(worksheet.code LIKE :search OR worksheet.title LIKE :search OR partner.name LIKE :search OR partner.code LIKE :search OR rentalPartner.name LIKE :search OR rentalPartner.code LIKE :search OR machineRental.code LIKE :search)')
+                ->setParameter('search', '%' . $search . '%');
+        }
 
         $partnerId = (int) ($filters['partner_id'] ?? 0);
         if ($partnerId > 0) {
             $qb
-                ->andWhere('IDENTITY(partnerContact.partner) = :partnerId')
+                ->andWhere('(partner.id = :partnerId OR rentalPartner.id = :partnerId)')
                 ->setParameter('partnerId', $partnerId);
-        } else {
-            $qb->andWhere('1 = 0');
         }
 
-        $search = trim((string) ($filters['search'] ?? ''));
-        if ($search !== '') {
+        $typeCode = trim((string) ($filters['worksheet_type_code'] ?? ''));
+        if ($typeCode !== '' && in_array($typeCode, $worksheetTypeCodes, true)) {
             $qb
-                ->andWhere('(partnerContact.name LIKE :search OR partnerContact.title LIKE :search OR partnerContact.email LIKE :search OR partnerContact.phone LIKE :search OR partnerContact.description LIKE :search)')
-                ->setParameter('search', '%' . $search . '%');
+                ->andWhere('worksheetType.code = :worksheetTypeCode')
+                ->setParameter('worksheetTypeCode', $typeCode);
         }
 
-        $countQb = clone $qb;
-        $totalRecords = (int) $countQb
-            ->select('COUNT(partnerContact.id)')
-            ->resetDQLPart('orderBy')
+        $totalRecords = (int) (clone $qb)
+            ->select('COUNT(worksheet.id)')
             ->getQuery()
             ->getSingleScalarResult();
-
         $totalPages = max(1, (int) ceil($totalRecords / $itemsPerPage));
         $page = min($page, $totalPages);
         $offset = ($page - 1) * $itemsPerPage;
 
         $records = $qb
             ->select([
-                'partnerContact.id AS id',
-                'IDENTITY(partnerContact.partner) AS partner_id',
-                'partnerContact.name AS name',
-                'partnerContact.title AS title',
-                'partnerContact.email AS email',
-                'partnerContact.phone AS phone',
-                'partnerContact.description AS description',
-                'partnerContact.defaultContact AS default_contact',
+                'worksheet.id AS id',
+                'worksheet.code AS code',
+                'worksheet.title AS title',
+                'worksheet.data AS data',
+                'worksheet.datetimeAdd AS datetime_add',
+                'worksheet.datetimeLast AS datetime_last',
+                'worksheetType.code AS worksheet_type_code',
+                'worksheetType.title AS worksheet_type_title',
+                'worksheetStatusType.code AS worksheet_status_type_code',
+                'worksheetStatusType.title AS worksheet_status_type_title',
+                'COALESCE(partner.id, rentalPartner.id) AS partner_id',
+                'COALESCE(partner.code, rentalPartner.code) AS partner_code',
+                'COALESCE(partner.name, rentalPartner.name) AS partner_name',
+                'machineRental.code AS rental_code',
             ])
-            ->orderBy('partnerContact.defaultContact', 'DESC')
-            ->addOrderBy('partnerContact.name', 'ASC')
-            ->addOrderBy('partnerContact.id', 'ASC')
+            ->orderBy('worksheet.datetimeAdd', 'DESC')
+            ->addOrderBy('worksheet.id', 'DESC')
             ->setFirstResult($offset)
             ->setMaxResults($itemsPerPage)
             ->getQuery()
@@ -383,19 +386,5 @@ class WorksheetRepository extends ServiceEntityRepository
             'totalRecords' => $totalRecords,
             'itemsPerPage' => $itemsPerPage,
         ];
-    }
-
-    private function parseDateTimeFilter(string $value): ?\DateTimeImmutable
-    {
-        $value = trim($value);
-        if ($value === '') {
-            return null;
-        }
-
-        try {
-            return new \DateTimeImmutable($value);
-        } catch (\Exception) {
-            return null;
-        }
     }
 }

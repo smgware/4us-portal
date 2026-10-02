@@ -1,0 +1,1407 @@
+<script>
+    $(document).ready(function () {
+        const routes = {
+            main: {{ path('index_worksheet_add_main')|json_encode|raw }},
+            save: {{ path('save_worksheet')|json_encode|raw }},
+            partnerOptions: {{ path('list_worksheet_partner_select_list')|json_encode|raw }},
+            machineOptions: {{ path('list_worksheet_machine_select_list')|json_encode|raw }},
+            notificationContacts: {{ path('list_worksheet_notification_contacts')|json_encode|raw }},
+            attachmentList: {{ path('list_worksheet_attachments')|json_encode|raw }},
+            attachmentUpload: {{ path('upload_worksheet_attachment')|json_encode|raw }},
+            attachmentDescription: {{ path('update_worksheet_attachment_description')|json_encode|raw }},
+            attachmentDelete: {{ path('delete_worksheet_attachment')|json_encode|raw }}
+        };
+
+        let editorState = null;
+        let saving = false;
+        let attachmentListRequest = null;
+        let worksheetPartnerCombobox = null;
+        let worksheetMachineCombobox = null;
+
+        const mainFormData = new FormData();
+        mainFormData.set('id', {{ (id|default(''))|json_encode|raw }});
+        mainFormData.set('rental_id', {{ (rental_id|default(''))|json_encode|raw }});
+        mainFormData.set('code_worksheet_type', {{ (code_worksheet_type|default(''))|json_encode|raw }});
+
+        new Ajax({
+            url: routes.main,
+            name: 'index_worksheet_add_main',
+            type: 'POST',
+            dataType: 'json',
+            formData: mainFormData,
+            target: null,
+            function_success: function (result) {
+                if (!result.success) {
+                    showLoadError(result.data?.error);
+                    return;
+                }
+
+                openEditor(result);
+            },
+            function_error: function (xhr) {
+                showLoadError(xhr.responseJSON?.data?.error);
+            }
+        }).send();
+
+        function showLoadError(error) {
+            if (error === 'notfound') {
+                alertify.alert('Hiba', 'A munkalap nem található.');
+                return;
+            }
+
+            alertify.error(error || 'Nem sikerült betölteni a munkalapot.');
+        }
+
+        function openEditor(result) {
+            const saveButton = result.data?.options?.save_enabled === false
+                ? ''
+                : `
+                            <button type="button" class="btn btn-default btn-sm btn-success" data-name="alertify-save">
+                                <i class="bi bi-floppy2-fill"></i> Mentés
+                            </button>`;
+            const footer = `
+                <div class="container-fluid p-0" data-box="worksheet_add">
+                    <div class="row">
+                        <div class="col-12 text-end">
+                            ${saveButton}
+                            <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="alertify-cancel">
+                                <i class="bi bi-x-circle"></i> Bezárás
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+
+            const worksheetCode = result.data?.worksheet?.code || '';
+            const statusTitle = String(result.data?.worksheet?.status_title || '').toUpperCase();
+            const isClosed = statusTitle === 'CLOSED';
+            const closedTitle = isClosed ? '<span class="text-xs">(lezárt)</span>' : '';
+            alertify.sheet(
+                `Munkalap <span data-name="worksheet_code">${escapeHtml(worksheetCode)}</span> ${closedTitle}`,
+                '<div class="container-fluid p-0"><div class="row"><div class="col-12" data-name="index_worksheet_add_main"></div></div></div>'
+            )
+                .set('movable', false)
+                .set('resizable', false)
+                .set('closable', false)
+                .set('closableByEscape', false)
+                .maximize()
+                .set({transition: 'zoom'})
+                .setFooter(footer);
+
+            $('.ajs-header:visible').last().toggleClass('bg-danger', isClosed);
+
+            $('[data-name="index_worksheet_add_main"]').html(result.content);
+            $('.ajs-header [data-name="worksheet_header_close"]').remove();
+            $('.ajs-header:visible').last().append(`
+                <button type="button" class="btn position-absolute" data-name="worksheet_header_close" style="top:10px;right:10px;">
+                    <i class="bi bi-x-circle"></i>
+                </button>`);
+
+            editorState = createEditorState(result.data || {});
+            initializeEditor();
+
+            $('[data-name="worksheet_header_close"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', requestEditorClose);
+            $('[data-box="worksheet_add"] [data-name="alertify-cancel"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', requestEditorClose);
+            $('[data-box="worksheet_add"] [data-name="alertify-save"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', saveWorksheetData);
+        }
+
+        //worksheet
+
+        function createEditorState(data) {
+            const conditions = new Map();
+            (data.condition_images || []).forEach(function (item) {
+                const normalized = normalizePersistedAttachment(item);
+                if (normalized.conditionType) {
+                    conditions.set(normalized.conditionType, normalized);
+                }
+            });
+            const materialUnits = normalizeMaterialUnits(data.material_units);
+
+            return {
+                worksheetId: Number(data.worksheet?.id || 0),
+                worksheetCode: data.worksheet?.code || '',
+                selectedAttachments: [],
+                loadedAttachments: [],
+                existingConditions: conditions,
+                conditionSelections: new Map(),
+                viewerItems: [],
+                viewerIndex: 0,
+                viewerBodyOverflow: '',
+                listPage: 1,
+                listSearch: '',
+                notificationPartnerId: String(data.notification?.partner_id || ''),
+                notificationPartnerLabel: '',
+                hasSavedNotificationContacts: data.notification?.has_saved_contacts === true,
+                notificationContactsLoading: false,
+                materialUnits: materialUnits,
+                materialsUsed: normalizeMaterialsUsed(data.materials_used, materialUnits)
+            };
+        }
+
+        function initializeEditor() {
+            const viewer = $('[data-name="index_worksheet_add_main"] #attachment_viewer').last();
+            $('#attachment_viewer').not(viewer).remove();
+            viewer.appendTo(document.body);
+            filterWorksheetStatuses();
+            bindWorksheetType();
+            initializeWorksheetComboboxes();
+            bindWorksheetDescriptionTemplate();
+            bindMaterialsUsed();
+            bindNewAttachmentPicker();
+            bindExistingAttachmentActions();
+            bindConditionImages();
+            bindAttachmentSearch();
+            bindViewer();
+            renderMaterialsUsed();
+            renderSelectedAttachments();
+            renderAllConditionSlots();
+
+            if (editorState.worksheetId > 0) {
+                loadAttachments(true, 1);
+            }
+        }
+
+        function requestEditorClose() {
+            if (saving) {
+                return;
+            }
+
+            alertify.confirm('Megerősítés', 'Bezárod a munkalapot?', function () {
+                cleanupEditor();
+                alertify.sheet().close();
+            }, function () {});
+        }
+
+        function cleanupEditor() {
+            closeViewer();
+            worksheetPartnerCombobox?.destroy();
+            worksheetMachineCombobox?.destroy();
+            worksheetPartnerCombobox = null;
+            worksheetMachineCombobox = null;
+            if (!editorState) {
+                return;
+            }
+
+            editorState.selectedAttachments.forEach(revokePreviewUrl);
+            editorState.conditionSelections.forEach(revokePreviewUrl);
+            $(document).off('keydown.worksheetAttachmentViewer');
+            $('#attachment_viewer').remove();
+        }
+
+        function bindWorksheetType() {
+            $('#worksheet_type_id')
+                .off('change.worksheetEditor')
+                .on('change.worksheetEditor', filterWorksheetStatuses);
+        }
+
+        function initializeWorksheetComboboxes() {
+            const partnerRoot = $('[data-worksheet-combobox="partner"]');
+            const machineRoot = $('[data-worksheet-combobox="machine"]');
+
+            editorState.notificationPartnerId = String(partnerRoot.find('[data-ajax-combobox-value]').val() || '');
+            editorState.notificationPartnerLabel = String(partnerRoot.find('[data-ajax-combobox-search]').val() || '');
+
+            worksheetPartnerCombobox = new AjaxCombobox(partnerRoot, {
+                endpoint: routes.partnerOptions,
+                requestName: 'worksheet_partner_combobox_' + Date.now(),
+                emptyText: 'Nincs a keresésnek megfelelő partner.',
+                onSelect: function (item) {
+                    requestPartnerChange(String(item.id || ''), String(item.label || ''));
+                },
+                onClear: function () {
+                    requestPartnerChange('', '');
+                }
+            });
+
+            worksheetMachineCombobox = new AjaxCombobox(machineRoot, {
+                endpoint: routes.machineOptions,
+                requestName: 'worksheet_machine_combobox_' + Date.now(),
+                emptyText: 'Nincs a keresésnek megfelelő gép.'
+            });
+
+        }
+
+        function requestPartnerChange(nextPartnerId, nextPartnerLabel) {
+            const previousPartnerId = editorState.notificationPartnerId;
+            const previousPartnerLabel = editorState.notificationPartnerLabel;
+            if (nextPartnerId === previousPartnerId) {
+                editorState.notificationPartnerLabel = nextPartnerLabel;
+                return;
+            }
+
+            const hasNotificationSettings = previousPartnerId !== '' && (
+                editorState.hasSavedNotificationContacts
+                || selectedNotificationContactIds().length > 0
+            );
+            const applyChange = function () {
+                loadNotificationContacts(
+                    nextPartnerId,
+                    previousPartnerId,
+                    previousPartnerLabel,
+                    nextPartnerLabel
+                );
+            };
+
+            if (!hasNotificationSettings) {
+                applyChange();
+                return;
+            }
+
+            alertify.confirm(
+                'Partner módosítása',
+                'Új partner kiválasztása esetén a korábban beállított kapcsolattartói értesítési beállítások törlődnek. Az új partner kapcsolattartói közül lehet majd kiválasztani az értesítendő személyeket. Folytatod?',
+                applyChange,
+                function () {
+                    restorePartnerSelection(previousPartnerId, previousPartnerLabel);
+                }
+            );
+        }
+
+        function restorePartnerSelection(partnerId, partnerLabel) {
+            worksheetPartnerCombobox?.setValue(partnerId, partnerLabel, null);
+            editorState.notificationPartnerId = String(partnerId || '');
+            editorState.notificationPartnerLabel = String(partnerLabel || '');
+        }
+
+        function setPartnerComboboxDisabled(disabled) {
+            $('[data-worksheet-combobox="partner"]')
+                .find('[data-ajax-combobox-search], [data-ajax-combobox-clear]')
+                .prop('disabled', disabled);
+        }
+
+        function validateWorksheetComboboxes() {
+            const partnerRoot = $('[data-worksheet-combobox="partner"]');
+            const partnerSearch = String(partnerRoot.find('[data-ajax-combobox-search]').val() || '').trim();
+            const partnerId = String(partnerRoot.find('[data-ajax-combobox-value]').val() || '');
+            if (partnerSearch !== '' && partnerId === '') {
+                alertify.alert('Hiányzó kiválasztás', 'Válassz partnert a találati listából.');
+                partnerRoot.find('[data-ajax-combobox-search]').trigger('focus');
+                return false;
+            }
+            if (partnerId !== editorState.notificationPartnerId) {
+                alertify.alert('Partner módosítása', 'A partner törléséhez használd a mező melletti törlés gombot.');
+                partnerRoot.find('[data-ajax-combobox-search]').trigger('focus');
+                return false;
+            }
+
+            const machineRoot = $('[data-worksheet-combobox="machine"]');
+            const machineSearch = String(machineRoot.find('[data-ajax-combobox-search]').val() || '').trim();
+            const machineId = String(machineRoot.find('[data-ajax-combobox-value]').val() || '');
+            if (machineSearch !== '' && machineId === '') {
+                alertify.alert('Hiányzó kiválasztás', 'Válassz gépet a találati listából.');
+                machineRoot.find('[data-ajax-combobox-search]').trigger('focus');
+                return false;
+            }
+
+            return true;
+        }
+
+        function bindWorksheetDescriptionTemplate() {
+            $('[data-name="worksheet_description_template"]')
+                .off('change.worksheetEditor')
+                .on('change.worksheetEditor', function () {
+                    const selectedOption = $(this).find('option:selected');
+                    if (String(selectedOption.val() || '') === '') {
+                        return;
+                    }
+
+                    $('#worksheet_note')
+                        .val(String(selectedOption.attr('data-description') || ''))
+                        .trigger('input');
+                });
+        }
+
+        function normalizeMaterialUnits(units) {
+            if (!Array.isArray(units)) {
+                return [];
+            }
+
+            return units
+                .map(function (unit) {
+                    return {
+                        name: String(unit?.name || ''),
+                        short: String(unit?.short || '')
+                    };
+                })
+                .filter(unit => unit.name !== '' && unit.short !== '');
+        }
+
+        function normalizeMaterialsUsed(materials, units) {
+            if (!Array.isArray(materials)) {
+                return [];
+            }
+
+            return materials.map(function (material) {
+                const unitShort = typeof material?.unit === 'object'
+                    ? String(material.unit?.short || '')
+                    : String(material?.unit || '');
+                const unit = units.find(candidate => candidate.short === unitShort) || units[0] || {name: '', short: ''};
+                const quantity = Number(material?.quantity);
+
+                return {
+                    article_number: String(material?.article_number || ''),
+                    name: String(material?.name || ''),
+                    quantity: Number.isFinite(quantity) && quantity >= 1 ? quantity : 1,
+                    unit: {name: unit.name, short: unit.short}
+                };
+            });
+        }
+
+        function bindMaterialsUsed() {
+            $('[data-name="btnAddMaterialsUsed"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', function () {
+                    const defaultUnit = editorState.materialUnits[0] || {name: '', short: ''};
+                    editorState.materialsUsed.push({
+                        article_number: '',
+                        name: '',
+                        quantity: 1,
+                        unit: {name: defaultUnit.name, short: defaultUnit.short}
+                    });
+                    renderMaterialsUsed();
+                    $('[data-name="listMaterialsUsed"] [data-material-index]')
+                        .last()
+                        .find('[data-material-field="article_number"]')
+                        .trigger('focus');
+                });
+
+            $('[data-name="listMaterialsUsed"]')
+                .off('input.worksheetEditor change.worksheetEditor click.worksheetEditor')
+                .on('input.worksheetEditor change.worksheetEditor', '[data-material-field]', function () {
+                    const row = $(this).closest('[data-material-index]');
+                    const index = Number(row.attr('data-material-index'));
+                    const material = editorState.materialsUsed[index];
+                    const field = String($(this).attr('data-material-field') || '');
+                    if (!material) {
+                        return;
+                    }
+
+                    if (field === 'unit') {
+                        const unitShort = String($(this).val() || '');
+                        const unit = editorState.materialUnits.find(candidate => candidate.short === unitShort)
+                            || {name: '', short: ''};
+                        material.unit = {name: unit.name, short: unit.short};
+                    } else if (field === 'quantity') {
+                        const quantityValue = String($(this).val() || '').replace(',', '.');
+                        material.quantity = quantityValue === '' ? '' : Number(quantityValue);
+                    } else if (field === 'article_number' || field === 'name') {
+                        material[field] = String($(this).val() || '');
+                    }
+
+                    syncMaterialsUsedInput();
+                })
+                .on('click.worksheetEditor', '[data-action="remove-material"]', function () {
+                    const index = Number($(this).closest('[data-material-index]').attr('data-material-index'));
+                    if (!editorState.materialsUsed[index]) {
+                        return;
+                    }
+
+                    alertify.confirm(
+                        'Megerősítés',
+                        'Eltávolítod a felhasznált anyagot?',
+                        function () {
+                            editorState.materialsUsed.splice(index, 1);
+                            renderMaterialsUsed();
+                        },
+                        function () {}
+                    );
+                });
+        }
+
+        function renderMaterialsUsed() {
+            const target = $('[data-name="listMaterialsUsed"]');
+            syncMaterialsUsedInput();
+
+            if (!editorState.materialsUsed.length) {
+                target.html('<div class="text-xs text-muted-custom mb-3">Nincsenek hozzáadott tételek</div>');
+                return;
+            }
+
+            target.html(editorState.materialsUsed.map(function (material, index) {
+                const quantity = material.quantity === '' ? '' : String(material.quantity);
+
+                return `
+                    <div class="border rounded p-2 mb-2" data-material-index="${index}">
+                        <div class="row g-2 align-items-end">
+                            <!--
+                            <div class="col-xl-3 col-md-6 col-12">
+                                <label class="text-xs">Cikkszám</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    maxlength="255"
+                                    data-material-field="article_number"
+                                    value="${escapeAttribute(material.article_number)}"
+                                >
+                            </div>
+                            -->
+
+                            <div class="col-xl-6 col-md-6 col-12">
+                                <label class="text-xs">Megnevezés</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    maxlength="255"
+                                    data-material-field="name"
+                                    value="${escapeAttribute(material.name)}"
+                                >
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <label class="text-xs">Mennyiség</label>
+                                <input
+                                    type="number"
+                                    inputmode="decimal"
+                                    class="form-control"
+                                    min="1"
+                                    step="any"
+                                    required
+                                    data-material-field="quantity"
+                                    value="${escapeAttribute(quantity)}"
+                                >
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-6">
+                                <label class="text-xs">Mértékegység</label>
+                                <select class="form-control" required data-material-field="unit">
+                                    ${renderMaterialUnitOptions(material.unit?.short || '')}
+                                </select>
+                            </div>
+                            <div class="col-xl-2 col-md-4 col-12 d-grid">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    data-action="remove-material"
+                                    title="Tétel törlése"
+                                ><i class="bi bi-trash"></i> Törlés</button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join(''));
+        }
+
+        function renderMaterialUnitOptions(selectedShort) {
+            return editorState.materialUnits.map(function (unit) {
+                const selected = unit.short === selectedShort ? ' selected' : '';
+                return `<option value="${escapeAttribute(unit.short)}"${selected}>${escapeHtml(unit.name)} (${escapeHtml(unit.short)})</option>`;
+            }).join('');
+        }
+
+        function syncMaterialsUsedInput() {
+            if (!editorState) {
+                return;
+            }
+
+            const materials = editorState.materialsUsed.map(function (material) {
+                return {
+                    article_number: String(material.article_number || ''),
+                    name: String(material.name || ''),
+                    quantity: material.quantity,
+                    unit: {
+                        name: String(material.unit?.name || ''),
+                        short: String(material.unit?.short || '')
+                    }
+                };
+            });
+            $('form[data-name="worksheet"] [data-name="materials_used_json"]').val(JSON.stringify(materials));
+        }
+
+        function selectedNotificationContactIds() {
+            const ids = new Set();
+            $('[data-name="worksheet_notification_contacts"]')
+                .find('input[name="notification_contact_ids[]"]')
+                .each(function () {
+                    if (this.type === 'hidden' || this.checked) {
+                        const id = Number($(this).val() || 0);
+                        if (id > 0) {
+                            ids.add(id);
+                        }
+                    }
+                });
+
+            return Array.from(ids);
+        }
+
+        async function loadNotificationContacts(partnerId, previousPartnerId, previousPartnerLabel, partnerLabel) {
+            if (editorState.notificationContactsLoading) {
+                return;
+            }
+
+            const contactsContainer = $('[data-name="worksheet_notification_contacts"]');
+            const previousHtml = contactsContainer.html();
+            const previousHasSavedContacts = editorState.hasSavedNotificationContacts;
+            const formData = new FormData();
+            formData.set('partner_id', partnerId);
+            formData.set('worksheet_id', String(editorState.worksheetId || ''));
+
+            editorState.notificationContactsLoading = true;
+            editorState.notificationPartnerId = String(partnerId || '');
+            editorState.notificationPartnerLabel = String(partnerLabel || '');
+            editorState.hasSavedNotificationContacts = false;
+            setPartnerComboboxDisabled(true);
+            $('[data-box="worksheet_add"] [data-name="alertify-save"]').prop('disabled', true);
+            contactsContainer.html(`
+                <div class="worksheet-notification-loading text-xs text-muted-custom">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    Kapcsolattartók betöltése...
+                </div>`);
+
+            try {
+                const result = await ajaxRequest({
+                    url: routes.notificationContacts,
+                    name: 'list_worksheet_notification_contacts',
+                    type: 'POST',
+                    formData: formData
+                });
+                contactsContainer.html(result.content || '');
+                editorState.hasSavedNotificationContacts = result.data?.has_saved_contacts === true;
+                renderPartnerProject(result.data?.partner_project || null);
+            } catch (error) {
+                editorState.hasSavedNotificationContacts = previousHasSavedContacts;
+                restorePartnerSelection(previousPartnerId, previousPartnerLabel);
+                contactsContainer.html(previousHtml);
+                alertify.error(errorMessage(error, 'A kapcsolattartók betöltése nem sikerült.'));
+            } finally {
+                editorState.notificationContactsLoading = false;
+                setPartnerComboboxDisabled(false);
+                $('[data-box="worksheet_add"] [data-name="alertify-save"]').prop('disabled', false);
+            }
+        }
+
+        function renderPartnerProject(project) {
+            $('[data-name="worksheet_partner_project_name"]').text(project?.name || '-');
+            $('[data-name="worksheet_partner_project_code"]').text(project?.code || '');
+        }
+
+        function filterWorksheetStatuses() {
+            const typeId = String($('#worksheet_type_id').val() || '');
+            const typeCode = String($('#worksheet_type_id option:selected').attr('data-code') || '');
+            const statusSelect = $('#worksheet_status_type_id');
+            let currentIsValid = false;
+
+            statusSelect.find('option').each(function () {
+                const optionTypeId = String($(this).attr('data-worksheet-type') || '');
+                const isPlaceholder = String($(this).val() || '') === '';
+                const visible = isPlaceholder || (typeId !== '' && optionTypeId === typeId);
+                $(this).prop('disabled', !visible).prop('hidden', !visible);
+
+                if (visible && String($(this).val() || '') !== '' && String($(this).val()) === String(statusSelect.val())) {
+                    currentIsValid = true;
+                }
+            });
+
+            if (!currentIsValid) {
+                const firstStatus = statusSelect.find(`option[data-worksheet-type="${cssEscape(typeId)}"]`).first();
+                statusSelect.val(firstStatus.length ? firstStatus.val() : '');
+            }
+
+            const isMachineMove = typeCode === 'MACHINE_MOVE_BETWEEN_LOCATIONS';
+            $('[data-worksheet-company-site-field]').toggleClass('d-none', !isMachineMove);
+            $('#worksheet_company_site_id').prop('required', isMachineMove);
+
+            const requiresOperationalDetails = true;
+            $('[data-worksheet-operational-input]').prop('required', requiresOperationalDetails);
+        }
+
+        function bindNewAttachmentPicker() {
+            const input = $('[data-name="worksheet_attachment_input"]');
+
+            $('[data-name="btnAddWorksheetAttachments"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', function () {
+                    input.trigger('click');
+                });
+
+            input
+                .off('change.worksheetEditor')
+                .on('change.worksheetEditor', function () {
+                    Array.from(this.files || []).forEach(function (file) {
+                        editorState.selectedAttachments.push(createClientAttachment(file, false, null));
+                    });
+                    this.value = '';
+                    renderSelectedAttachments();
+                });
+
+            $('[data-name="worksheet_new_attachments"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', '[data-action]', function () {
+                    const key = String($(this).closest('[data-client-key]').attr('data-client-key') || '');
+                    const item = editorState.selectedAttachments.find(candidate => candidate.viewerKey === key);
+                    if (!item) {
+                        return;
+                    }
+
+                    const action = $(this).attr('data-action');
+                    if (action === 'remove') {
+                        revokePreviewUrl(item);
+                        editorState.selectedAttachments = editorState.selectedAttachments.filter(candidate => candidate.viewerKey !== key);
+                        renderSelectedAttachments();
+                    } else if (action === 'edit') {
+                        openDescriptionEditor(item, false);
+                    } else if (action === 'info') {
+                        showAttachmentInfo(item);
+                    } else if (action === 'view') {
+                        openViewer(key);
+                    }
+                });
+        }
+
+        function createClientAttachment(file, isConditionImage, conditionType) {
+            const isImage = String(file.type || '').toLowerCase().startsWith('image/');
+
+            return {
+                viewerKey: 'client-' + Date.now() + '-' + Math.random().toString(16).slice(2),
+                file: file,
+                name: file.name,
+                originalName: file.name,
+                description: isConditionImage ? conditionType : '',
+                mimeType: file.type || 'application/octet-stream',
+                extension: (file.name.split('.').pop() || '').toLowerCase(),
+                size: Number(file.size || 0),
+                isImage: isImage,
+                isConditionImage: isConditionImage,
+                conditionType: conditionType,
+                previewUrl: isImage ? URL.createObjectURL(file) : '',
+                uploadedAtFormatted: 'Még nincs feltöltve',
+                uploadedBy: {name: 'Még nincs feltöltve'}
+            };
+        }
+
+        function renderSelectedAttachments() {
+            const target = $('[data-name="worksheet_new_attachments"]');
+            if (!editorState.selectedAttachments.length) {
+                target.html('<span class="text-xs text-muted-custom" data-name="no_new_attachments">Nincsenek újonnan kiválasztott fájlok.</span>');
+                return;
+            }
+
+            target.html(editorState.selectedAttachments.map(function (item) {
+                const preview = item.isImage
+                    ? `<img src="${escapeAttribute(item.previewUrl)}" alt="">`
+                    : '<i class="bi bi-file-earmark"></i>';
+                const description = item.description
+                    ? `<div class="worksheet-attachment-description text-xs mt-1">${escapeHtml(item.description)}</div>`
+                    : '';
+
+                return `
+                    <div class="worksheet-attachment-block" data-client-key="${escapeAttribute(item.viewerKey)}">
+                        <div class="d-flex align-items-start gap-2">
+                            <button type="button" class="worksheet-attachment-preview" data-action="view" title="Megnyitás">${preview}</button>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <button type="button" class="btn btn-link text-default text-start text-decoration-none p-0 w-100" data-action="view">
+                                    <span class="attachment-name d-block text-truncate" title="${escapeAttribute(item.originalName)}">${escapeHtml(item.originalName)}</span>
+                                </button>
+                                <div class="attachment-meta">${escapeHtml(formatFileSize(item.size))} · ${escapeHtml(item.mimeType)}</div>
+                                ${description}
+                            </div>
+                            <div class="d-flex flex-column gap-1">
+                                <button type="button" class="btn btn-default btn-sm" data-action="edit" title="Leírás szerkesztése"><i class="bi bi-pencil-square"></i></button>
+                                <button type="button" class="btn btn-default btn-sm" data-action="info" title="Fájlinformáció"><i class="bi bi-info-circle"></i></button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" data-action="remove" title="Eltávolítás"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join(''));
+        }
+
+        function bindExistingAttachmentActions() {
+            $('[data-name="worksheet_existing_attachments"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', '[data-action]', function () {
+                    const action = $(this).attr('data-action');
+                    if (action === 'load-more') {
+                        loadAttachments(false, Number($(this).attr('data-next-page') || 1));
+                        return;
+                    }
+
+                    const id = Number($(this).closest('[data-attachment-id]').attr('data-attachment-id') || 0);
+                    const item = editorState.loadedAttachments.find(candidate => Number(candidate.id) === id);
+                    if (!item) {
+                        return;
+                    }
+
+                    if (action === 'view') {
+                        openViewer(item.viewerKey);
+                    } else if (action === 'edit') {
+                        openDescriptionEditor(item, true);
+                    } else if (action === 'info') {
+                        showAttachmentInfo(item);
+                    } else if (action === 'delete') {
+                        deletePersistedAttachment(item);
+                    }
+                });
+        }
+
+        function bindAttachmentSearch() {
+            $('[data-name="attachment_search"]')
+                .off('keydown.worksheetEditor')
+                .on('keydown.worksheetEditor', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        runAttachmentSearch();
+                    }
+                });
+
+            $('[data-name="btnAttachmentSearch"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', runAttachmentSearch);
+        }
+
+        function runAttachmentSearch() {
+            editorState.listSearch = String($('[data-name="attachment_search"]').val() || '').trim();
+            loadAttachments(true, 1);
+        }
+
+        function loadAttachments(reset, page) {
+            const target = $('[data-name="worksheet_existing_attachments"]');
+            if (editorState.worksheetId <= 0) {
+                target.html('<span class="text-xs text-muted-custom">A korábbi csatolmányok az első mentés után jelennek meg.</span>');
+                return;
+            }
+
+            if (attachmentListRequest?.ajax && attachmentListRequest.ajax.readyState !== 4) {
+                attachmentListRequest.ajax.abort();
+            }
+
+            const formData = new FormData();
+            formData.set('worksheet_id', String(editorState.worksheetId));
+            formData.set('page', String(page));
+            formData.set('search', editorState.listSearch);
+
+            attachmentListRequest = new Ajax({
+                url: routes.attachmentList,
+                name: 'list_worksheet_attachments_editor',
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                function_prepare: function () {
+                    if (reset) {
+                        target.html('<div class="text-xs text-muted-custom py-2"><span class="spinner-border spinner-border-sm me-1"></span> Betöltés...</div>');
+                    }
+                },
+                function_success: function (result) {
+                    if (!result.success) {
+                        alertify.error(result.data?.error || 'A csatolmányok nem tölthetők be.');
+                        return;
+                    }
+
+                    const items = (result.data?.items || []).map(normalizePersistedAttachment);
+                    if (reset) {
+                        editorState.loadedAttachments = items;
+                        target.html(result.content || '<span class="text-xs text-muted-custom">Nincsenek csatolmányok.</span>');
+                    } else {
+                        target.find('[data-action="load-more"]').remove();
+                        mergeLoadedAttachments(items);
+                        target.append(result.content || '');
+                    }
+                    editorState.listPage = Number(result.data?.page || page);
+                },
+                function_error: function (xhr, status) {
+                    if (status !== 'abort') {
+                        alertify.error(xhr.responseJSON?.data?.error || 'A csatolmányok nem tölthetők be.');
+                    }
+                }
+            });
+            attachmentListRequest.send();
+        }
+
+        function mergeLoadedAttachments(items) {
+            const byId = new Map(editorState.loadedAttachments.map(item => [Number(item.id), item]));
+            items.forEach(item => byId.set(Number(item.id), item));
+            editorState.loadedAttachments = Array.from(byId.values());
+        }
+
+        function normalizePersistedAttachment(item) {
+            return Object.assign({}, item, {
+                viewerKey: 'persisted-' + Number(item.id),
+                isImage: Boolean(item.isImage),
+                isConditionImage: Boolean(item.isConditionImage),
+                size: Number(item.size || 0)
+            });
+        }
+
+        function replacePersistedAttachment(updatedItem) {
+            const normalized = normalizePersistedAttachment(updatedItem);
+            editorState.loadedAttachments = editorState.loadedAttachments.map(function (item) {
+                return Number(item.id) === Number(normalized.id) ? normalized : item;
+            });
+            if (normalized.conditionType && editorState.existingConditions.has(normalized.conditionType)) {
+                editorState.existingConditions.set(normalized.conditionType, normalized);
+                renderConditionSlot(normalized.conditionType);
+            }
+        }
+
+        function openDescriptionEditor(item, persisted) {
+            const dialogKey = 'attachment_description_' + Math.random().toString(16).slice(2);
+            const content = `
+                <div class="p-2">
+                    <label class="form-label text-s" for="${dialogKey}">Leírás</label>
+                    <textarea id="${dialogKey}" class="form-control" rows="5" maxlength="5000">${escapeHtml(item.description || '')}</textarea>
+                </div>`;
+            const footer = `
+                <div class="container-fluid p-0" data-box="${dialogKey}">
+                    <div class="text-end">
+                        <button type="button" class="btn btn-success btn-sm" data-action="save">Mentés</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-action="cancel">Mégse</button>
+                    </div>
+                </div>`;
+
+            alertify.popup('Csatolmány leírása', content)
+                .set('movable', false)
+                .set('resizable', false)
+                .set('closable', false)
+                .set('closableByEscape', false)
+                .resizeTo('520px', '330px')
+                .setFooter(footer);
+
+            $(`[data-box="${dialogKey}"] [data-action="cancel"]`).on('click', function () {
+                alertify.popup().close();
+            });
+            $(`[data-box="${dialogKey}"] [data-action="save"]`).on('click', async function () {
+                const description = String($('#' + dialogKey).val() || '').trim();
+                const saveButton = $(this).prop('disabled', true);
+
+                if (!persisted) {
+                    item.description = description;
+                    renderSelectedAttachments();
+                    alertify.popup().close();
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.set('attachment_id', String(item.id));
+                formData.set('description', description);
+                try {
+                    const result = await ajaxRequest({
+                        url: routes.attachmentDescription,
+                        name: 'update_worksheet_attachment_description',
+                        type: 'POST',
+                        formData: formData
+                    });
+                    replacePersistedAttachment(result.data.attachment);
+                    alertify.popup().close();
+                    alertify.success('A leírás mentve.');
+                    loadAttachments(true, 1);
+                } catch (error) {
+                    saveButton.prop('disabled', false);
+                    alertify.error(errorMessage(error, 'A leírás mentése nem sikerült.'));
+                }
+            });
+        }
+
+        function deletePersistedAttachment(item) {
+            alertify.confirm('Megerősítés', `Törlöd ezt a csatolmányt?<br><strong>${escapeHtml(item.originalName)}</strong>`, async function () {
+                const formData = new FormData();
+                formData.set('attachment_id', String(item.id));
+                try {
+                    await ajaxRequest({
+                        url: routes.attachmentDelete,
+                        name: 'delete_worksheet_attachment',
+                        type: 'POST',
+                        formData: formData
+                    });
+                    editorState.loadedAttachments = editorState.loadedAttachments.filter(candidate => Number(candidate.id) !== Number(item.id));
+                    alertify.success('A csatolmány törölve.');
+                    loadAttachments(true, 1);
+                } catch (error) {
+                    alertify.error(errorMessage(error, 'A csatolmány törlése nem sikerült.'));
+                }
+            }, function () {});
+        }
+
+        function bindConditionImages() {
+            $('[data-name="condition_image_slot"]').each(function () {
+                const slot = $(this);
+                const conditionType = String(slot.attr('data-condition') || '');
+                const input = slot.find('[data-name="condition_image_input"]');
+
+                slot.find('[data-name="btnAddConditionImage"]')
+                    .off('click.worksheetEditor')
+                    .on('click.worksheetEditor', function () {
+                        input.trigger('click');
+                    });
+
+                slot.find('[data-name="condition_image_browse"]')
+                    .off('click.worksheetEditor')
+                    .on('click.worksheetEditor', function () {
+                        const item = editorState.conditionSelections.get(conditionType)
+                            || editorState.existingConditions.get(conditionType);
+                        if (item) {
+                            openViewer(item.viewerKey);
+                        } else {
+                            input.trigger('click');
+                        }
+                    });
+
+                input
+                    .off('change.worksheetEditor')
+                    .on('change.worksheetEditor', function () {
+                        const file = this.files?.[0];
+                        this.value = '';
+                        if (!file) {
+                            return;
+                        }
+                        if (!String(file.type || '').toLowerCase().startsWith('image/')) {
+                            alertify.alert('Hibás fájl', 'Az állapotkép helyére képfájlt válassz.');
+                            return;
+                        }
+
+                        const previousSelection = editorState.conditionSelections.get(conditionType);
+                        if (previousSelection) {
+                            revokePreviewUrl(previousSelection);
+                        }
+                        editorState.conditionSelections.set(conditionType, createClientAttachment(file, true, conditionType));
+                        renderConditionSlot(conditionType);
+                    });
+
+                slot.find('[data-name="btnRemoveConditionImage"]')
+                    .off('click.worksheetEditor')
+                    .on('click.worksheetEditor', function () {
+                        removeConditionImage(conditionType);
+                    });
+            });
+        }
+
+        function renderAllConditionSlots() {
+            $('[data-name="condition_image_slot"]').each(function () {
+                renderConditionSlot(String($(this).attr('data-condition') || ''));
+            });
+        }
+
+        function renderConditionSlot(conditionType) {
+            const slot = $('[data-name="condition_image_slot"]').filter(function () {
+                return String($(this).attr('data-condition') || '') === conditionType;
+            });
+            const item = editorState.conditionSelections.get(conditionType)
+                || editorState.existingConditions.get(conditionType);
+            const image = slot.find('.condition-image-preview img');
+            const placeholder = slot.find('.condition-image-placeholder');
+
+            if (item) {
+                image.attr('src', item.previewUrl || item.contentUrl || '').removeClass('d-none').show();
+                placeholder.addClass('d-none');
+                slot.find('[data-name="condition_image_filename"]').text(item.originalName || item.name || conditionType);
+                slot.find('[data-name="btnRemoveConditionImage"]').removeClass('d-none');
+            } else {
+                image.attr('src', '').addClass('d-none').hide();
+                placeholder.removeClass('d-none');
+                slot.find('[data-name="condition_image_filename"]').text('Nincs kiválasztott kép');
+                slot.find('[data-name="btnRemoveConditionImage"]').addClass('d-none');
+            }
+        }
+
+        function removeConditionImage(conditionType) {
+            const selection = editorState.conditionSelections.get(conditionType);
+            if (selection) {
+                revokePreviewUrl(selection);
+                editorState.conditionSelections.delete(conditionType);
+                renderConditionSlot(conditionType);
+                return;
+            }
+
+            const persisted = editorState.existingConditions.get(conditionType);
+            if (!persisted) {
+                return;
+            }
+
+            alertify.confirm('Megerősítés', `Törlöd a(z) „${escapeHtml(conditionType)}” állapotképet?`, async function () {
+                const formData = new FormData();
+                formData.set('attachment_id', String(persisted.id));
+                try {
+                    await ajaxRequest({
+                        url: routes.attachmentDelete,
+                        name: 'delete_condition_image',
+                        type: 'POST',
+                        formData: formData
+                    });
+                    editorState.existingConditions.delete(conditionType);
+                    renderConditionSlot(conditionType);
+                    alertify.success('Az állapotkép törölve.');
+                } catch (error) {
+                    alertify.error(errorMessage(error, 'Az állapotkép törlése nem sikerült.'));
+                }
+            }, function () {});
+        }
+
+        function bindViewer() {
+            const viewer = $('#attachment_viewer');
+            viewer.find('[data-name="attachment_viewer_close"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', closeViewer);
+            viewer.find('[data-name="attachment_viewer_navigate"]')
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', function () {
+                    moveViewer($(this).attr('data-direction') === 'prev' ? -1 : 1);
+                });
+            viewer
+                .off('click.worksheetEditor')
+                .on('click.worksheetEditor', function (event) {
+                    if (event.target === this) {
+                        closeViewer();
+                    }
+                });
+
+            $(document)
+                .off('keydown.worksheetAttachmentViewer')
+                .on('keydown.worksheetAttachmentViewer', function (event) {
+                    if ($('#attachment_viewer').hasClass('d-none')) {
+                        return;
+                    }
+                    if (event.key === 'Escape') {
+                        closeViewer();
+                    } else if (event.key === 'ArrowLeft') {
+                        moveViewer(-1);
+                    } else if (event.key === 'ArrowRight') {
+                        moveViewer(1);
+                    }
+                });
+        }
+
+        function collectViewerItems() {
+            const items = [];
+            const seen = new Set();
+            $('[data-name="condition_image_slot"]').each(function () {
+                const conditionType = String($(this).attr('data-condition') || '');
+                const item = editorState.conditionSelections.get(conditionType)
+                    || editorState.existingConditions.get(conditionType);
+                if (item && !seen.has(item.viewerKey)) {
+                    seen.add(item.viewerKey);
+                    items.push(item);
+                }
+            });
+            editorState.loadedAttachments.forEach(function (item) {
+                if (!seen.has(item.viewerKey)) {
+                    seen.add(item.viewerKey);
+                    items.push(item);
+                }
+            });
+            editorState.selectedAttachments.forEach(function (item) {
+                if (!seen.has(item.viewerKey)) {
+                    seen.add(item.viewerKey);
+                    items.push(item);
+                }
+            });
+
+            return items;
+        }
+
+        function openViewer(viewerKey) {
+            editorState.viewerItems = collectViewerItems();
+            const index = editorState.viewerItems.findIndex(item => item.viewerKey === viewerKey);
+            if (index < 0) {
+                return;
+            }
+
+            editorState.viewerIndex = index;
+            editorState.viewerBodyOverflow = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            $('#attachment_viewer').removeClass('d-none');
+            renderViewer();
+        }
+
+        function closeViewer() {
+            $('#attachment_viewer').addClass('d-none');
+            if (editorState) {
+                document.body.style.overflow = editorState.viewerBodyOverflow || '';
+            }
+        }
+
+        function moveViewer(direction) {
+            if (!editorState?.viewerItems?.length) {
+                return;
+            }
+            const length = editorState.viewerItems.length;
+            editorState.viewerIndex = (editorState.viewerIndex + direction + length) % length;
+            renderViewer();
+        }
+
+        function renderViewer() {
+            const item = editorState.viewerItems[editorState.viewerIndex];
+            if (!item) {
+                closeViewer();
+                return;
+            }
+
+            const visual = item.isImage
+                ? `<img src="${escapeAttribute(item.previewUrl || item.contentUrl || '')}" alt="${escapeAttribute(item.originalName || '')}">`
+                : '<i class="bi bi-file-earmark attachment-viewer-file-icon"></i>';
+            const description = item.description
+                ? `<div><span class="text-white-50">Leírás:</span> ${escapeHtml(item.description)}</div>`
+                : '';
+            const condition = item.conditionType
+                ? `<div><span class="text-white-50">Állapotkép típusa:</span> ${escapeHtml(item.conditionType)}</div>`
+                : '';
+
+            $('[data-name="attachment_viewer_content"]').html(`
+                ${visual}
+                <div class="attachment-viewer-caption">
+                    <div class="fw-600 text-break">${escapeHtml(item.originalName || item.name || 'Csatolmány')}</div>
+                    ${description}
+                    ${condition}
+                    <div class="text-white-50 text-xs mt-1">${editorState.viewerIndex + 1} / ${editorState.viewerItems.length}</div>
+                </div>`);
+            $('#attachment_viewer [data-name="attachment_viewer_navigate"]').toggle(editorState.viewerItems.length > 1);
+        }
+
+        function showAttachmentInfo(item) {
+            const rows = [
+                ['Feltöltötte', item.uploadedBy?.name || 'Ismeretlen'],
+                ['Fájlnév', item.originalName || item.name || '-'],
+                ['Méret', formatFileSize(item.size)],
+                ['Fájltípus', item.mimeType || 'Ismeretlen'],
+                ['Kiterjesztés', item.extension || '-'],
+                ['Feltöltés ideje', item.uploadedAtFormatted || 'Még nincs feltöltve']
+            ];
+            if (item.conditionType) {
+                rows.push(['Állapotkép típusa', item.conditionType]);
+            }
+            if (item.description) {
+                rows.push(['Leírás', item.description]);
+            }
+            if (item.sha256) {
+                rows.push(['SHA-256', item.sha256]);
+            }
+
+            alertify.alert('Fájlinformáció', `
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <tbody>${rows.map(row => `<tr><th class="text-start pe-3">${escapeHtml(row[0])}</th><td class="text-break">${escapeHtml(row[1])}</td></tr>`).join('')}</tbody>
+                    </table>
+                </div>`);
+        }
+
+        async function saveWorksheetData() {
+            if (saving || editorState?.notificationContactsLoading) {
+                return;
+            }
+
+            const form = $('form[data-name="worksheet"]')[0];
+            syncMaterialsUsedInput();
+            if (!form || !form.reportValidity() || !validateWorksheetComboboxes()) {
+                return;
+            }
+
+            saving = true;
+            setSaveButtonsDisabled(true);
+            const formData = new FormData(form);
+
+            try {
+                const result = await ajaxRequest({
+                    url: routes.save,
+                    name: 'save_worksheet_editor',
+                    type: 'POST',
+                    formData: formData
+                });
+
+                editorState.worksheetId = Number(result.data.worksheetId || result.data.id || 0);
+                editorState.worksheetCode = result.data.worksheetCode || result.data.code || '';
+                $('form[data-name="worksheet"] [name="id"]').val(editorState.worksheetId);
+                $('[data-name="worksheet_code"]').text(editorState.worksheetCode);
+                if (result.data.save_enabled === false) {
+                    $('[data-box="worksheet_add"] [data-name="alertify-save"]').remove();
+                }
+
+                const uploadQueue = [
+                    ...editorState.selectedAttachments,
+                    ...Array.from(editorState.conditionSelections.values())
+                ];
+                const uploadCount = uploadQueue.length;
+                const failures = uploadCount > 0 ? await uploadWorksheetAttachments(uploadQueue) : [];
+
+                if (failures.length > 0) {
+                    loadAttachments(true, 1);
+                    alertify.alert(
+                        'Részleges mentés',
+                        `A munkalap mentve, de ${failures.length} csatolmány feltöltése nem sikerült:<br><br>${failures.map(failure => escapeHtml(failure)).join('<br>')}`
+                    );
+                    return;
+                }
+
+                cleanupEditor();
+                alertify.sheet().close();
+                refreshWorksheetList();
+                alertify.success(uploadCount > 0
+                    ? 'Sikeres munkalap- és csatolmánymentés.'
+                    : 'Sikeres munkalapmentés.');
+            } catch (error) {
+                alertify.alert('Mentési hiba', errorMessage(error, 'A munkalap mentése nem sikerült.'));
+            } finally {
+                saving = false;
+                setSaveButtonsDisabled(false);
+            }
+        }
+
+        async function uploadWorksheetAttachments(queue) {
+            const progressKey = 'worksheet_upload_progress';
+            alertify.popup('Csatolmányok feltöltése', `
+                <div class="p-3" data-name="${progressKey}">
+                    <div class="fw-600 mb-1" data-name="upload_filename"></div>
+                    <div class="text-xs text-muted mb-2" data-name="upload_counter"></div>
+                    <div class="progress" role="progressbar" aria-label="Feltöltés">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" data-name="upload_bar" style="width:0%">0%</div>
+                    </div>
+                </div>`)
+                .set('movable', false)
+                .set('resizable', false)
+                .set('closable', false)
+                .set('closableByEscape', false)
+                .resizeTo('540px', '260px')
+                .setFooter('<div></div>');
+
+            const failures = [];
+            for (let index = 0; index < queue.length; index += 1) {
+                const item = queue[index];
+                updateUploadProgress(item.originalName, index + 1, queue.length, 0);
+                try {
+                    const result = await uploadOneAttachment(item, function (percent) {
+                        updateUploadProgress(item.originalName, index + 1, queue.length, percent);
+                    });
+                    registerUploadedAttachment(item, result.data.attachment);
+                    updateUploadProgress(item.originalName, index + 1, queue.length, 100);
+                } catch (error) {
+                    failures.push(item.originalName + ': ' + errorMessage(error, 'ismeretlen hiba'));
+                }
+            }
+
+            alertify.popup().close();
+            return failures;
+        }
+
+        function uploadOneAttachment(item, onProgress) {
+            const formData = new FormData();
+            formData.set('worksheet_id', String(editorState.worksheetId));
+            formData.set('attachment', item.file, item.file.name);
+            formData.set('description', item.description || '');
+            formData.set('is_condition_image', item.isConditionImage ? '1' : '0');
+            formData.set('condition_type', item.conditionType || '');
+            formData.set('last_modified', String(item.file.lastModified || ''));
+
+            return ajaxRequest({
+                url: routes.attachmentUpload,
+                name: 'upload_worksheet_attachment',
+                type: 'POST',
+                formData: formData,
+                function_xhr: function () {
+                    const xhr = new window.XMLHttpRequest();
+                    xhr.upload.addEventListener('progress', function (event) {
+                        if (event.lengthComputable) {
+                            onProgress(Math.round((event.loaded / event.total) * 100));
+                        }
+                    });
+                    return xhr;
+                }
+            });
+        }
+
+        function registerUploadedAttachment(clientItem, uploadedItem) {
+            const normalized = normalizePersistedAttachment(uploadedItem);
+            revokePreviewUrl(clientItem);
+            if (clientItem.isConditionImage) {
+                editorState.conditionSelections.delete(clientItem.conditionType);
+                editorState.existingConditions.set(clientItem.conditionType, normalized);
+                renderConditionSlot(clientItem.conditionType);
+            } else {
+                editorState.selectedAttachments = editorState.selectedAttachments.filter(item => item.viewerKey !== clientItem.viewerKey);
+                renderSelectedAttachments();
+            }
+        }
+
+        function updateUploadProgress(filename, current, total, percent) {
+            const progress = $('[data-name="worksheet_upload_progress"]');
+            progress.find('[data-name="upload_filename"]').text(filename);
+            progress.find('[data-name="upload_counter"]').text(`${current}. fájl / ${total}`);
+            progress.find('[data-name="upload_bar"]')
+                .css('width', percent + '%')
+                .attr('aria-valuenow', percent)
+                .text(percent + '%');
+        }
+
+        function ajaxRequest(options) {
+            return new Promise(function (resolve, reject) {
+                const ajaxOptions = {
+                    url: options.url,
+                    name: options.name + '_' + Math.random().toString(16).slice(2),
+                    type: options.type || 'POST',
+                    dataType: 'json',
+                    formData: options.formData || new FormData(),
+                    function_success: function (result) {
+                        if (result?.success) {
+                            resolve(result);
+                        } else {
+                            reject({result: result});
+                        }
+                    },
+                    function_error: function (xhr, status, error) {
+                        reject({xhr: xhr, status: status, error: error});
+                    }
+                };
+                if (typeof options.function_xhr === 'function') {
+                    ajaxOptions.function_xhr = options.function_xhr;
+                }
+                const request = new Ajax(ajaxOptions);
+                request.send();
+            });
+        }
+
+        function errorMessage(error, fallback) {
+            return error?.xhr?.responseJSON?.data?.error
+                || error?.xhr?.responseJSON?.message
+                || error?.result?.data?.error
+                || fallback;
+        }
+
+        function setSaveButtonsDisabled(disabled) {
+            $('[data-box="worksheet_add"] [data-name="alertify-save"], [data-box="worksheet_add"] [data-name="alertify-cancel"], [data-name="worksheet_header_close"]')
+                .prop('disabled', disabled);
+        }
+
+        function refreshWorksheetList() {
+            if (ajaxquery?.['list_worksheets_list']) {
+                ajaxquery['list_worksheets_list'].send();
+            }
+        }
+
+        function formatFileSize(bytes) {
+            const value = Number(bytes || 0);
+            if (value < 1024) {
+                return value + ' B';
+            }
+            if (value < 1024 * 1024) {
+                return (value / 1024).toFixed(1) + ' KB';
+            }
+            if (value < 1024 * 1024 * 1024) {
+                return (value / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+            return (value / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        }
+
+        function revokePreviewUrl(item) {
+            if (item?.previewUrl) {
+                URL.revokeObjectURL(item.previewUrl);
+                item.previewUrl = '';
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function escapeAttribute(value) {
+            return escapeHtml(value);
+        }
+
+        function cssEscape(value) {
+            if (window.CSS?.escape) {
+                return window.CSS.escape(String(value));
+            }
+            return String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+        }
+    });
+</script>

@@ -63,6 +63,7 @@
             setFooter(html_footer);
 
             bindUserImagePicker();
+            bindUserSignaturePicker();
 
             $(`div[data-box="${this.name}"] .btn[data-name='alertify-cancel']`).unbind("click").click(function(){
                 alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
@@ -93,6 +94,180 @@
                 $("form[data-name='user'] [data-name='image_empty']").hide();
             });
         });
+    }
+
+    function bindUserSignaturePicker() {
+        $("form[data-name='user'] [data-name='btn_set_signature']")
+            .off("click.userSignature")
+            .on("click.userSignature", openUserSignaturePopup);
+    }
+
+    function openUserSignaturePopup() {
+        const userForm = $("form[data-name='user']");
+        const currentSignature = String(userForm.find("[data-name='signature']").val() || '');
+        const content = `
+            <div data-name="user_signature_popup">
+                <div class="text-sm text-muted-custom mb-2">
+                    Rajzold meg az aláírást az egérrel vagy érintőképernyőn.
+                </div>
+                <div class="border rounded p-2" style="background:#fff;">
+                    <canvas
+                        data-name="signature_canvas"
+                        width="900"
+                        height="300"
+                        style="display:block;width:100%;height:auto;aspect-ratio:3/1;background:#fff;cursor:crosshair;touch-action:none;"
+                    ></canvas>
+                </div>
+                <div class="d-flex justify-content-between flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-name="signature_clear">
+                        <i class="bi bi-eraser"></i> Törlés
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-name="signature_cancel">Mégse</button>
+                        <button type="button" class="btn btn-success btn-sm" data-name="signature_apply">
+                            <i class="bi bi-check-lg"></i> Alkalmaz
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+
+        alertify.popup('Aláírás beállítása', content)
+            .set('movable', false)
+            .set('resizable', false)
+            .set({transition: 'zoom'})
+            .resizeTo('780px', '500px');
+
+        const popup = $("[data-name='user_signature_popup']").last();
+        const canvas = popup.find("[data-name='signature_canvas']")[0];
+        if (!canvas) {
+            alertify.error('Az aláírás rajzfelülete nem tölthető be.');
+            return;
+        }
+
+        const context = canvas.getContext('2d');
+        const applyButton = popup.find("[data-name='signature_apply']");
+        const clearButton = popup.find("[data-name='signature_clear']");
+        context.strokeStyle = '#111827';
+        context.fillStyle = '#111827';
+        context.lineWidth = 4;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+
+        let drawing = false;
+        let hasSignature = currentSignature !== '';
+
+        function setCanvasReady(ready) {
+            canvas.style.pointerEvents = ready ? '' : 'none';
+            canvas.style.opacity = ready ? '1' : '.55';
+            applyButton.prop('disabled', !ready);
+            clearButton.prop('disabled', !ready);
+        }
+
+        function canvasPoint(event) {
+            const bounds = canvas.getBoundingClientRect();
+            return {
+                x: (event.clientX - bounds.left) * (canvas.width / bounds.width),
+                y: (event.clientY - bounds.top) * (canvas.height / bounds.height)
+            };
+        }
+
+        function finishDrawing(event) {
+            if (!drawing) {
+                return;
+            }
+            drawing = false;
+            context.closePath();
+            if (event?.pointerId !== undefined && canvas.hasPointerCapture?.(event.pointerId)) {
+                canvas.releasePointerCapture(event.pointerId);
+            }
+        }
+
+        canvas.addEventListener('pointerdown', function (event) {
+            event.preventDefault();
+            const point = canvasPoint(event);
+            drawing = true;
+            hasSignature = true;
+            canvas.setPointerCapture?.(event.pointerId);
+
+            context.beginPath();
+            context.arc(point.x, point.y, context.lineWidth / 2, 0, Math.PI * 2);
+            context.fill();
+            context.beginPath();
+            context.moveTo(point.x, point.y);
+        });
+
+        canvas.addEventListener('pointermove', function (event) {
+            if (!drawing) {
+                return;
+            }
+            event.preventDefault();
+            const point = canvasPoint(event);
+            context.lineTo(point.x, point.y);
+            context.stroke();
+        });
+        canvas.addEventListener('pointerup', finishDrawing);
+        canvas.addEventListener('pointercancel', finishDrawing);
+
+        if (currentSignature !== '') {
+            setCanvasReady(false);
+            const signatureImage = new Image();
+            signatureImage.onload = function () {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                const scale = Math.min(
+                    canvas.width / signatureImage.width,
+                    canvas.height / signatureImage.height
+                );
+                const width = signatureImage.width * scale;
+                const height = signatureImage.height * scale;
+                context.drawImage(
+                    signatureImage,
+                    (canvas.width - width) / 2,
+                    (canvas.height - height) / 2,
+                    width,
+                    height
+                );
+                setCanvasReady(true);
+            };
+            signatureImage.onerror = function () {
+                hasSignature = false;
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                setCanvasReady(true);
+                alertify.warning('A korábbi aláírás nem tölthető be, új aláírás rajzolható.');
+            };
+            signatureImage.src = currentSignature;
+        }
+
+        clearButton
+            .off('click.userSignature')
+            .on('click.userSignature', function () {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                hasSignature = false;
+            });
+
+        popup.find("[data-name='signature_cancel']")
+            .off('click.userSignature')
+            .on('click.userSignature', function () {
+                alertify.popup().close();
+            });
+
+        applyButton
+            .off('click.userSignature')
+            .on('click.userSignature', function () {
+                const signature = hasSignature ? canvas.toDataURL('image/png') : '';
+                userForm.find("[data-name='signature']").val(signature);
+
+                const preview = userForm.find("[data-name='signature_preview']");
+                const emptyState = userForm.find("[data-name='signature_empty']");
+                if (signature !== '') {
+                    preview.attr('src', signature).removeClass('d-none').show();
+                    emptyState.addClass('d-none');
+                } else {
+                    preview.attr('src', '').addClass('d-none').hide();
+                    emptyState.removeClass('d-none');
+                }
+
+                alertify.popup().close();
+            });
     }
 
     function resizeImageToBase64(file, callback) {
@@ -146,6 +321,7 @@
         formData.set('password', $("form[data-name='user'] [data-name='password']").val() || '');
         formData.set('password_again', $("form[data-name='user'] [data-name='password_again']").val() || '');
         formData.set('image', $("form[data-name='user'] [data-name='image']").val());
+        formData.set('signature', $("form[data-name='user'] [data-name='signature']").val());
         formData.set('data', JSON.stringify(data));
 
         alertify.confirm("Megerősítés","Mented az adatokat?", ()=>{

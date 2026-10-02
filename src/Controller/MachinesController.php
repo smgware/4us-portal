@@ -3,11 +3,12 @@
 namespace App\Controller;
 
 use App\Entity\Machine;
+use App\Repository\CompanySiteRepository;
 use App\Repository\MachineCategoryRepository;
 use App\Repository\MachineRentalRepository;
 use App\Repository\MachineRepository;
-use App\Repository\ProjectRepository;
 use App\Repository\WorksheetRepository;
+use App\Repository\WorksheetTypeRepository;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
@@ -20,37 +21,24 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 class MachinesController extends BaseController
 {
     private const ITEMS_PER_PAGE = 20;
+    private const INFO_ITEMS_PER_PAGE = 5;
+    private const INFO_WORKSHEET_TYPE_CODES = [
+        'MACHINE_HANDOVER',
+        'MACHINE_RETURN',
+        'ERROR_REPORTING',
+        'ERROR_REPORT',
+        'MACHINE_MOVE_BETWEEN_LOCATIONS',
+        'MACHINE_DISPOSAL',
+    ];
 
     #[Route('/machines', name: 'index_machines')]
-    public function index(MachineCategoryRepository $machineCategoryRepository): Response
-    {
+    public function index(
+        MachineCategoryRepository $machineCategoryRepository,
+        CompanySiteRepository $companySiteRepository,
+    ): Response {
         return $this->render('machines/index.html.twig', [
             'machineCategories' => $machineCategoryRepository->findBy([], ['title' => 'ASC']),
-        ]);
-    }
-
-    #[Route('/machines/projects/select/list', name: 'list_machine_project_select_list', methods: ['POST'])]
-    public function listMachineProjectSelectList(
-        Request $request,
-        ProjectRepository $projectRepository,
-    ): Response {
-        $filters = json_decode((string) $request->request->get('filters', '{}'), true);
-        if (!is_array($filters)) {
-            return $this->response(false, [
-                'data' => ['error' => 'Érvénytelen projektkeresési adatok.'],
-            ], 'json', Response::HTTP_BAD_REQUEST);
-        }
-
-        $search = mb_substr(trim((string) ($filters['search'] ?? '')), 0, 100);
-        $records = $projectRepository->findForMachineSelect($search, 20);
-
-        return $this->response(true, [
-            'template' => 'machines/select/list_machine_project_select_list.html.twig',
-            'templateData' => ['records' => $records],
-            'data' => [
-                'search' => $search,
-                'count' => count($records),
-            ],
+            'companySites' => $companySiteRepository->findBy([], ['status' => 'DESC', 'title' => 'ASC']),
         ]);
     }
 
@@ -58,7 +46,8 @@ class MachinesController extends BaseController
     public function index_add(
         Request $request,
         MachineRepository $machineRepository,
-        MachineCategoryRepository $machineCategoryRepository
+        MachineCategoryRepository $machineCategoryRepository,
+        CompanySiteRepository $companySiteRepository,
     ): Response {
         $idRaw = $request->query->get('id');
         $id = is_numeric($idRaw) ? (int) $idRaw : 0;
@@ -69,6 +58,7 @@ class MachinesController extends BaseController
             'templateData' => [
                 'item' => $item,
                 'categories' => $machineCategoryRepository->findBy([], ['title' => 'ASC']),
+                'companySites' => $companySiteRepository->findBy([], ['status' => 'DESC', 'title' => 'ASC']),
             ],
             'data' => [],
         ]);
@@ -79,7 +69,7 @@ class MachinesController extends BaseController
         Request $request,
         MachineRepository $machineRepository,
         MachineCategoryRepository $machineCategoryRepository,
-        ProjectRepository $projectRepository
+        CompanySiteRepository $companySiteRepository,
     ): Response {
         $postData = [];
         foreach ($request->request->all() as $key => $value) {
@@ -115,25 +105,14 @@ class MachinesController extends BaseController
             ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
-        $projectIdRaw = $postData['project_id'] ?? '';
-        $project = null;
-        if ($projectIdRaw !== '') {
-            if (!is_numeric($projectIdRaw) || (int) $projectIdRaw <= 0) {
-                return $this->response(false, [
-                    'data' => [
-                        'error' => 'Érvénytelen projekt azonosító.',
-                    ],
-                ], 'json', Response::HTTP_BAD_REQUEST);
-            }
-
-            $project = $projectRepository->find((int) $projectIdRaw);
-            if (!$project) {
-                return $this->response(false, [
-                    'data' => [
-                        'error' => 'A kiválasztott projekt nem található.',
-                    ],
-                ], 'json', Response::HTTP_BAD_REQUEST);
-            }
+        $companySiteId = (int) ($postData['company_site_id'] ?? 0);
+        $companySite = $companySiteId > 0 ? $companySiteRepository->find($companySiteId) : null;
+        if (!$companySite) {
+            return $this->response(false, [
+                'data' => [
+                    'error' => 'A telephely megadása kötelező.',
+                ],
+            ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
         $code = (string) ($postData['code'] ?? '');
@@ -143,14 +122,25 @@ class MachinesController extends BaseController
         }
         */
 
-        $data = $postData['data'] ?? [];
+        $submittedData = $postData['data'] ?? [];
+        if (!is_array($submittedData)) {
+            return $this->response(false, [
+                'data' => [
+                    'error' => 'A gép kiegészítő adatai érvénytelenek.',
+                ],
+            ], 'json', Response::HTTP_BAD_REQUEST);
+        }
+
+        $data = $machine->getData() ?? [];
+        $data['sku'] = trim((string) ($submittedData['sku'] ?? ''));
+        $data['year'] = trim((string) ($submittedData['year'] ?? ''));
 
         $machine
             ->setTitle($title)
             ->setCode($code)
             ->setData($data)
-            ->setProject($project)
             ->setMachineCategory($machineCategory)
+            ->setCompanySite($companySite)
             ->setStatus((string) ($postData['status'] ?? '1'));
 
         $machine->setDatetimeLast(new \DateTimeImmutable());
@@ -162,7 +152,6 @@ class MachinesController extends BaseController
             'data' => [
                 'id' => $machine->getId(),
                 'mode' => $isNew ? 'insert' : 'update',
-                'project_id' => $machine->getProject()?->getId(),
                 'post' => $postData,
             ],
         ]);
@@ -206,15 +195,24 @@ class MachinesController extends BaseController
     public function list_machines(Request $request, MachineRepository $machineRepository): Response
     {
         $filtersJson = $request->request->get('filters', '{}');
-        $filters = json_decode($filtersJson, true);
+        $decodedFilters = json_decode($filtersJson, true);
 
-        if (!is_array($filters)) {
+        if (!is_array($decodedFilters)) {
             return $this->response(false, [
                 'data' => [
                     'error' => 'Invalid filters JSON.',
                 ],
             ], 'json', Response::HTTP_BAD_REQUEST);
         }
+
+        $filters = [
+            'search' => (string) ($decodedFilters['search'] ?? ''),
+            'type' => (string) ($decodedFilters['type'] ?? ''),
+            'machines_category' => $decodedFilters['machines_category']
+                ?? $decodedFilters['machine_category_id']
+                ?? '',
+            'company_site_id' => $decodedFilters['company_site_id'] ?? '',
+        ];
 
         $pageRaw = $request->request->get('page', $request->query->get('page', 1));
         $page = is_numeric($pageRaw) ? (int) $pageRaw : 1;
@@ -246,7 +244,8 @@ class MachinesController extends BaseController
         Request $request,
         MachineRepository $machineRepository,
         MachineRentalRepository $machineRentalRepository,
-        WorksheetRepository $worksheetRepository
+        WorksheetTypeRepository $worksheetTypeRepository,
+        CompanySiteRepository $companySiteRepository,
     ): Response
     {
         $idRaw = $request->request->get('id');
@@ -261,26 +260,126 @@ class MachinesController extends BaseController
             ], 'json', Response::HTTP_NOT_FOUND);
         }
 
-        $machineRentals = $machineRentalRepository->findInfoByMachine($machine, 10);
-        $openMachineRental = null;
-        foreach ($machineRentals as $machineRental) {
-            if ($machineRental['datetime_rental_end'] === null) {
-                $openMachineRental = $machineRental;
-                break;
-            }
-        }
-
         return $this->response(true, [
             'template' => 'machines/index_info.html.twig',
             'templateData' => [
                 'machine' => $machine,
-                'open_machine_rental' => $openMachineRental,
-                'worksheets_error_reporting' => $worksheetRepository->findInfoByMachine($machine, ['ERROR_REPORTING', 'ERROR_REPORT'], 10),
-                'worksheets_machine_return' => $worksheetRepository->findInfoByMachine($machine, ['MACHINE_RETURN'], 10),
-                'worksheets_handover' => $worksheetRepository->findInfoByMachine($machine, ['MACHINE_HANDOVER'], 10),
-                'machine_rentals' => $machineRentals,
+                'open_machine_rental' => $machineRentalRepository->findCurrentInfoByMachine($machine),
+                'worksheet_filter_types' => $this->findInfoWorksheetTypes($worksheetTypeRepository),
+                'company_sites' => $companySiteRepository->findBy([], ['status' => 'DESC', 'title' => 'ASC']),
+                'max_attachment_file_size' => MachinesAttachmentsController::maximumFileSize(),
             ],
-            'data' => [],
+            'data' => ['machine_id' => $machine->getId()],
+        ]);
+    }
+
+    #[Route('/machines/info/company-site', name: 'update_machine_company_site', methods: ['POST'])]
+    public function updateCompanySite(
+        Request $request,
+        MachineRepository $machineRepository,
+        CompanySiteRepository $companySiteRepository,
+    ): Response
+    {
+        $machine = $this->findRequestedMachine($request, $machineRepository);
+        if (!$machine) {
+            return $this->machineNotFoundResponse();
+        }
+
+        $companySiteId = $request->request->get('company_site_id');
+        $companySite = is_numeric($companySiteId) && (int) $companySiteId > 0
+            ? $companySiteRepository->find((int) $companySiteId)
+            : null;
+        if (!$companySite) {
+            return $this->response(false, [
+                'data' => ['error' => 'A telephely megadása kötelező.'],
+            ], 'json', Response::HTTP_BAD_REQUEST);
+        }
+
+        $machine
+            ->setCompanySite($companySite)
+            ->setDatetimeLast(new \DateTimeImmutable())
+            ->setUidLast($this->getUser()?->getId());
+        $machineRepository->save($machine);
+
+        return $this->response(true, [
+            'data' => [
+                'machine_id' => $machine->getId(),
+                'company_site_id' => $companySite->getId(),
+                'company_site_title' => $companySite->getTitle(),
+            ],
+        ]);
+    }
+
+    #[Route('/machines/info/rentals/list', name: 'list_machine_info_rentals', methods: ['POST'])]
+    public function listInfoRentals(
+        Request $request,
+        MachineRepository $machineRepository,
+        MachineRentalRepository $machineRentalRepository,
+    ): Response {
+        $machine = $this->findRequestedMachine($request, $machineRepository);
+        if (!$machine) {
+            return $this->machineNotFoundResponse();
+        }
+
+        $filters = $this->decodeFilters($request);
+        if ($filters === null) {
+            return $this->invalidInfoFiltersResponse();
+        }
+
+        $page = max(1, (int) $request->request->get('page', 1));
+        $list = $machineRentalRepository->findInfoPageByMachine(
+            $machine,
+            $filters,
+            $page,
+            self::INFO_ITEMS_PER_PAGE,
+        );
+
+        return $this->response(true, [
+            'template' => 'machines/_info_rentals_list.html.twig',
+            'templateData' => $list,
+            'data' => [
+                'page' => $list['page'],
+                'totalPages' => $list['totalPages'],
+                'totalRecords' => $list['totalRecords'],
+                'itemsPerPage' => $list['itemsPerPage'],
+            ],
+        ]);
+    }
+
+    #[Route('/machines/info/worksheets/list', name: 'list_machine_info_worksheets', methods: ['POST'])]
+    public function listInfoWorksheets(
+        Request $request,
+        MachineRepository $machineRepository,
+        WorksheetRepository $worksheetRepository,
+    ): Response {
+        $machine = $this->findRequestedMachine($request, $machineRepository);
+        if (!$machine) {
+            return $this->machineNotFoundResponse();
+        }
+
+        $filters = $this->decodeFilters($request);
+        if ($filters === null) {
+            return $this->invalidInfoFiltersResponse();
+        }
+
+        $page = max(1, (int) $request->request->get('page', 1));
+        $list = $worksheetRepository->findInfoPageByMachine(
+            $machine,
+            self::INFO_WORKSHEET_TYPE_CODES,
+            $filters,
+            $page,
+            self::INFO_ITEMS_PER_PAGE,
+        );
+
+        return $this->response(true, [
+            'template' => 'machines/_info_worksheets_list.html.twig',
+            'templateData' => $list,
+            'data' => [
+                'page' => $list['page'],
+                'totalPages' => $list['totalPages'],
+                'totalRecords' => $list['totalRecords'],
+                'itemsPerPage' => $list['itemsPerPage'],
+            ],
         ]);
     }
 
@@ -318,6 +417,51 @@ class MachinesController extends BaseController
             'error_reporting_url' => $errorReportingUrl,
             'qr_code_data_uri' => $qrCode->getDataUri(),
         ]);
+    }
+
+    private function findRequestedMachine(Request $request, MachineRepository $machineRepository): ?Machine
+    {
+        $id = $request->request->get('machine_id', $request->request->get('id'));
+
+        return is_numeric($id) && (int) $id > 0 ? $machineRepository->find((int) $id) : null;
+    }
+
+    private function decodeFilters(Request $request): ?array
+    {
+        $filters = json_decode((string) $request->request->get('filters', '{}'), true);
+
+        return is_array($filters) ? $filters : null;
+    }
+
+    private function machineNotFoundResponse(): Response
+    {
+        return $this->response(false, [
+            'data' => ['error' => 'A gép nem található.'],
+        ], 'json', Response::HTTP_NOT_FOUND);
+    }
+
+    private function invalidInfoFiltersResponse(): Response
+    {
+        return $this->response(false, [
+            'data' => ['error' => 'Érvénytelen szűrési adatok.'],
+        ], 'json', Response::HTTP_BAD_REQUEST);
+    }
+
+    private function findInfoWorksheetTypes(WorksheetTypeRepository $worksheetTypeRepository): array
+    {
+        $typesByCode = [];
+        foreach ($worksheetTypeRepository->findBy(['code' => self::INFO_WORKSHEET_TYPE_CODES]) as $worksheetType) {
+            $typesByCode[$worksheetType->getCode()] = $worksheetType;
+        }
+
+        $types = [];
+        foreach (self::INFO_WORKSHEET_TYPE_CODES as $code) {
+            if (isset($typesByCode[$code])) {
+                $types[] = $typesByCode[$code];
+            }
+        }
+
+        return $types;
     }
 
 }

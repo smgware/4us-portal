@@ -26,28 +26,32 @@ class ProjectRepository extends ServiceEntityRepository
         }
     }
 
-    public function findForMachineSelect(string $search, int $limit = 20): array
+    /**
+     * @return array<int, array{id: int, code: string, name: string, status: string}>
+     */
+    public function findForWorksheetSelect(string $search, int $limit = 20): array
     {
-        $limit = max(1, min(50, $limit));
-        $queryBuilder = $this->createQueryBuilder('project')
-            ->select([
-                'project.id AS id',
-                'project.code AS code',
-                'project.name AS name',
-                'project.description AS description',
-            ])
+        $qb = $this->createQueryBuilder('project')
+            ->select('project.id, project.code, project.name, project.status')
             ->orderBy('project.name', 'ASC')
-            ->addOrderBy('project.id', 'ASC')
-            ->setMaxResults($limit);
+            ->addOrderBy('project.code', 'ASC')
+            ->setMaxResults(max(1, $limit));
 
-        $search = trim($search);
         if ($search !== '') {
-            $queryBuilder
-                ->andWhere('project.name LIKE :search OR project.code LIKE :search OR project.description LIKE :search')
+            $qb
+                ->andWhere('project.code LIKE :search OR project.name LIKE :search')
                 ->setParameter('search', '%' . $search . '%');
         }
 
-        return $queryBuilder->getQuery()->getArrayResult();
+        return $qb->getQuery()->getArrayResult();
+    }
+
+    /**
+     * @return array<int, array{id: int, code: string, name: string, status: string}>
+     */
+    public function findForMachineRentalSelect(string $search, int $limit = 20): array
+    {
+        return $this->findForWorksheetSelect($search, $limit);
     }
 
     public function findList(array $filters, int $page, int $itemsPerPage): array
@@ -81,6 +85,7 @@ class ProjectRepository extends ServiceEntityRepository
                 'project.id AS id',
                 'project.code AS code',
                 'project.name AS name',
+                'project.status AS status',
                 'project.description AS description',
             ])
             ->orderBy('project.id', 'DESC')
