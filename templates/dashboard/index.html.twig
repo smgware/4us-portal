@@ -560,6 +560,37 @@
     <div class="dashboard-overview">
         <div class="page-title"><i class="bi bi-microsoft"></i> Áttekintés</div>
 
+        <div class="container-fluid p-0 mt-3">
+            <div class="card panel-card p-3">
+                <div class="row">
+                    <div class="col col-lg-12 col-12 mb-3">
+                        <div class="row">
+                            <div class="col-12"><strong><i class="bi bi-search"></i> Gép keresése</strong></div>
+                        </div>
+                        <div class="row mt-1">
+                            <div class="col-10"><input type="text" class="form-control"></div>
+                            <div class="col-2"><div class="btn btn-default" data-name="btnDashboardMachineQuickSearch"> <i class="bi bi-search"></i> <span class="d-none d-lg-inline-block">Keresés</span></div></div>
+                        </div>
+                    </div>
+
+                    <!--
+                    <div class="col col-lg-6 col-12 mb-5">
+                        <div class="row">
+                            <div class="col-12"><strong><i class="bi bi-search"></i> Munkalap keresése</strong></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-10"><input type="text" class="form-control"></div>
+                            <div class="col-2"><div class="btn btn-default"> <i class="bi bi-search"></i> <span class="d-none d-lg-inline-block">Keresés</span></div></div>
+                        </div>
+                    </div>
+                    -->
+                </div>
+
+                <div class="row">
+                    <div class="col-12" data-name="ajax-content" data-key="index_dashboard_quicksearch_result"></div>
+            </div>
+        </div>
+
 
         <section class="dashboard-metrics mt-4" aria-label="Összesített gépállapotok">
             <article class="dashboard-metric dashboard-metric--total" data-summary="total" data-value="{{ summary.total_machines }}">
@@ -711,4 +742,33 @@
             {% endif %}
         </section>
     </div>
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+
+
+    $("[data-name='btnDashboardMachineQuickSearch']").unbind("click").click(function () {
+        var formData = new FormData();
+
+        new Ajax({
+            url: '{{ path('index_dashboard_machine_quick_search') }}',
+            name: 'index_dashboard_machine_quick_search',
+            type: 'POST',
+            dataType: 'json',
+            formData: formData,
+            target: $("[data-key='index_dashboard_quicksearch_result']"),
+            function_success: function (result) {
+                if(result.success){
+                    this.target.html(result.content);
+                }
+            },
+            function_error: function (xhr) {
+                const message = xhr.responseText || 'Nem sikerült menteni az adatot.';
+                alertify.error(message);
+            }
+        }).send();
+    });
+</script>
 {% endblock %}
