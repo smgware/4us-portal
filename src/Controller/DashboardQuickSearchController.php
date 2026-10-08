@@ -15,7 +15,7 @@ class DashboardQuickSearchController extends BaseController
         Request $request
     ): Response
     {
-
+        //aa
         return $this->response(true, [
             'template' => 'dashboard/quick_search/index_dashboard_machine_quick_search.html.twig',
             'data' => [
