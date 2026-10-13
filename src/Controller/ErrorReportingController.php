@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Worksheet;
 use App\Entity\WorksheetAttachment;
 use App\Repository\MachineRepository;
+use App\Repository\UserRepository;
 use App\Repository\WorksheetAttachmentRepository;
 use App\Repository\WorksheetRepository;
 use App\Repository\WorksheetStatusTypeRepository;
@@ -84,6 +85,7 @@ class ErrorReportingController extends AbstractController
         WorksheetRepository $worksheetRepository,
         WorksheetTypeRepository $worksheetTypeRepository,
         WorksheetStatusTypeRepository $worksheetStatusTypeRepository,
+        UserRepository $userRepository,
         CsrfTokenManagerInterface $csrfTokenManager
     ): JsonResponse {
         $csrfToken = (string) $request->request->get('_csrf_token', '');
@@ -204,6 +206,12 @@ class ErrorReportingController extends AbstractController
 
         $notificationResult = [];
 
+        $mailLogoPath = $this->getParameter('kernel.project_dir') . '/public/assets/img/4us_logo_mail.png';
+        $mailLogoData = is_file($mailLogoPath) ? file_get_contents($mailLogoPath) : false;
+        $logoDataUri = is_string($mailLogoData)
+            ? 'data:image/png;base64,' . base64_encode($mailLogoData)
+            : null;
+
         $emailSent = false;
         $emailError = null;
         $email = $request->request->get('email');
@@ -250,23 +258,13 @@ class ErrorReportingController extends AbstractController
                 $mail->addAddress($recipientEmail);
                 $mail->isHTML(true);
 
-                $mailLogoPath = $this->getParameter('kernel.project_dir') . '/public/assets/img/4us_logo_mail.png';
-                if (!is_file($mailLogoPath)) {
-                    throw new \RuntimeException('Az e-mail logo nem talalhato.');
-                }
-                $mail->addEmbeddedImage(
-                    $mailLogoPath,
-                    '4us-logo-mail',
-                    '4us_logo_mail.png',
-                    PHPMailer::ENCODING_BASE64,
-                    'image/png',
-                );
                 $mail->Subject = 'Hibabejelentés rözítve: ' . $worksheetCode;
-                $mail->Body = $this->renderView('emails/error_reporting_email_user.html.twig', [
+                $mail->Body = $this->renderView('error_reporting/emails/error_reporting_email_user.html.twig', [
                     'code' => $worksheetCode,
                     'data' => $errorReportingData,
                     'fieldLabels' => $fieldLabels,
                     'attachments' => $attachments,
+                    'logoDataUri' => $logoDataUri,
                 ]);
                 $mail->AltBody = 'A hibabejelentés rögzítve. Kod: ' . $worksheetCode;
 
@@ -283,6 +281,92 @@ class ErrorReportingController extends AbstractController
                 $emailError = $exception->getMessage();
             }
         }
+
+        $adminEmailsSent = 0;
+        $adminEmailsFailed = 0;
+        $adminFieldLabels = [
+            'machine_code' => 'Gép száma',
+            'error_description' => 'Hiba leírása',
+            'company_name' => 'Cégnév',
+            'tax_number' => 'Adószám',
+            'name' => 'Bejelentő neve',
+            'email' => 'E-mail cím',
+            'phone' => 'Telefonszám',
+            'address' => 'Helyszín',
+        ];
+        $worksheetUrl = rtrim($request->getSchemeAndHttpHost() . $request->getBaseUrl(), '/')
+            . '/worksheets/sheet/' . rawurlencode($worksheetCode);
+
+        $adminRecipients = [];
+        foreach ($userRepository->findUsersByNotificationEventCode('ERROR_REPORT_ADD') as $admin) {
+            $adminRecipients[$admin->getId() ?? spl_object_id($admin)] = $admin;
+        }
+        foreach ($userRepository->findBy(['status' => '1']) as $user) {
+            if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+                $adminRecipients[$user->getId() ?? spl_object_id($user)] = $user;
+            }
+        }
+
+        foreach ($adminRecipients as $admin) {
+            $adminEmail = trim((string) $admin->getEmail());
+            if ($adminEmail === '' || !filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            try {
+                $mail = new PHPMailer(true);
+                $host = (string) $this->getParameter('app.mail.host');
+                if ($host !== '') {
+                    $mail->isSMTP();
+                    $mail->Host = $host;
+                    $mail->SMTPAuth = (bool) $this->getParameter('app.mail.smtp_auth');
+                    $mail->Username = (string) $this->getParameter('app.mail.username');
+                    $mail->Password = (string) $this->getParameter('app.mail.password');
+                    $mail->Port = (int) $this->getParameter('app.mail.port');
+                    $encryption = (string) $this->getParameter('app.mail.encryption');
+                    if ($encryption !== '' && strtolower($encryption) !== 'none') {
+                        $mail->SMTPSecure = $encryption;
+                    }
+                }
+
+                $mail->CharSet = 'UTF-8';
+                $mail->setFrom(
+                    (string) $this->getParameter('app.mail.from'),
+                    (string) $this->getParameter('app.mail.from_name'),
+                );
+                $mail->addAddress($adminEmail, (string) $admin->getName());
+                $mail->isHTML(true);
+                $mail->Subject = 'Új hibabejelentés érkezett: ' . $worksheetCode;
+                $mail->Body = $this->renderView('error_reporting/emails/error_reporting_email_admin.html.twig', [
+                    'code' => $worksheetCode,
+                    'data' => $errorReportingData,
+                    'fieldLabels' => $adminFieldLabels,
+                    'attachments' => $attachments,
+                    'worksheetUrl' => $worksheetUrl,
+                    'logoDataUri' => $logoDataUri,
+                ]);
+                $mail->AltBody = 'Új hibabejelentés érkezett. Kód: ' . $worksheetCode
+                    . PHP_EOL . 'Munkalap: ' . $worksheetUrl;
+
+                foreach ($attachments as $attachment) {
+                    $absolutePath = $attachment['absolutePath'] ?? '';
+                    if ($absolutePath !== '' && is_file($absolutePath)) {
+                        $mail->addAttachment($absolutePath, $attachment['originalName']);
+                    }
+                }
+
+                $mail->send();
+                ++$adminEmailsSent;
+            } catch (\Throwable $exception) {
+                ++$adminEmailsFailed;
+            }
+        }
+
+        $notificationResult = [
+            'reporterEmailSent' => $emailSent,
+            'adminEmailsSent' => $adminEmailsSent,
+            'adminEmailsFailed' => $adminEmailsFailed,
+        ];
 
         return $this->json([
             'success' => true,

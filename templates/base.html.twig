@@ -58,10 +58,12 @@
                 <span class="menu-text">Áttekintés</span>
             </a>
 
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
             <a href="{{ path('index_worksheets') }}" class="{{ app.request.attributes.get('_route') == 'index_worksheets' ? 'active' : '' }}">
                 <i class="bi bi-clipboard-check"></i>
                 <span class="menu-text">Munkalapok</span>
             </a>
+            {% endif %}
 
 
             {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}

@@ -198,18 +198,21 @@
         <td colspan="2"><div class="date-row">Dátum: <span class="field-value" style="min-width: 38mm; text-align: center;">{{ documentDate|date('Y-m-d') }}</span></div></td>
     </tr>
     <tr>
-        <td>
+        <td colspan="2">
             <div class="signature-space">
                 {% if editor and editor.signature %}<img class="signature-image" src="{{ editor.signature }}" alt="Aláírás">{% endif %}
             </div>
             <div class="signature-line">{{ isReturn ? 'Átvevő' : 'Átadó' }}</div>
             {% if editor %}<div class="signature-name">{{ editor.name ?: editor.userName }}</div>{% endif %}
         </td>
+
+        <!--
         <td>
             <div class="signature-space"></div>
             <div class="signature-line">{{ isReturn ? 'Átadó' : 'Átvevő' }}</div>
             {% if partnerContact %}<div class="signature-name">{{ partnerContact.name }}</div>{% endif %}
         </td>
+        -->
     </tr>
 </table>
 </body>

@@ -1,19 +1,125 @@
+<style>
+    [data-dashboard-machine-actions] .dashboard-machine-action {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        min-height: 62px;
+        padding: 8px 14px 8px 8px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card-bg);
+        color: var(--text);
+        text-align: left;
+        font-weight: 700;
+    }
+    [data-dashboard-machine-actions] .dashboard-machine-action:hover { background: var(--hover-bg); }
+    [data-dashboard-machine-actions] .dashboard-machine-action__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 58px;
+        height: 46px;
+        border-radius: 10px;
+        font-size: 1.45rem;
+    }
+    [data-dashboard-machine-actions] .dashboard-machine-action__icon--error { color: var(--dashboard-red); background: rgba(220, 53, 69, .12); }
+    [data-dashboard-machine-actions] .dashboard-machine-action__icon--handover { color: var(--dashboard-green); background: rgba(25, 135, 84, .12); }
+    [data-dashboard-machine-actions] .dashboard-machine-action__icon--return { color: var(--dashboard-blue); background: rgba(13, 110, 253, .12); }
+    [data-dashboard-machine-actions] .dashboard-machine-action__icon--move { color: var(--dashboard-amber); background: rgba(255, 153, 0, .14); }
+    [data-dashboard-machine-actions] .dashboard-machine-action__code { color: var(--muted); font-size: .75rem; font-weight: 600; }
+</style>
 
+<div class="container-fluid p-0" data-dashboard-machine-actions>
+    <div class="page-title mb-3"><i class="bi bi-grid-3x3-gap-fill"></i> Mit szeretnél csinálni?</div>
 
-
-<div class="container-fluid p-0 mt-3">
-    <div class="card panel-card p-3">
-        <div class="row">
-            <div class="col-12">
-                <div class="page-title"><i class="bi bi-question-circle-fill"></i> Mit szeretnél csinálni?</div>
-            </div>
+    <div class="row g-2">
+        <div class="col-lg-6 col-12">
+            <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-type="ERROR_REPORT" data-machine-id="{{ machine.id }}">
+                <span class="dashboard-machine-action__icon dashboard-machine-action__icon--error"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
+                <span>Hibajegy létrehozás</span>
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
-        <div class="row">
-            <div class="col-12">
-                  <div class="btn btn-default w-50">
-                      <span><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
-                  </div>
+
+        {% if handoverWorksheet %}
+                <div class="col-lg-6 col-12">
+                    <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-id="{{ handoverWorksheet.id }}">
+                        <span class="dashboard-machine-action__icon dashboard-machine-action__icon--handover"><i class="bi bi-box-arrow-up-right"></i></span>
+                        <span>Átadási <span class="dashboard-machine-action__code">({{ handoverWorksheet.code }})</span></span>
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+        {% endif %}
+
+        {% if returnWorksheet %}
+                <div class="col-lg-6 col-12">
+                    <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-id="{{ returnWorksheet.id }}">
+                        <span class="dashboard-machine-action__icon dashboard-machine-action__icon--return"><i class="bi bi-box-arrow-in-down-left"></i></span>
+                        <span>Visszavételi <span class="dashboard-machine-action__code">({{ returnWorksheet.code }})</span></span>
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+        {% endif %}
+
+        {% if not rental %}
+            <div class="col-lg-6 col-12">
+                <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-type="MACHINE_MOVE_BETWEEN_LOCATIONS" data-machine-id="{{ machine.id }}">
+                    <span class="dashboard-machine-action__icon dashboard-machine-action__icon--move"><i class="bi bi-arrow-left-right"></i></span>
+                    <span>Telephelyek közötti mozgatás</span>
+                    <i class="bi bi-chevron-right"></i>
+                </button>
             </div>
-        </div>
+        {% endif %}
+
     </div>
 </div>
+
+<script>
+    (function () {
+        const root = $('[data-dashboard-machine-actions]').last();
+
+        root.find('[data-dashboard-worksheet-action]')
+            .off('click.dashboardMachineAction')
+            .on('click.dashboardMachineAction', function () {
+                const button = $(this);
+                const formData = new FormData();
+                const worksheetId = String(button.attr('data-worksheet-id') || '');
+                const worksheetType = String(button.attr('data-worksheet-type') || '');
+                const machineId = String(button.attr('data-machine-id') || '');
+
+                if (worksheetId !== '') {
+                    formData.set('worksheet_id', worksheetId);
+                }
+                if (worksheetType !== '') {
+                    formData.set('code_worksheet_type', worksheetType);
+                }
+                if (machineId !== '') {
+                    formData.set('machine_id', machineId);
+                }
+
+                new Ajax({
+                    url: {{ path('index_worksheets_add')|json_encode|raw }},
+                    name: 'dashboard_machine_worksheet_action_' + Date.now(),
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    target: null,
+                    function_success: function (result) {
+                        if (!result.success) {
+                            alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalapot.');
+                            return;
+                        }
+
+                        $('#worksheet_add_content').remove();
+                        $('<div>', { id: 'worksheet_add_content', html: result.content }).appendTo('body');
+                    },
+                    function_error: function (xhr) {
+                        const error = xhr.responseJSON?.data?.error;
+                        alertify.error(error === 'notfound' ? 'A munkalap nem található.' : (error || 'Nem sikerült betölteni a munkalapot.'));
+                    }
+                }).send();
+            });
+    })();
+</script>

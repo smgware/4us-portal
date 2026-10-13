@@ -1,5 +1,5 @@
 {% extends 'base_login.html.twig' %}
-{% block title %}Hibabejelentes - Portal Sigma{% endblock %}
+{% block title %}Hibabejelentés - 4US Zrt{% endblock %}
 {% block body %}
 
     <style>
@@ -132,8 +132,8 @@
         <div class="error-reporting-shell">
             <section class="error-reporting-card">
                 <div class="error-reporting-card__header">
-                    <h1 class="error-reporting-title">Hibabejelentes</h1>
-                    <p class="error-reporting-subtitle">Toltsd ki az adatokat, majd kuldd be a hibabejelentest.</p>
+                    <h1 class="error-reporting-title">Hibabejelentés</h1>
+                    <p class="error-reporting-subtitle">Kérjük töltse ki az alábbi adatokat.</p>
                 </div>
 
                 <div class="error-reporting-card__body">
@@ -409,7 +409,8 @@
                     dataType: 'json',
                     formData: formData,
                     function_success: function (result) {
-                        alertify.alert('Sikeres hibabejelentés', 'A hibabejelentés kódja:<br><strong>' + result.data.code + '</strong>');
+                         alertify.alert('Info', 'Sikeres hibabejelentés. <br><br> Kollégáink hamarosan felveszik Önnel a kapcsolatot.');
+
                         $('#errorReportingForm')[0].reset();
                         selectedFiles.splice(0, selectedFiles.length);
                         renderAttachments();

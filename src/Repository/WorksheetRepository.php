@@ -54,6 +54,41 @@ class WorksheetRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findLatestOpenByRentalAndType(int $machineRentalId, string $worksheetTypeCode): ?Worksheet
+    {
+        return $this->createQueryBuilder('worksheet')
+            ->innerJoin('worksheet.worksheetType', 'worksheetType')
+            ->innerJoin('worksheet.worksheetStatusType', 'worksheetStatusType')
+            ->andWhere('worksheet.machineRentalId = :machineRentalId')
+            ->andWhere('worksheetType.code = :worksheetTypeCode')
+            ->andWhere('worksheet.status = :active')
+            ->andWhere('worksheetStatusType.code NOT IN (:finalStatusCodes)')
+            ->setParameter('machineRentalId', $machineRentalId)
+            ->setParameter('worksheetTypeCode', $worksheetTypeCode)
+            ->setParameter('active', '1')
+            ->setParameter('finalStatusCodes', ['CLOSED', 'REPAIRED_RETURNED', 'TAKEN_BACK'])
+            ->orderBy('worksheet.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findLatestByRentalAndTypeCode(int $machineRentalId, string $worksheetTypeCode): ?Worksheet
+    {
+        return $this->createQueryBuilder('worksheet')
+            ->innerJoin('worksheet.worksheetType', 'worksheetType')
+            ->andWhere('worksheet.machineRentalId = :machineRentalId')
+            ->andWhere('worksheetType.code = :worksheetTypeCode')
+            ->andWhere('worksheet.status = :active')
+            ->setParameter('machineRentalId', $machineRentalId)
+            ->setParameter('worksheetTypeCode', $worksheetTypeCode)
+            ->setParameter('active', '1')
+            ->orderBy('worksheet.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     public function findList(array $filters, int $page, int $itemsPerPage): array
     {
         $page = max(1, $page);

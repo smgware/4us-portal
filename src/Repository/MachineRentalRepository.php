@@ -42,13 +42,29 @@ class MachineRentalRepository extends ServiceEntityRepository
 
     public function findOpenByMachine(Machine $machine, ?int $excludeRentalId = null): ?MachineRental
     {
+        $closedReturnWorksheet = $this->entityManager->createQueryBuilder()
+            ->select('returnWorksheet.id')
+            ->from(Worksheet::class, 'returnWorksheet')
+            ->innerJoin('returnWorksheet.worksheetType', 'returnWorksheetType')
+            ->innerJoin('returnWorksheet.worksheetStatusType', 'returnWorksheetStatus')
+            ->andWhere('returnWorksheet.machineRentalId = machineRental.id')
+            ->andWhere('returnWorksheet.status = :worksheetActive')
+            ->andWhere('returnWorksheetType.code = :returnWorksheetTypeCode')
+            ->andWhere('returnWorksheetStatus.code IN (:finalReturnStatusCodes)');
+
         $qb = $this->entityManager->createQueryBuilder()
             ->select('machineRental')
             ->from(MachineRental::class, 'machineRental')
             ->andWhere('machineRental.machine = :machine')
             ->andWhere('machineRental.status = :openStatus')
+            ->andWhere(sprintf('NOT EXISTS (%s)', $closedReturnWorksheet->getDQL()))
             ->setParameter('machine', $machine)
             ->setParameter('openStatus', '1')
+            ->setParameter('worksheetActive', '1')
+            ->setParameter('returnWorksheetTypeCode', 'MACHINE_RETURN')
+            ->setParameter('finalReturnStatusCodes', ['CLOSED', 'REPAIRED_RETURNED', 'TAKEN_BACK'])
+            ->orderBy('machineRental.datetimeRentalStart', 'DESC')
+            ->addOrderBy('machineRental.id', 'DESC')
             ->setMaxResults(1);
 
         if ($excludeRentalId !== null && $excludeRentalId > 0) {

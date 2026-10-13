@@ -151,6 +151,7 @@ class WorksheetsController extends BaseController
             $request->request->get('worksheet_id', $request->request->get('id')),
         );
         $machineRentalId = $this->positiveInt($request->request->get('rental_id'));
+        $machineId = $this->positiveInt($request->request->get('machine_id'));
         $worksheetTypeCode = trim((string) $request->request->get('code_worksheet_type', ''));
 
         $worksheet = $worksheetId ? $worksheetRepository->find($worksheetId) : null;
@@ -181,6 +182,7 @@ class WorksheetsController extends BaseController
             'templateData' => [
                 'id' => $worksheetId,
                 'rental_id' => $machineRentalId,
+                'machine_id' => $machineId,
                 'code_worksheet_type' => $worksheetTypeCode,
             ],
         ]);
@@ -271,9 +273,10 @@ class WorksheetsController extends BaseController
             $lastEditorName = $lastEditor?->getName() ?: $lastEditor?->getUserName();
         }
         $worksheetData = $worksheet?->getData() ?? [];
+        $requestedMachineId = $this->positiveInt($request->request->get('machine_id'));
         $selectedMachine = $worksheet?->getMachineId()
             ? $machineRepository->find($worksheet->getMachineId())
-            : null;
+            : ($requestedMachineId ? $machineRepository->find($requestedMachineId) : null);
         $partnerProject = $worksheet?->getPartner()
             ? $machineRentalRepository->findLatestByPartner($worksheet->getPartner())?->getProject()
             : null;

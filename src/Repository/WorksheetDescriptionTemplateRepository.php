@@ -49,7 +49,7 @@ class WorksheetDescriptionTemplateRepository extends ServiceEntityRepository
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
             $qb
-                ->andWhere('descriptionTemplate.title LIKE :search OR descriptionTemplate.description LIKE :search')
+                ->andWhere('descriptionTemplate.title LIKE :search OR descriptionTemplate.code LIKE :search OR descriptionTemplate.description LIKE :search')
                 ->setParameter('search', '%' . $search . '%');
         }
 
@@ -68,6 +68,7 @@ class WorksheetDescriptionTemplateRepository extends ServiceEntityRepository
             ->select([
                 'descriptionTemplate.id AS id',
                 'descriptionTemplate.title AS title',
+                'descriptionTemplate.code AS code',
                 'descriptionTemplate.description AS description',
                 'descriptionTemplate.uidAdd AS uid_add',
                 'descriptionTemplate.uidLast AS uid_last',

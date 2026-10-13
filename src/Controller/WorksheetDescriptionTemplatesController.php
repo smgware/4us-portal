@@ -58,10 +58,14 @@ class WorksheetDescriptionTemplatesController extends BaseController
         }
 
         $title = mb_substr((string) ($postData['title'] ?? ''), 0, 255);
+        $code = mb_substr((string) ($postData['code'] ?? ''), 0, 255);
         $description = (string) ($postData['description'] ?? '');
         $errors = [];
         if ($title === '') {
             $errors[] = 'A cím megadása kötelező.';
+        }
+        if ($code === '') {
+            $errors[] = 'A kód megadása kötelező.';
         }
         if ($description === '') {
             $errors[] = 'A leírás megadása kötelező.';
@@ -82,6 +86,7 @@ class WorksheetDescriptionTemplatesController extends BaseController
 
         $template
             ->setTitle($title)
+            ->setCode($code)
             ->setDescription($description)
             ->setStatus(($postData['status'] ?? '1') === '0' ? '0' : '1')
             ->setDatetimeLast(new \DateTimeImmutable())

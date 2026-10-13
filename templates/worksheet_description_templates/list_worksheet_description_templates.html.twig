@@ -3,6 +3,7 @@
         <thead>
             <tr class="pt-2 pb-2">
                 <th class="p-2">Cím</th>
+                <th class="p-2">Kód</th>
                 <th class="p-2">Leírás</th>
                 <th class="p-2">Rögzítette</th>
                 <th class="p-2">Módosította</th>
@@ -16,6 +17,7 @@
             {% for record in records %}
                 <tr data-name="list_item" data-key="{{ record.id }}">
                     <td class="p-2 fw-600">{{ record.title }}</td>
+                    <td class="p-2">{{ record.code }}</td>
                     <td class="p-2" style="min-width:260px;max-width:520px;">
                         <div style="white-space:pre-wrap;overflow-wrap:anywhere;">{{ record.description|slice(0, 180) }}{% if record.description|length > 180 %}…{% endif %}</div>
                     </td>
@@ -49,7 +51,7 @@
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="8" class="text-center py-4">Nincs megjeleníthető adat.</td>
+                    <td colspan="9" class="text-center py-4">Nincs megjeleníthető adat.</td>
                 </tr>
             {% endfor %}
         </tbody>

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Új hibabejelentés érkezett</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f3f6fa; color:#172033; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f3f6fa;">
+        <tr><td align="center" style="padding:32px 16px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px; background-color:#ffffff; border-radius:16px; overflow:hidden;">
+                <tr><td style="padding:28px 32px 24px; background-color:#102a43;">
+                    {% if logoDataUri %}
+                        <img src="{{ logoDataUri }}" alt="Portal Sigma" width="138" style="display:block; width:138px; max-width:100%; height:auto; border:0;">
+                    {% else %}
+                        <span style="color:#ffffff; font-size:20px; font-weight:700; letter-spacing:.4px;">Portal Sigma</span>
+                    {% endif %}
+                </td></tr>
+                <tr><td style="padding:32px;">
+                    <div style="display:inline-block; padding:6px 10px; border-radius:999px; background-color:#fff1e8; color:#b54708; font-size:12px; font-weight:700; letter-spacing:.4px; text-transform:uppercase;">Új hibabejelentés</div>
+                    <h1 style="margin:16px 0 10px; color:#102a43; font-size:26px; line-height:1.25;">Hibabejelentés érkezett</h1>
+                    <p style="margin:0; color:#52657b; font-size:16px; line-height:1.6;">Egy új külső hibabejelentés vár feldolgozásra.</p>
+
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0; background-color:#f5f8fc; border:1px solid #dce5ef; border-radius:10px;">
+                        <tr><td style="padding:16px 18px;">
+                            <div style="color:#6b7c93; font-size:12px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;">Hibabejelentés azonosítója</div>
+                            <div style="margin-top:4px; color:#102a43; font-size:21px; font-weight:700; letter-spacing:.3px;">{{ code }}</div>
+                        </td></tr>
+                    </table>
+
+                    <h2 style="margin:0 0 12px; color:#102a43; font-size:18px;">A bejelentés adatai</h2>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #dce5ef; border-radius:10px; overflow:hidden;">
+                        {% for field, label in fieldLabels %}
+                            {% if data[field] is defined and data[field] is not empty %}
+                                <tr>
+                                    <td style="width:36%; padding:12px 14px; vertical-align:top; background-color:{{ loop.index is odd ? '#f8fafc' : '#ffffff' }}; color:#52657b; font-size:13px; font-weight:700;">{{ label }}</td>
+                                    <td style="padding:12px 14px; vertical-align:top; background-color:{{ loop.index is odd ? '#f8fafc' : '#ffffff' }}; color:#172033; font-size:14px; line-height:1.5; white-space:pre-line;">{{ data[field] }}</td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+
+                    {% if attachments is not empty %}
+                        <div style="margin-top:20px; padding:14px 16px; border-left:4px solid #2d7dd2; background-color:#f2f8ff; color:#31455e; font-size:14px; line-height:1.5;"><strong>Csatolt fájlok:</strong> {{ attachments|map(attachment => attachment.originalName)|join(', ') }}</div>
+                    {% endif %}
+
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:26px;"><tr><td style="border-radius:8px; background-color:#167444;"><a href="{{ worksheetUrl }}" style="display:inline-block; padding:13px 20px; color:#ffffff; font-size:14px; font-weight:700; text-decoration:none;">Munkalap megnyitása a portálon</a></td></tr></table>
+                </td></tr>
+                <tr><td style="padding:20px 32px; border-top:1px solid #e5ebf2; background-color:#f8fafc; color:#738399; font-size:12px; line-height:1.5;">Ez egy automatikusan generált értesítés a Portal Sigma rendszerből.</td></tr>
+            </table>
+        </td></tr>
+    </table>
+</body>
+</html>

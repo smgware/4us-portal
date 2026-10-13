@@ -195,6 +195,7 @@
                                     >
                                 </div>
 
+                                {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_partner_search">Partner</label>
                                     <div class="ajax-combobox" data-worksheet-combobox="partner">
@@ -223,6 +224,7 @@
                                         <div class="form-text text-warning"><i class="bi bi-exclamation-triangle"></i> A jelenlegi partner inaktív. Másik értékre cserélhető, újból nem választható ki.</div>
                                     {% endif %}
                                 </div>
+                                {% endif %}
 
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_machine_search">Gép</label>
@@ -348,7 +350,7 @@
                                             {% for descriptionTemplate in worksheetDescriptionTemplates %}
                                                 <option
                                                     value="{{ descriptionTemplate.id }}"
-                                                    data-description="{{ descriptionTemplate.description|e('html_attr') }}"
+                                                    data-description="{{ descriptionTemplate.description|e('html_attr') }}" data-code="{{ descriptionTemplate.code }}"
                                                 >{{ descriptionTemplate.title }}</option>
                                             {% endfor %}
                                         </select>
@@ -364,7 +366,9 @@
                                     <label class="text-s" for="worksheet_kilometer">KM óra állás <span class="text-danger">*</span></label>
                                     <input type="number" inputmode="decimal" min="1" class="form-control" id="worksheet_kilometer" name="kilometer" value="{{ itemData.kilometer|default(requiresOperationalDetails ? '1' : '') }}" {{ requiresOperationalDetails ? 'required' }} data-worksheet-operational-input>
                                 </div>
-                                <div class="col-md-6 col-12">
+
+
+                                <div class="col-md-6 col-12" data-name="data_block" data-type="worksheet_work_and_travel_time" >
                                     <label class="text-s" for="worksheet_work_and_travel_time">Munka és útidő (óra) <span class="text-danger">*</span></label>
                                     <input
                                         type="number"
@@ -378,7 +382,7 @@
                                         data-worksheet-operational-input
                                     >
                                 </div>
-                                <div class="col-md-6 col-12">
+                                <div class="col-md-6 col-12" data-name="data_block" data-type="worksheet_distance_to_site">
                                     <label class="text-s" for="worksheet_distance_to_site">Kiszállás (km) <span class="text-danger">*</span></label>
                                     <input
                                         type="number"
@@ -392,12 +396,14 @@
                                         data-worksheet-operational-input
                                     >
                                 </div>
+
+
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="row mb-2">
+                <div class="row mb-2" data-name="data_block" data-type="materials_used">
                     <div class="col-12">
                         <div class="panel-card p-3">
                             <div class="text-s fw-600">Felhasznált anyagok</div>
@@ -423,6 +429,8 @@
                         </div>
                     </div>
                 </div>
+
+
                 <div class="row mb-2">
                     <div class="col-12">
                         <div class="panel-card p-3">
@@ -583,3 +591,32 @@
         <i class="bi bi-chevron-right"></i>
     </button>
 </div>
+
+
+<script>
+    fieldSetup = function(){
+        if( $("select[id='worksheet_type_id'] option:selected").attr("data-code") == "MACHINE_HANDOVER" ){
+            $("[data-name='data_block'][data-type='worksheet_work_and_travel_time']").css("display","none");
+            $("[data-name='data_block'][data-type='worksheet_distance_to_site']").css("display","none");
+
+            $("[data-name='data_block'][data-type='materials_used']").css("display","none");
+
+            $("#worksheet_description_template")
+                .find("option[data-code='ATADASI']")
+                .prop("selected", true)
+                .end()
+                .trigger("change");
+
+        }
+        if( $("select[id='worksheet_type_id'] option:selected").attr("data-code") == "MACHINE_RETURN" ){
+            $("[data-name='data_block'][data-type='worksheet_work_and_travel_time']").css("display","none");
+            $("[data-name='data_block'][data-type='worksheet_distance_to_site']").css("display","none");
+        }
+
+    }
+
+    $("select[id='worksheet_type_id']").unbind("change").change(function(){
+        fieldSetup();
+    });
+
+</script>

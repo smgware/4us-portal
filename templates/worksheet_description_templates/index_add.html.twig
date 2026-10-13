@@ -17,6 +17,21 @@
     </div>
 
     <div class="mb-3">
+        <label for="worksheet-description-template-code" class="form-label">Kód</label>
+        <input
+            id="worksheet-description-template-code"
+            type="text"
+            class="form-control"
+            name="code"
+            data-name="code"
+            maxlength="255"
+            value="{{ item ? item.code : '' }}"
+            placeholder="Add meg a sablon kódját"
+            required
+        >
+    </div>
+
+    <div class="mb-3">
         <label for="worksheet-description-template-description" class="form-label">Leírás</label>
         <textarea
             id="worksheet-description-template-description"

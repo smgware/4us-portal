@@ -21,6 +21,7 @@
         const mainFormData = new FormData();
         mainFormData.set('id', {{ (id|default(''))|json_encode|raw }});
         mainFormData.set('rental_id', {{ (rental_id|default(''))|json_encode|raw }});
+        mainFormData.set('machine_id', {{ (machine_id|default(''))|json_encode|raw }});
         mainFormData.set('code_worksheet_type', {{ (code_worksheet_type|default(''))|json_encode|raw }});
 
         new Ajax({
