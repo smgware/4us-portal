@@ -4,6 +4,7 @@
 {% set selectedStatusId = item and item.worksheetStatusType ? item.worksheetStatusType.id : null %}
 {% set selectedTypeCode = item and item.worksheetType ? item.worksheetType.code : (selectedWorksheetType ? selectedWorksheetType.code : '') %}
 {% set isMachineMove = selectedTypeCode == 'MACHINE_MOVE_BETWEEN_LOCATIONS' %}
+{% set isExistingHandoverOrReturn = item and item.id and selectedTypeCode in ['MACHINE_HANDOVER', 'MACHINE_RETURN'] %}
 {% set requiresOperationalDetails = true %}
 {% set conditionTypes = ['Elölről', 'Hátulról', 'Jobbról', 'Balról', 'Üzem / KM óra'] %}
 
@@ -170,7 +171,7 @@
 
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_status_type_id">Státusz</label>
-                                    <select name="worksheet_status_type_id" id="worksheet_status_type_id" class="form-control" required>
+                                    <select name="worksheet_status_type_id" id="worksheet_status_type_id" class="form-control" required >
                                         <option value="">Válassz státuszt...</option>
                                         {% for worksheetStatusType in worksheetStatusTypes %}
                                             <option
@@ -195,7 +196,6 @@
                                     >
                                 </div>
 
-                                {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_partner_search">Partner</label>
                                     <div class="ajax-combobox" data-worksheet-combobox="partner">
@@ -224,7 +224,6 @@
                                         <div class="form-text text-warning"><i class="bi bi-exclamation-triangle"></i> A jelenlegi partner inaktív. Másik értékre cserélhető, újból nem választható ki.</div>
                                     {% endif %}
                                 </div>
-                                {% endif %}
 
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_machine_search">Gép</label>
@@ -518,6 +517,7 @@
                     </div>
                 </div>
 
+                {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
                 <div class="row mb-2">
                     <div class="col-12">
                         <div class="panel-card p-3">
@@ -536,6 +536,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif  %}
 
                 <div class="row mb-2">
                     <div class="col-12">
@@ -618,5 +619,6 @@
     $("select[id='worksheet_type_id']").unbind("change").change(function(){
         fieldSetup();
     });
+    fieldSetup();
 
 </script>

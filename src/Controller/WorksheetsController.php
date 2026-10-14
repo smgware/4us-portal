@@ -33,7 +33,6 @@ class WorksheetsController extends BaseController
     private const ATTACHMENTS_PER_PAGE = 5;
     private const FINAL_STATUS_CODES = ['CLOSED', 'REPAIRED_RETURNED', 'TAKEN_BACK'];
     private const MACHINE_MOVE_WORKSHEET_TYPE_CODE = 'MACHINE_MOVE_BETWEEN_LOCATIONS';
-    private const SERVICE_WORKSHEET_TYPE_CODE = 'ERROR_REPORT';
     private const MATERIAL_UNITS = [
         ['name' => 'Darab', 'short' => 'db'],
         ['name' => 'Méter', 'short' => 'm'],
@@ -61,7 +60,6 @@ class WorksheetsController extends BaseController
         WorksheetStatusTypeRepository $worksheetStatusTypeRepository,
         WorksheetRepository $worksheetRepository,
     ): Response {
-        $isServiceUser = $this->isServiceUser();
         $worksheetStatusFilters = [];
         foreach ($worksheetStatusTypeRepository->findBy([], ['title' => 'ASC']) as $worksheetStatusType) {
             $code = trim((string) $worksheetStatusType->getCode());
@@ -84,23 +82,6 @@ class WorksheetsController extends BaseController
         }
 
         $worksheetTypes = $worksheetTypeRepository->findBy(['status' => '1'], ['title' => 'ASC']);
-        if ($isServiceUser) {
-            $worksheetTypes = array_values(array_filter(
-                $worksheetTypes,
-                static fn ($worksheetType): bool => $worksheetType->getCode() === self::SERVICE_WORKSHEET_TYPE_CODE,
-            ));
-            $serviceWorksheetTypeIds = array_filter(array_map(
-                static fn ($worksheetType): ?int => $worksheetType->getId(),
-                $worksheetTypes,
-            ));
-            $worksheetStatusFilters = array_filter(
-                $worksheetStatusFilters,
-                static fn (array $filter): bool => array_intersect(
-                    $filter['worksheet_type_ids'],
-                    $serviceWorksheetTypeIds,
-                ) !== [],
-            );
-        }
         $worksheetTypesByCode = [];
         foreach ($worksheetTypes as $worksheetType) {
             $worksheetTypesByCode[(string) $worksheetType->getCode()] = $worksheetType;
@@ -119,9 +100,6 @@ class WorksheetsController extends BaseController
         );
         $worksheetTypeShortcuts = [];
         foreach ($shortcutDefinitions as $shortcutDefinition) {
-            if ($isServiceUser && $shortcutDefinition['code'] !== self::SERVICE_WORKSHEET_TYPE_CODE) {
-                continue;
-            }
             $worksheetType = $worksheetTypesByCode[$shortcutDefinition['code']] ?? null;
             if (!$worksheetType) {
                 continue;
@@ -164,13 +142,6 @@ class WorksheetsController extends BaseController
         $worksheetType = $worksheetTypeCode !== ''
             ? $worksheetTypeRepository->findOneBy(['code' => $worksheetTypeCode])
             : null;
-
-        if ($this->isServiceUser() && (
-            ($worksheet && $worksheet->getWorksheetType()?->getCode() !== self::SERVICE_WORKSHEET_TYPE_CODE)
-            || ($worksheetTypeCode !== '' && $worksheetTypeCode !== self::SERVICE_WORKSHEET_TYPE_CODE)
-        )) {
-            return $this->serviceWorksheetAccessDenied();
-        }
 
         if (!$worksheet && $machineRentalId && $worksheetType) {
             $worksheet = $worksheetRepository->findOneByRentalAndType($machineRentalId, $worksheetType);
@@ -217,13 +188,6 @@ class WorksheetsController extends BaseController
             $selectedWorksheetType = $worksheetTypeRepository->findOneBy(['code' => $worksheetTypeCode]);
         }
 
-        if ($this->isServiceUser() && (
-            ($worksheet && $worksheet->getWorksheetType()?->getCode() !== self::SERVICE_WORKSHEET_TYPE_CODE)
-            || ($worksheetTypeCode !== '' && $worksheetTypeCode !== self::SERVICE_WORKSHEET_TYPE_CODE)
-        )) {
-            return $this->serviceWorksheetAccessDenied();
-        }
-
         $conditionImages = [];
         if ($worksheet) {
             $conditionImages = $this->serializeAttachments(
@@ -241,22 +205,10 @@ class WorksheetsController extends BaseController
         }
 
         $worksheetTypes = $worksheetTypeRepository->findBy(['status' => '1'], ['title' => 'ASC']);
-        if ($this->isServiceUser()) {
-            $worksheetTypes = array_values(array_filter(
-                $worksheetTypes,
-                static fn ($worksheetType): bool => $worksheetType->getCode() === self::SERVICE_WORKSHEET_TYPE_CODE,
-            ));
-        }
         if ($worksheet?->getWorksheetType() && !in_array($worksheet->getWorksheetType(), $worksheetTypes, true)) {
             $worksheetTypes[] = $worksheet->getWorksheetType();
         }
         $worksheetStatusTypes = $worksheetStatusTypeRepository->findBy([], ['title' => 'ASC']);
-        if ($this->isServiceUser()) {
-            $worksheetStatusTypes = array_values(array_filter(
-                $worksheetStatusTypes,
-                static fn ($worksheetStatusType): bool => $worksheetStatusType->getWorksheetType()?->getCode() === self::SERVICE_WORKSHEET_TYPE_CODE,
-            ));
-        }
 
         $notificationContacts = [];
         $selectedNotificationContactIds = [];
@@ -526,13 +478,6 @@ class WorksheetsController extends BaseController
             $errors[] = 'A kiválasztott státusz nem tartozik a munkalaptípushoz.';
         }
 
-        if ($this->isServiceUser() && (
-            ($worksheet && $worksheet->getWorksheetType()?->getCode() !== self::SERVICE_WORKSHEET_TYPE_CODE)
-            || ($worksheetType && $worksheetType->getCode() !== self::SERVICE_WORKSHEET_TYPE_CODE)
-        )) {
-            return $this->serviceWorksheetAccessDenied();
-        }
-
         if ($errors !== []) {
             return $this->response(false, [
                 'data' => ['error' => implode('<br>', $errors), 'errors' => $errors],
@@ -769,10 +714,6 @@ class WorksheetsController extends BaseController
             ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
-        if ($this->isServiceUser()) {
-            $filters['allowed_worksheet_type_codes'] = [self::SERVICE_WORKSHEET_TYPE_CODE];
-        }
-
         $page = $this->positiveInt($request->request->get('page', $request->query->get('page', 1))) ?? 1;
         $list = $worksheetRepository->findList($filters, $page, self::ITEMS_PER_PAGE);
 
@@ -810,12 +751,6 @@ class WorksheetsController extends BaseController
         ]);
         if (!$worksheet || $worksheet->getStatus() !== '1') {
             throw $this->createNotFoundException('A munkalap nem található.');
-        }
-
-        if ($this->isServiceUser()
-            && $worksheet->getWorksheetType()?->getCode() !== self::SERVICE_WORKSHEET_TYPE_CODE
-        ) {
-            throw $this->createAccessDeniedException('No access to this worksheet.');
         }
 
         $worksheetData = $worksheet->getData() ?? [];
@@ -1400,18 +1335,6 @@ class WorksheetsController extends BaseController
         }
 
         return $result;
-    }
-
-    private function isServiceUser(): bool
-    {
-        return $this->isGranted('ROLE_SERVICE');
-    }
-
-    private function serviceWorksheetAccessDenied(): Response
-    {
-        return $this->response(false, [
-            'data' => ['error' => 'SERVICE jogosultsaggal csak ERROR_REPORT munkalap kezelheto.'],
-        ], 'json', Response::HTTP_FORBIDDEN);
     }
 
     private function isSafeInlineImage(string $mimeType): bool

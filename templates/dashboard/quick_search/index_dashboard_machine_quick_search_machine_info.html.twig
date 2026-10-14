@@ -5,9 +5,32 @@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-12">
-
+    <div class="row g-3">
+        <div class="col-lg-7 col-12">
+            <div class="border rounded p-3 h-100 bg-light">
+                <div class="fw-semibold mb-2"><i class="bi bi-gear-wide-connected"></i> Gép adatai</div>
+                <div class="row g-2 small">
+                    <div class="col-md-6"><span class="text-muted">Megnevezés:</span> <strong>{{ machine.title|default('-') }}</strong></div>
+                    <div class="col-md-6"><span class="text-muted">Gépkód:</span> <strong>{{ machine.code|default('-') }}</strong></div>
+                    <div class="col-md-6"><span class="text-muted">Kategória:</span> <strong>{{ machine.machineCategory ? machine.machineCategory.title : '-' }}</strong></div>
+                    <div class="col-md-6"><span class="text-muted">Telephely:</span> <strong>{{ machine.companySite ? machine.companySite.title : '-' }}</strong></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5 col-12">
+            <div class="border rounded p-3 h-100 {{ activeMachineRental ? 'border-warning' : 'bg-light' }}">
+                <div class="fw-semibold mb-2"><i class="bi bi-repeat"></i> Aktív gépkölcsönzés</div>
+                {% if activeMachineRental %}
+                    <div class="row g-2 small">
+                        <div class="col-12"><span class="badge text-bg-warning">Van aktív gépkölcsönzés</span></div>
+                        <div class="col-12"><span class="text-muted">Partner:</span> <strong>{{ activeMachineRental.partner ? activeMachineRental.partner.name : '-' }}</strong></div>
+                        <div class="col-12"><span class="text-muted">Projekt:</span> <strong>{{ activeMachineRental.project ? activeMachineRental.project.name : '-' }}</strong></div>
+                        <div class="col-12"><span class="text-muted">Bérlés kezdete:</span> <strong>{{ activeMachineRental.datetimeRentalStart ? activeMachineRental.datetimeRentalStart|date('Y-m-d H:i') : '-' }}</strong></div>
+                    </div>
+                {% else %}
+                    <span class="badge text-bg-success">Nincs aktív gépkölcsönzés</span>
+                {% endif %}
+            </div>
         </div>
     </div>
 

@@ -1,3 +1,47 @@
+<style>
+    .dashboard-machine-actions .dashboard-machine-action {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: 58px;
+        padding: 9px 12px;
+        border: 1px solid #e5eaf1;
+        border-radius: 10px;
+        color: var(--text);
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(20, 35, 60, .05);
+        font-weight: 600;
+        text-align: left;
+        transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    .dashboard-machine-actions .dashboard-machine-action:hover:not(:disabled) {
+        border-color: #cfd8e5;
+        box-shadow: 0 3px 10px rgba(20, 35, 60, .1);
+        transform: translateY(-1px);
+    }
+    .dashboard-machine-actions .dashboard-machine-action:disabled { opacity: .55; }
+    .dashboard-machine-actions .dashboard-machine-action__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        margin-right: 14px;
+        border-radius: 10px;
+        font-size: 1.45rem;
+    }
+    .dashboard-machine-actions .dashboard-machine-action__chevron {
+        margin-left: auto;
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+    .dashboard-machine-actions .is-error .dashboard-machine-action__icon { color: #f03e4c; background: #fff0f1; }
+    .dashboard-machine-actions .is-handover .dashboard-machine-action__icon { color: #16a36a; background: #ebfaf2; }
+    .dashboard-machine-actions .is-return .dashboard-machine-action__icon { color: #2774e8; background: #edf4ff; }
+    .dashboard-machine-actions .is-move .dashboard-machine-action__icon { color: #ec901b; background: #fff4e5; }
+</style>
+
 <div class="container-fluid p-0">
     <div class="row">
         <div class="col-12">
@@ -5,10 +49,39 @@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-12">
-
+    <div class="row g-2 dashboard-machine-actions" data-dashboard-machine-actions>
+        <div class="col col-lg-6 col-12">
+            <button type="button" class="btn dashboard-machine-action is-error" data-dashboard-machine-worksheet data-machine-id="{{ machine.id }}" data-worksheet-type="ERROR_REPORT">
+                <span class="dashboard-machine-action__icon"><i class="bi bi-wrench-adjustable"></i></span>
+                Hibajegy létrehozás
+                <i class="bi bi-chevron-right dashboard-machine-action__chevron"></i>
+            </button>
         </div>
+
+        {% if hasActiveMachineRental %}
+            <div class="col col-lg-6 col-12">
+                <button type="button" class="btn dashboard-machine-action is-handover" data-dashboard-machine-worksheet data-worksheet-id="{{ handoverWorksheetId|default('') }}" data-worksheet-type="MACHINE_HANDOVER" {{ handoverWorksheetId ? '' : 'disabled' }}>
+                    <span class="dashboard-machine-action__icon"><i class="bi bi-box-arrow-up-right"></i></span>
+                    Átadási
+                    <i class="bi bi-chevron-right dashboard-machine-action__chevron"></i>
+                </button>
+            </div>
+            <div class="col col-lg-6 col-12">
+                <button type="button" class="btn dashboard-machine-action is-return" data-dashboard-machine-worksheet data-worksheet-id="{{ returnWorksheetId|default('') }}" data-worksheet-type="MACHINE_RETURN" {{ returnWorksheetId ? '' : 'disabled' }}>
+                    <span class="dashboard-machine-action__icon"><i class="bi bi-box-arrow-in-left"></i></span>
+                    Visszavételi
+                    <i class="bi bi-chevron-right dashboard-machine-action__chevron"></i>
+                </button>
+            </div>
+        {% else %}
+            <div class="col col-lg-6 col-12">
+                <button type="button" class="btn dashboard-machine-action is-move" data-dashboard-machine-worksheet data-machine-id="{{ machine.id }}" data-worksheet-type="MACHINE_MOVE_BETWEEN_LOCATIONS">
+                    <span class="dashboard-machine-action__icon"><i class="bi bi-arrow-left-right"></i></span>
+                    Telephelyek közötti mozgatás
+                    <i class="bi bi-chevron-right dashboard-machine-action__chevron"></i>
+                </button>
+            </div>
+        {% endif %}
     </div>
 
 </div>
