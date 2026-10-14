@@ -560,54 +560,7 @@
     <div class="dashboard-overview">
         <div class="page-title"><i class="bi bi-microsoft"></i> Áttekintés</div>
 
-        <!--quick search-->
-
-        <div class="container-fluid p-0 mt-3">
-            <div class="card panel-card p-3">
-                <div class="row">
-                    <div class="col col-lg-12 col-12 mb-3">
-                        <div class="row">
-                            <div class="col-12"><strong><i class="bi bi-search"></i> Gép keresése</strong></div>
-                        </div>
-                        <div class="row mt-1">
-                            <div class="col-10">
-                                <div class="ajax-combobox" data-dashboard-combobox="machine">
-                                    <div class="input-group">
-                                        <input
-                                            type="text"
-                                            class="form-control"
-                                            id="dashboard_machine_quick_search"
-                                            data-name="inputQuckSearch"
-                                            placeholder="Gép kiválasztása..."
-                                            autocomplete="off"
-                                            role="combobox"
-                                            aria-autocomplete="list"
-                                            aria-controls="dashboard_machine_quick_search_results"
-                                            aria-expanded="false"
-                                            data-ajax-combobox-search
-                                        >
-                                        <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Gép kiválasztásának törlése">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    </div>
-                                    <input type="hidden" id="dashboard_machine_quick_search_id" data-ajax-combobox-value>
-                                    <div id="dashboard_machine_quick_search_results" class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
-                                </div>
-                            </div>
-                            <div class="col-2"><button type="button" class="btn btn-default" data-name="btnDashboardMachineQuickSearch" disabled> <i class="bi bi-search"></i> <span class="d-none d-lg-inline-block">Keresés</span></button></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card panel-card p-3 mt-3" style="display:none">
-                <div class="row">
-                    <div class="col-12" data-name="ajax-content" data-key="index_dashboard_quicksearch_result"></div>
-                </div>
-            </div>
-       </div>
-        <!--quick search end-->
-
+        {% include 'dashboard/quick_search/index_dashboard_machine_quick_search.html.twig' %}
 
         {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
         <section class="dashboard-metrics mt-4" aria-label="Összesített gépállapotok">
@@ -765,59 +718,4 @@
 
 {% block scripts %}
 
-<script>
-
-
-    $(function () {
-        const machineComboboxRoot = $('[data-dashboard-combobox="machine"]');
-        const machineIdInput = machineComboboxRoot.find('[data-ajax-combobox-value]');
-        const quickSearchButton = $('[data-name="btnDashboardMachineQuickSearch"]');
-
-        function toggleQuickSearchButton() {
-            quickSearchButton.prop('disabled', String(machineIdInput.val() || '') === '');
-        }
-
-        new AjaxCombobox(machineComboboxRoot, {
-            endpoint: {{ path('list_worksheet_machine_select_list')|json_encode|raw }},
-            requestName: 'dashboard_machine_quick_search_' + Date.now(),
-            emptyText: 'Nincs a keresésnek megfelelő gép.',
-            onSelect: toggleQuickSearchButton,
-            onClear: toggleQuickSearchButton
-        });
-
-        machineIdInput
-            .off('change.dashboardMachineQuickSearch')
-            .on('change.dashboardMachineQuickSearch', toggleQuickSearchButton);
-        toggleQuickSearchButton();
-
-        quickSearchButton.off('click.dashboardMachineQuickSearch').on('click.dashboardMachineQuickSearch', function () {
-            const machineId = String(machineIdInput.val() || '');
-            if (machineId === '') {
-                return;
-            }
-
-        var formData = new FormData();
-        formData.set('machine_id', machineId);
-
-        new Ajax({
-            url: '{{ path('index_dashboard_machine_quick_search') }}',
-            name: 'index_dashboard_machine_quick_search',
-            type: 'POST',
-            dataType: 'json',
-            formData: formData,
-            target: $("[data-key='index_dashboard_quicksearch_result']"),
-            function_success: function (result) {
-                if(result.success){
-                    this.target.parent().parent().fadeIn(100);
-                    this.target.html(result.content);
-                }
-            },
-            function_error: function (xhr) {
-                const message = xhr.responseText || 'Nem sikerült menteni az adatot.';
-                alertify.error(message);
-            }
-        }).send();
-        });
-    });
-</script>
 {% endblock %}

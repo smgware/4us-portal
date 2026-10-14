@@ -1,125 +1,135 @@
-<style>
-    [data-dashboard-machine-actions] .dashboard-machine-action {
-        display: grid;
-        grid-template-columns: 58px minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 14px;
-        width: 100%;
-        min-height: 62px;
-        padding: 8px 14px 8px 8px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--card-bg);
-        color: var(--text);
-        text-align: left;
-        font-weight: 700;
-    }
-    [data-dashboard-machine-actions] .dashboard-machine-action:hover { background: var(--hover-bg); }
-    [data-dashboard-machine-actions] .dashboard-machine-action__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 58px;
-        height: 46px;
-        border-radius: 10px;
-        font-size: 1.45rem;
-    }
-    [data-dashboard-machine-actions] .dashboard-machine-action__icon--error { color: var(--dashboard-red); background: rgba(220, 53, 69, .12); }
-    [data-dashboard-machine-actions] .dashboard-machine-action__icon--handover { color: var(--dashboard-green); background: rgba(25, 135, 84, .12); }
-    [data-dashboard-machine-actions] .dashboard-machine-action__icon--return { color: var(--dashboard-blue); background: rgba(13, 110, 253, .12); }
-    [data-dashboard-machine-actions] .dashboard-machine-action__icon--move { color: var(--dashboard-amber); background: rgba(255, 153, 0, .14); }
-    [data-dashboard-machine-actions] .dashboard-machine-action__code { color: var(--muted); font-size: .75rem; font-weight: 600; }
-</style>
 
-<div class="container-fluid p-0" data-dashboard-machine-actions>
-    <div class="page-title mb-3"><i class="bi bi-grid-3x3-gap-fill"></i> Mit szeretnél csinálni?</div>
+<!--quick search-->
 
-    <div class="row g-2">
-        <div class="col-lg-6 col-12">
-            <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-type="ERROR_REPORT" data-machine-id="{{ machine.id }}">
-                <span class="dashboard-machine-action__icon dashboard-machine-action__icon--error"><i class="bi bi-wrench-adjustable-circle-fill"></i></span>
-                <span>Hibajegy létrehozás</span>
-                <i class="bi bi-chevron-right"></i>
-            </button>
-        </div>
-
-        {% if handoverWorksheet %}
-                <div class="col-lg-6 col-12">
-                    <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-id="{{ handoverWorksheet.id }}">
-                        <span class="dashboard-machine-action__icon dashboard-machine-action__icon--handover"><i class="bi bi-box-arrow-up-right"></i></span>
-                        <span>Átadási <span class="dashboard-machine-action__code">({{ handoverWorksheet.code }})</span></span>
-                        <i class="bi bi-chevron-right"></i>
-                    </button>
+<div class="container-fluid p-0 mt-3">
+    <div class="card panel-card p-3">
+        <div class="row">
+            <div class="col col-lg-12 col-12 mb-3">
+                <div class="row">
+                    <div class="col-12"><strong><i class="bi bi-search"></i> Gép keresése</strong></div>
                 </div>
-        {% endif %}
-
-        {% if returnWorksheet %}
-                <div class="col-lg-6 col-12">
-                    <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-id="{{ returnWorksheet.id }}">
-                        <span class="dashboard-machine-action__icon dashboard-machine-action__icon--return"><i class="bi bi-box-arrow-in-down-left"></i></span>
-                        <span>Visszavételi <span class="dashboard-machine-action__code">({{ returnWorksheet.code }})</span></span>
-                        <i class="bi bi-chevron-right"></i>
-                    </button>
+                <div class="row mt-1">
+                    <div class="col-10">
+                        <div class="ajax-combobox" data-dashboard-combobox="machine">
+                            <div class="input-group">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="dashboard_machine_quick_search"
+                                    data-name="inputQuckSearch"
+                                    placeholder="Gép kiválasztása..."
+                                    autocomplete="off"
+                                    role="combobox"
+                                    aria-autocomplete="list"
+                                    aria-controls="dashboard_machine_quick_search_results"
+                                    aria-expanded="false"
+                                    data-ajax-combobox-search
+                                >
+                                <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Gép kiválasztásának törlése">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="dashboard_machine_quick_search_id" data-ajax-combobox-value>
+                            <div id="dashboard_machine_quick_search_results" class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
+                        </div>
+                    </div>
+                    <div class="col-2"><button type="button" class="btn btn-default" data-name="btnDashboardMachineQuickSearch" disabled> <i class="bi bi-search"></i> <span class="d-none d-lg-inline-block">Keresés</span></button></div>
                 </div>
-        {% endif %}
-
-        {% if not rental %}
-            <div class="col-lg-6 col-12">
-                <button type="button" class="dashboard-machine-action" data-dashboard-worksheet-action data-worksheet-type="MACHINE_MOVE_BETWEEN_LOCATIONS" data-machine-id="{{ machine.id }}">
-                    <span class="dashboard-machine-action__icon dashboard-machine-action__icon--move"><i class="bi bi-arrow-left-right"></i></span>
-                    <span>Telephelyek közötti mozgatás</span>
-                    <i class="bi bi-chevron-right"></i>
-                </button>
             </div>
-        {% endif %}
-
+        </div>
     </div>
+
+    <div class="card panel-card p-3 mt-3" style="display:none">
+        <div class="row">
+            <div class="col-12" data-name="ajax-content" data-key="index_dashboard_quick_search_machine_result"></div>
+        </div>
+    </div>
+
+
+    <div class="card panel-card p-3 mt-3" style="display:none">
+        <div class="row">
+            <div class="col-12" data-name="ajax-content" data-key="index_dashboard_quick_search_actions_result"></div>
+        </div>
+    </div>
+
 </div>
+<!--quick search end-->
 
 <script>
-    (function () {
-        const root = $('[data-dashboard-machine-actions]').last();
 
-        root.find('[data-dashboard-worksheet-action]')
-            .off('click.dashboardMachineAction')
-            .on('click.dashboardMachineAction', function () {
-                const button = $(this);
-                const formData = new FormData();
-                const worksheetId = String(button.attr('data-worksheet-id') || '');
-                const worksheetType = String(button.attr('data-worksheet-type') || '');
-                const machineId = String(button.attr('data-machine-id') || '');
+    $(function () {
+        const machineComboboxRoot = $('[data-dashboard-combobox="machine"]');
+        const machineIdInput = machineComboboxRoot.find('[data-ajax-combobox-value]');
+        const quickSearchButton = $('[data-name="btnDashboardMachineQuickSearch"]');
 
-                if (worksheetId !== '') {
-                    formData.set('worksheet_id', worksheetId);
-                }
-                if (worksheetType !== '') {
-                    formData.set('code_worksheet_type', worksheetType);
-                }
-                if (machineId !== '') {
-                    formData.set('machine_id', machineId);
-                }
+        function toggleQuickSearchButton() {
+            quickSearchButton.prop('disabled', String(machineIdInput.val() || '') === '');
+        }
 
-                new Ajax({
-                    url: {{ path('index_worksheets_add')|json_encode|raw }},
-                    name: 'dashboard_machine_worksheet_action_' + Date.now(),
-                    type: 'POST',
-                    dataType: 'json',
-                    formData: formData,
-                    target: null,
-                    function_success: function (result) {
-                        if (!result.success) {
-                            alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalapot.');
-                            return;
-                        }
+        new AjaxCombobox(machineComboboxRoot, {
+            endpoint: {{ path('list_worksheet_machine_select_list')|json_encode|raw }},
+            requestName: 'dashboard_machine_quick_search_' + Date.now(),
+            emptyText: 'Nincs a keresésnek megfelelő gép.',
+            onSelect: toggleQuickSearchButton,
+            onClear: toggleQuickSearchButton
+        });
 
-                        $('#worksheet_add_content').remove();
-                        $('<div>', { id: 'worksheet_add_content', html: result.content }).appendTo('body');
-                    },
-                    function_error: function (xhr) {
-                        const error = xhr.responseJSON?.data?.error;
-                        alertify.error(error === 'notfound' ? 'A munkalap nem található.' : (error || 'Nem sikerült betölteni a munkalapot.'));
+        machineIdInput
+            .off('change.dashboardMachineQuickSearch')
+            .on('change.dashboardMachineQuickSearch', toggleQuickSearchButton);
+        toggleQuickSearchButton();
+
+        quickSearchButton.off('click.dashboardMachineQuickSearch').on('click.dashboardMachineQuickSearch', function () {
+            const machineId = String(machineIdInput.val() || '');
+            if (machineId === '') {
+                return;
+            }
+
+            var formData = new FormData();
+            formData.set('machine_id', machineId);
+
+            new Ajax({
+                url: '{{ path('index_dashboard_quick_search_machine_info') }}',
+                name: 'index_dashboard_quick_search_machine_info',
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                target: $("[data-key='index_dashboard_quick_search_machine_result']"),
+                function_success: function (result) {
+                    if(result.success){
+                        this.target.parent().parent().fadeIn(100);
+                        this.target.html(result.content);
+
+
+
+                        new Ajax({
+                            url: '{{ path('index_dashboard_quick_search_actions') }}',
+                            name: 'index_dashboard_quick_search_actions',
+                            type: 'POST',
+                            dataType: 'json',
+                            formData: formData,
+                            target: $("[data-key='index_dashboard_quick_search_actions_result']"),
+                            function_success: function (result) {
+                                if(result.success){
+                                    this.target.parent().parent().fadeIn(100);
+                                    this.target.html(result.content);
+                                }
+                            },
+                            function_error: function (xhr) {
+                                const message = xhr.responseText || 'Nem sikerült menteni az adatot.';
+                                alertify.error(message);
+                            }
+                        }).send();
                     }
-                }).send();
-            });
-    })();
+                },
+                function_error: function (xhr) {
+                    const message = xhr.responseText || 'Nem sikerült menteni az adatot.';
+                    alertify.error(message);
+                }
+            }).send();
+
+        });
+    });
+</script>
+
 </script>
