@@ -89,6 +89,47 @@ class WorksheetRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /**
+     * @return array{operating_hours?: mixed, kilometer?: mixed}
+     */
+    public function findLatestOperationalReadingsByMachine(Machine $machine): array
+    {
+        if (!$machine->getId()) {
+            return [];
+        }
+
+        $readings = [];
+        $worksheets = $this->createQueryBuilder('worksheet')
+            ->andWhere('worksheet.machineId = :machineId')
+            ->andWhere('worksheet.status = :active')
+            ->setParameter('machineId', $machine->getId())
+            ->setParameter('active', '1')
+            ->orderBy('worksheet.datetimeAdd', 'DESC')
+            ->addOrderBy('worksheet.id', 'DESC')
+            ->getQuery()
+            ->toIterable();
+
+        foreach ($worksheets as $worksheet) {
+            $data = $worksheet->getData() ?? [];
+            foreach (['operating_hours', 'kilometer'] as $field) {
+                if (array_key_exists($field, $readings)) {
+                    continue;
+                }
+
+                $value = $data[$field] ?? null;
+                if (is_numeric($value) && (float) $value >= 1) {
+                    $readings[$field] = $value;
+                }
+            }
+
+            if (count($readings) === 2) {
+                break;
+            }
+        }
+
+        return $readings;
+    }
+
     public function findList(array $filters, int $page, int $itemsPerPage): array
     {
         $page = max(1, $page);
@@ -130,6 +171,17 @@ class WorksheetRepository extends ServiceEntityRepository
             $qb
                 ->andWhere('worksheetStatusType.code = :worksheetStatusTypeCode')
                 ->setParameter('worksheetStatusTypeCode', $worksheetStatusTypeCode);
+        }
+
+        $worksheetSource = strtolower(trim((string) ($filters['worksheet_source'] ?? '')));
+        if ($worksheetSource === 'external') {
+            $qb
+                ->andWhere("JSON_VALUE(worksheet.data, '$.source') = :worksheetSource")
+                ->setParameter('worksheetSource', $worksheetSource);
+        } elseif ($worksheetSource === 'internal') {
+            $qb
+                ->andWhere("(JSON_VALUE(worksheet.data, '$.source') = :worksheetSource OR JSON_VALUE(worksheet.data, '$.source') IS NULL)")
+                ->setParameter('worksheetSource', $worksheetSource);
         }
 
         $countQb = clone $qb;

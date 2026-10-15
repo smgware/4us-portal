@@ -5,6 +5,7 @@
             save: {{ path('save_worksheet')|json_encode|raw }},
             partnerOptions: {{ path('list_worksheet_partner_select_list')|json_encode|raw }},
             machineOptions: {{ path('list_worksheet_machine_select_list')|json_encode|raw }},
+            machineContext: {{ path('get_worksheet_machine_context')|json_encode|raw }},
             notificationContacts: {{ path('list_worksheet_notification_contacts')|json_encode|raw }},
             attachmentList: {{ path('list_worksheet_attachments')|json_encode|raw }},
             attachmentUpload: {{ path('upload_worksheet_attachment')|json_encode|raw }},
@@ -139,6 +140,8 @@
                 notificationPartnerLabel: '',
                 hasSavedNotificationContacts: data.notification?.has_saved_contacts === true,
                 notificationContactsLoading: false,
+                machineContext: data.machine_context || null,
+                machineContextRequestVersion: 0,
                 materialUnits: materialUnits,
                 materialsUsed: normalizeMaterialsUsed(data.materials_used, materialUnits)
             };
@@ -151,6 +154,7 @@
             filterWorksheetStatuses();
             bindWorksheetType();
             initializeWorksheetComboboxes();
+            syncErrorReportMachineContext(false);
             bindWorksheetDescriptionTemplate();
             bindMaterialsUsed();
             bindNewAttachmentPicker();
@@ -222,9 +226,151 @@
             worksheetMachineCombobox = new AjaxCombobox(machineRoot, {
                 endpoint: routes.machineOptions,
                 requestName: 'worksheet_machine_combobox_' + Date.now(),
-                emptyText: 'Nincs a keresésnek megfelelő gép.'
+                emptyText: 'Nincs a keresésnek megfelelő gép.',
+                onSelect: function (item) {
+                    loadWorksheetMachineContext(item);
+                },
+                onClear: function () {
+                    resetWorksheetMachineContext();
+                }
             });
 
+        }
+
+        function currentWorksheetTypeCode() {
+            return String($('#worksheet_type_id option:selected').attr('data-code') || '').toUpperCase();
+        }
+
+        function isNewErrorReport() {
+            return editorState?.worksheetId === 0
+                && ['ERROR_REPORT', 'ERROR_REPORTING'].includes(currentWorksheetTypeCode());
+        }
+
+        async function loadWorksheetMachineContext(item) {
+            if (!editorState || editorState.worksheetId > 0) {
+                return;
+            }
+
+            const machineId = String(item?.id || '');
+            if (machineId === '') {
+                resetWorksheetMachineContext();
+                return;
+            }
+
+            const requestVersion = ++editorState.machineContextRequestVersion;
+            const formData = new FormData();
+            formData.set('machine_id', machineId);
+            $('[data-box="worksheet_add"] [data-name="alertify-save"]').prop('disabled', true);
+
+            try {
+                const result = await ajaxRequest({
+                    url: routes.machineContext,
+                    name: 'get_worksheet_machine_context_' + requestVersion,
+                    type: 'POST',
+                    formData: formData
+                });
+                const selectedMachineId = String(
+                    $('[data-worksheet-combobox="machine"] [data-ajax-combobox-value]').val() || ''
+                );
+                if (requestVersion !== editorState.machineContextRequestVersion || selectedMachineId !== machineId) {
+                    return;
+                }
+
+                editorState.machineContext = result.data?.machine_context || null;
+                applyOperationalReadings(editorState.machineContext?.operational_readings || null);
+                await syncErrorReportMachineContext(true);
+            } catch (error) {
+                if (requestVersion === editorState.machineContextRequestVersion) {
+                    alertify.error(errorMessage(error, 'A gép munkalapadatai nem tölthetők be.'));
+                }
+            } finally {
+                if (requestVersion === editorState.machineContextRequestVersion) {
+                    $('[data-box="worksheet_add"] [data-name="alertify-save"]').prop('disabled', false);
+                }
+            }
+        }
+
+        function resetWorksheetMachineContext() {
+            if (!editorState || editorState.worksheetId > 0) {
+                return;
+            }
+
+            editorState.machineContextRequestVersion += 1;
+            editorState.machineContext = null;
+            applyOperationalReadings(null);
+            syncErrorReportMachineContext(true);
+        }
+
+        function applyOperationalReadings(readings) {
+            if (!editorState || editorState.worksheetId > 0) {
+                return;
+            }
+
+            [
+                ['operating_hours', '#worksheet_operating_hours'],
+                ['kilometer', '#worksheet_kilometer']
+            ].forEach(function ([field, selector]) {
+                const number = Number(readings?.[field]);
+                const value = Number.isFinite(number) && number >= 1 ? number : 1;
+                $(selector).attr('min', String(value)).val(String(value));
+            });
+        }
+
+        async function syncErrorReportMachineContext(loadContacts) {
+            if (!editorState) {
+                return;
+            }
+
+            const form = $('form[data-name="worksheet"]');
+            const machineRoot = $('[data-worksheet-combobox="machine"]');
+            const partnerRoot = $('[data-worksheet-combobox="partner"]');
+            const machineId = String(machineRoot.find('[data-ajax-combobox-value]').val() || '');
+            const context = editorState.machineContext;
+            const hasOpenRental = context?.has_open_rental === true;
+            const shouldUseMachineContext = isNewErrorReport();
+
+            form.attr('data-has-open-machine-rental', hasOpenRental ? '1' : '0');
+            partnerRoot.attr('data-worksheet-locked', shouldUseMachineContext ? '1' : '0');
+            machineRoot.attr('data-worksheet-locked', shouldUseMachineContext && machineId !== '' ? '1' : '0');
+            setPartnerComboboxDisabled(false);
+            setMachineComboboxDisabled(false);
+
+            if (!shouldUseMachineContext) {
+                if (typeof fieldSetup === 'function') {
+                    fieldSetup();
+                }
+                return;
+            }
+
+            const machineName = String(context?.machine?.name || machineRoot.find('[data-ajax-combobox-search]').val() || '');
+            if (machineId !== '' && machineName !== '') {
+                $('#worksheet_title').val(('Hibajegy: ' + machineName).slice(0, 255));
+            }
+            $('input[name="machine_rental_id"]').val(hasOpenRental ? String(context?.rental_id || '') : '');
+
+            const previousPartnerId = editorState.notificationPartnerId;
+            const previousPartnerLabel = editorState.notificationPartnerLabel;
+            const nextPartnerId = hasOpenRental ? String(context?.partner?.id || '') : '';
+            const nextPartnerLabel = hasOpenRental ? String(context?.partner?.name || '') : '';
+            worksheetPartnerCombobox?.setValue(nextPartnerId, nextPartnerLabel, null);
+            editorState.notificationPartnerId = nextPartnerId;
+            editorState.notificationPartnerLabel = nextPartnerLabel;
+            renderPartnerProject(hasOpenRental ? (context?.project || null) : null);
+
+            if (typeof fieldSetup === 'function') {
+                fieldSetup();
+            }
+
+            if (loadContacts && nextPartnerId !== previousPartnerId) {
+                await loadNotificationContacts(
+                    nextPartnerId,
+                    previousPartnerId,
+                    previousPartnerLabel,
+                    nextPartnerLabel,
+                    context?.project || null,
+                    true
+                );
+            }
         }
 
         function requestPartnerChange(nextPartnerId, nextPartnerLabel) {
@@ -270,9 +416,19 @@
         }
 
         function setPartnerComboboxDisabled(disabled) {
-            $('[data-worksheet-combobox="partner"]')
+            const root = $('[data-worksheet-combobox="partner"]');
+            const locked = root.attr('data-worksheet-locked') === '1';
+            root
                 .find('[data-ajax-combobox-search], [data-ajax-combobox-clear]')
-                .prop('disabled', disabled);
+                .prop('disabled', disabled || locked);
+        }
+
+        function setMachineComboboxDisabled(disabled) {
+            const root = $('[data-worksheet-combobox="machine"]');
+            const locked = root.attr('data-worksheet-locked') === '1';
+            root
+                .find('[data-ajax-combobox-search], [data-ajax-combobox-clear]')
+                .prop('disabled', disabled || locked);
         }
 
         function validateWorksheetComboboxes() {
@@ -526,7 +682,14 @@
             return Array.from(ids);
         }
 
-        async function loadNotificationContacts(partnerId, previousPartnerId, previousPartnerLabel, partnerLabel) {
+        async function loadNotificationContacts(
+            partnerId,
+            previousPartnerId,
+            previousPartnerLabel,
+            partnerLabel,
+            projectOverride = null,
+            useProjectOverride = false
+        ) {
             if (editorState.notificationContactsLoading) {
                 return;
             }
@@ -559,11 +722,21 @@
                 });
                 contactsContainer.html(result.content || '');
                 editorState.hasSavedNotificationContacts = result.data?.has_saved_contacts === true;
-                renderPartnerProject(result.data?.partner_project || null);
+                renderPartnerProject(useProjectOverride ? projectOverride : (result.data?.partner_project || null));
             } catch (error) {
-                editorState.hasSavedNotificationContacts = previousHasSavedContacts;
-                restorePartnerSelection(previousPartnerId, previousPartnerLabel);
-                contactsContainer.html(previousHtml);
+                if (useProjectOverride) {
+                    editorState.hasSavedNotificationContacts = false;
+                    restorePartnerSelection(partnerId, partnerLabel);
+                    renderPartnerProject(projectOverride);
+                    contactsContainer.html(`
+                        <div class="worksheet-notification-empty text-xs text-muted-custom">
+                            A kapcsolattartók nem tölthetők be.
+                        </div>`);
+                } else {
+                    editorState.hasSavedNotificationContacts = previousHasSavedContacts;
+                    restorePartnerSelection(previousPartnerId, previousPartnerLabel);
+                    contactsContainer.html(previousHtml);
+                }
                 alertify.error(errorMessage(error, 'A kapcsolattartók betöltése nem sikerült.'));
             } finally {
                 editorState.notificationContactsLoading = false;
@@ -605,6 +778,12 @@
 
             const requiresOperationalDetails = true;
             $('[data-worksheet-operational-input]').prop('required', requiresOperationalDetails);
+
+            if (worksheetPartnerCombobox && worksheetMachineCombobox) {
+                syncErrorReportMachineContext(true);
+            } else if (typeof fieldSetup === 'function') {
+                fieldSetup();
+            }
         }
 
         function bindNewAttachmentPicker() {

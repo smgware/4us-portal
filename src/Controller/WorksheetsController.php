@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Entity\Machine;
+use App\Entity\MachineRental;
 use App\Entity\User;
 use App\Entity\Worksheet;
 use App\Entity\WorksheetAttachment;
@@ -32,6 +34,7 @@ class WorksheetsController extends BaseController
     private const ITEMS_PER_PAGE = 20;
     private const ATTACHMENTS_PER_PAGE = 5;
     private const FINAL_STATUS_CODES = ['CLOSED', 'REPAIRED_RETURNED', 'TAKEN_BACK'];
+    private const ERROR_REPORT_WORKSHEET_TYPE_CODES = ['ERROR_REPORT', 'ERROR_REPORTING'];
     private const MACHINE_MOVE_WORKSHEET_TYPE_CODE = 'MACHINE_MOVE_BETWEEN_LOCATIONS';
     private const MATERIAL_UNITS = [
         ['name' => 'Darab', 'short' => 'db'],
@@ -210,28 +213,67 @@ class WorksheetsController extends BaseController
         }
         $worksheetStatusTypes = $worksheetStatusTypeRepository->findBy([], ['title' => 'ASC']);
 
-        $notificationContacts = [];
-        $selectedNotificationContactIds = [];
-        if ($worksheet?->getPartner()) {
-            $notificationContacts = $partnerContactRepository->findBy(
-                ['partner' => $worksheet->getPartner()],
-                ['defaultContact' => 'DESC', 'name' => 'ASC', 'id' => 'ASC'],
-            );
-            $selectedNotificationContactIds = $worksheetNotificatedContactRepository->findContactIds($worksheet);
-        }
-        $lastEditorName = null;
-        if ($worksheet?->getUidLast()) {
-            $lastEditor = $userRepository->find($worksheet->getUidLast());
-            $lastEditorName = $lastEditor?->getName() ?: $lastEditor?->getUserName();
-        }
         $worksheetData = $worksheet?->getData() ?? [];
         $requestedMachineId = $this->positiveInt($request->request->get('machine_id'));
         $selectedMachine = $worksheet?->getMachineId()
             ? $machineRepository->find($worksheet->getMachineId())
             : ($requestedMachineId ? $machineRepository->find($requestedMachineId) : null);
-        $partnerProject = $worksheet?->getPartner()
-            ? $machineRentalRepository->findLatestByPartner($worksheet->getPartner())?->getProject()
+        $selectedTypeCode = strtoupper(trim((string) $selectedWorksheetType?->getCode()));
+        $isNewErrorReport = !$worksheet
+            && in_array($selectedTypeCode, self::ERROR_REPORT_WORKSHEET_TYPE_CODES, true);
+        $openMachineRental = !$worksheet && $selectedMachine
+            ? $machineRentalRepository->findOpenByMachine($selectedMachine)
             : null;
+        $operationalReadings = !$worksheet && $selectedMachine
+            ? $this->normalizeOperationalReadings(
+                $worksheetRepository->findLatestOperationalReadingsByMachine($selectedMachine),
+            )
+            : $this->normalizeOperationalReadings([]);
+        $machineContext = !$worksheet && $selectedMachine
+            ? $this->serializeMachineWorksheetContext(
+                $selectedMachine,
+                $openMachineRental,
+                $operationalReadings,
+            )
+            : null;
+
+        $requestedRentalId = $this->positiveInt($request->request->get('rental_id'));
+        $linkedMachineRentalId = $worksheet?->getMachineRentalId()
+            ?? ($isNewErrorReport ? $openMachineRental?->getId() : $requestedRentalId);
+        $linkedMachineRental = $linkedMachineRentalId
+            ? $machineRentalRepository->find($linkedMachineRentalId)
+            : null;
+        $selectedPartner = $worksheet?->getPartner()
+            ?? ($isNewErrorReport ? $openMachineRental?->getPartner() : null);
+        if ($linkedMachineRental) {
+            $partnerProject = $linkedMachineRental->getProject();
+        } else {
+            $partnerProject = $selectedPartner
+                ? $machineRentalRepository->findLatestByPartner($selectedPartner)?->getProject()
+                : null;
+        }
+
+        $notificationContacts = [];
+        $selectedNotificationContactIds = [];
+        if ($selectedPartner) {
+            $notificationContacts = $partnerContactRepository->findBy(
+                ['partner' => $selectedPartner],
+                ['defaultContact' => 'DESC', 'name' => 'ASC', 'id' => 'ASC'],
+            );
+            if ($worksheet) {
+                $selectedNotificationContactIds = $worksheetNotificatedContactRepository->findContactIds($worksheet);
+            }
+        }
+
+        $lastEditorName = null;
+        if ($worksheet?->getUidLast()) {
+            $lastEditor = $userRepository->find($worksheet->getUidLast());
+            $lastEditorName = $lastEditor?->getName() ?: $lastEditor?->getUserName();
+        }
+        $initialWorksheetTitle = $worksheet?->getTitle()
+            ?? ($isNewErrorReport && $selectedMachine
+                ? mb_substr('Hibajegy: ' . $selectedMachine->getTitle(), 0, 255)
+                : '');
         $materialsUsed = $this->normalizeMaterialsUsed($worksheetData['materials_used'] ?? []);
         $saveEnabled = !$this->isFinalizedWorksheet($worksheet);
 
@@ -246,13 +288,19 @@ class WorksheetsController extends BaseController
                     ['title' => 'ASC'],
                 ),
                 'selectedMachine' => $selectedMachine,
+                'selectedPartner' => $selectedPartner,
                 'partnerProject' => $partnerProject,
                 'companySites' => $companySiteRepository->findBy([], ['status' => 'DESC', 'title' => 'ASC']),
-                'notificationPartner' => $worksheet?->getPartner(),
+                'notificationPartner' => $selectedPartner,
                 'notificationContacts' => $notificationContacts,
                 'selectedNotificationContactIds' => $selectedNotificationContactIds,
                 'selectedWorksheetType' => $selectedWorksheetType,
-                'rentalId' => $this->positiveInt($request->request->get('rental_id')),
+                'rentalId' => $linkedMachineRentalId,
+                'isNewErrorReport' => $isNewErrorReport,
+                'hasOpenMachineRental' => $openMachineRental !== null,
+                'worksheetContextFieldsLocked' => $isNewErrorReport && $selectedMachine !== null,
+                'initialWorksheetTitle' => $initialWorksheetTitle,
+                'operationalReadings' => $operationalReadings,
                 'conditionImages' => $conditionImagesByType,
                 'lastEditorName' => $lastEditorName,
             ],
@@ -260,11 +308,12 @@ class WorksheetsController extends BaseController
                 'worksheet' => $worksheet ? $this->serializeWorksheet($worksheet) : null,
                 'condition_images' => $conditionImages,
                 'notification' => [
-                    'partner_id' => $worksheet?->getPartner()?->getId(),
+                    'partner_id' => $selectedPartner?->getId(),
                     'selected_contact_ids' => $selectedNotificationContactIds,
                     'has_saved_contacts' => $selectedNotificationContactIds !== [],
                 ],
                 'partner_project' => $this->serializePartnerProject($partnerProject),
+                'machine_context' => $machineContext,
                 'materials_used' => $materialsUsed,
                 'material_units' => self::MATERIAL_UNITS,
                 'options' => ['save_enabled' => $saveEnabled],
@@ -361,6 +410,37 @@ class WorksheetsController extends BaseController
         ]);
     }
 
+    #[Route('/worksheets/machines/context', name: 'get_worksheet_machine_context', methods: ['POST'])]
+    public function getMachineContext(
+        Request $request,
+        MachineRepository $machineRepository,
+        MachineRentalRepository $machineRentalRepository,
+        WorksheetRepository $worksheetRepository,
+    ): Response {
+        $machineId = $this->positiveInt($request->request->get('machine_id'));
+        $machine = $machineId ? $machineRepository->find($machineId) : null;
+        if (!$machine) {
+            return $this->response(false, [
+                'data' => ['error' => 'A kiválasztott gép nem található.'],
+            ], 'json', Response::HTTP_NOT_FOUND);
+        }
+
+        $openMachineRental = $machineRentalRepository->findOpenByMachine($machine);
+        $operationalReadings = $this->normalizeOperationalReadings(
+            $worksheetRepository->findLatestOperationalReadingsByMachine($machine),
+        );
+
+        return $this->response(true, [
+            'data' => [
+                'machine_context' => $this->serializeMachineWorksheetContext(
+                    $machine,
+                    $openMachineRental,
+                    $operationalReadings,
+                ),
+            ],
+        ]);
+    }
+
     #[Route('/worksheets/notification-contacts', name: 'list_worksheet_notification_contacts', methods: ['POST'])]
     public function listWorksheetNotificationContacts(
         Request $request,
@@ -441,6 +521,7 @@ class WorksheetsController extends BaseController
         PartnerContactRepository $partnerContactRepository,
         WorksheetNotificatedContactRepository $worksheetNotificatedContactRepository,
         MachineRepository $machineRepository,
+        MachineRentalRepository $machineRentalRepository,
         CompanySiteRepository $companySiteRepository,
         EntityManagerInterface $entityManager,
     ): Response {
@@ -457,6 +538,7 @@ class WorksheetsController extends BaseController
             ], 'json', Response::HTTP_CONFLICT);
         }
 
+        $isNew = !$worksheet;
         $title = trim((string) $request->request->get('title', ''));
         $worksheetTypeId = $this->positiveInt($request->request->get('worksheet_type_id'));
         $worksheetStatusTypeId = $this->positiveInt($request->request->get('worksheet_status_type_id'));
@@ -464,6 +546,17 @@ class WorksheetsController extends BaseController
         $worksheetStatusType = $worksheetStatusTypeId
             ? $worksheetStatusTypeRepository->find($worksheetStatusTypeId)
             : null;
+        $machineId = $this->positiveInt($request->request->get('machine_id'));
+        $machine = $machineId ? $machineRepository->find($machineId) : null;
+        $worksheetTypeCode = strtoupper(trim((string) $worksheetType?->getCode()));
+        $isNewErrorReport = $isNew
+            && in_array($worksheetTypeCode, self::ERROR_REPORT_WORKSHEET_TYPE_CODES, true);
+        $openMachineRental = $isNewErrorReport && $machine
+            ? $machineRentalRepository->findOpenByMachine($machine)
+            : null;
+        if ($isNewErrorReport && $machine) {
+            $title = mb_substr('Hibajegy: ' . $machine->getTitle(), 0, 255);
+        }
 
         $errors = [];
         if ($title === '') {
@@ -477,6 +570,12 @@ class WorksheetsController extends BaseController
         } elseif ($worksheetStatusType->getWorksheetType()?->getId() !== $worksheetType?->getId()) {
             $errors[] = 'A kiválasztott státusz nem tartozik a munkalaptípushoz.';
         }
+        if ($machineId && !$machine) {
+            $errors[] = 'A kiválasztott gép nem található.';
+        }
+        if ($isNewErrorReport && !$machine) {
+            $errors[] = 'A gép megadása kötelező hibajegy létrehozásához.';
+        }
 
         if ($errors !== []) {
             return $this->response(false, [
@@ -485,40 +584,56 @@ class WorksheetsController extends BaseController
         }
 
         $partnerId = $this->positiveInt($request->request->get('partner_id'));
-        $partner = $partnerId ? $partnerRepository->find($partnerId) : null;
-        if ($partnerId && !$partner) {
+        $partner = $isNewErrorReport
+            ? $openMachineRental?->getPartner()
+            : ($partnerId ? $partnerRepository->find($partnerId) : null);
+        if (!$isNewErrorReport && $partnerId && !$partner) {
             return $this->response(false, [
                 'data' => ['error' => 'A kiválasztott partner nem található.'],
             ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
-        $requiresOperationalDetails = true;
         $operationalFields = [
             'operating_hours' => 'Az üzemóra megadása kötelező.',
             'kilometer' => 'A KM óra állás megadása kötelező.',
-            'work_and_travel_time' => 'A munka és útidő megadása kötelező.',
-            'distance_to_site' => 'A kiszállás megadása kötelező.',
         ];
+        if (!$isNewErrorReport || $openMachineRental) {
+            $operationalFields += [
+                'work_and_travel_time' => 'A munka és útidő megadása kötelező.',
+                'distance_to_site' => 'A kiszállás megadása kötelező.',
+            ];
+        }
         $operationalErrors = [];
-        if ($requiresOperationalDetails) {
-            foreach ($operationalFields as $field => $message) {
-                $value = trim((string) $request->request->get($field, ''));
-                if (!is_numeric($value) || (float) $value < 1) {
-                    $operationalErrors[] = $message;
-                }
+        foreach ($operationalFields as $field => $message) {
+            $value = trim((string) $request->request->get($field, ''));
+            if (!is_numeric($value) || (float) $value < 1) {
+                $operationalErrors[] = $message;
+            }
+        }
+
+        $operationalMinimums = $isNew && $machine
+            ? $this->normalizeOperationalReadings(
+                $worksheetRepository->findLatestOperationalReadingsByMachine($machine),
+            )
+            : $this->normalizeOperationalReadings([]);
+        $minimumLabels = [
+            'operating_hours' => 'Az üzemóra',
+            'kilometer' => 'A KM óra állás',
+        ];
+        foreach ($minimumLabels as $field => $label) {
+            $value = trim((string) $request->request->get($field, ''));
+            $minimum = $operationalMinimums[$field];
+            if (is_numeric($value) && (float) $value >= 1 && (float) $value < (float) $minimum) {
+                $operationalErrors[] = sprintf(
+                    '%s nem lehet kisebb a gép legutóbbi munkalapján rögzített értéknél (%s).',
+                    $label,
+                    (string) $minimum,
+                );
             }
         }
         if ($operationalErrors !== []) {
             return $this->response(false, [
                 'data' => ['error' => implode('<br>', $operationalErrors), 'errors' => $operationalErrors],
-            ], 'json', Response::HTTP_BAD_REQUEST);
-        }
-
-        $machineId = $this->positiveInt($request->request->get('machine_id'));
-        $machine = $machineId ? $machineRepository->find($machineId) : null;
-        if ($machineId && !$machine) {
-            return $this->response(false, [
-                'data' => ['error' => 'A kiválasztott gép nem található.'],
             ], 'json', Response::HTTP_BAD_REQUEST);
         }
 
@@ -600,7 +715,6 @@ class WorksheetsController extends BaseController
         }
 
         $now = new \DateTimeImmutable();
-        $isNew = !$worksheet;
         if ($isNew) {
             $worksheet = (new Worksheet())
                 ->setCode($this->generateWorksheetCode($worksheetRepository))
@@ -610,7 +724,17 @@ class WorksheetsController extends BaseController
                 ->setStatus('1');
         }
 
+        $machineRentalId = $isNewErrorReport
+            ? $openMachineRental?->getId()
+            : $this->positiveInt($request->request->get('machine_rental_id'));
+        $linkedMachineRental = $machineRentalId
+            ? $machineRentalRepository->find($machineRentalId)
+            : null;
+
         $data = $worksheet->getData() ?? [];
+        if (!in_array($data['source'] ?? null, ['external', 'internal'], true)) {
+            $data['source'] = 'internal';
+        }
         $data['machine'] = $machine
             ? (string) $machine->getTitle()
             : trim((string) $request->request->get('machine', ''));
@@ -625,7 +749,14 @@ class WorksheetsController extends BaseController
         } else {
             unset($data['partner_id']);
         }
-        unset($data['project_id'], $data['project_name'], $data['project_code']);
+        $linkedProject = $linkedMachineRental?->getProject();
+        if ($linkedProject) {
+            $data['project_id'] = $linkedProject->getId();
+            $data['project_name'] = $linkedProject->getName();
+            $data['project_code'] = $linkedProject->getCode();
+        } else {
+            unset($data['project_id'], $data['project_name'], $data['project_code']);
+        }
         if ($companySite) {
             $data['company_site_id'] = $companySite->getId();
             $data['company_site_title'] = $companySite->getTitle();
@@ -641,9 +772,10 @@ class WorksheetsController extends BaseController
         $data['materials_used'] = $materialsUsed;
         $data['worksheet_type_code'] = (string) $worksheetType->getCode();
 
-        $machineRentalId = $this->positiveInt($request->request->get('machine_rental_id'));
         if ($machineRentalId) {
             $data['machine_rental_id'] = $machineRentalId;
+        } else {
+            unset($data['machine_rental_id']);
         }
         $isClosed = in_array((string) $worksheetStatusType->getCode(), self::FINAL_STATUS_CODES, true);
         $userId = $this->getUser()?->getId();
@@ -760,9 +892,12 @@ class WorksheetsController extends BaseController
             ? $machineRepository->find($selectedMachineId)
             : null;
         $partner = $worksheet->getPartner();
-        $partnerProject = $partner
-            ? $machineRentalRepository->findLatestByPartner($partner)?->getProject()
+        $worksheetMachineRental = $worksheet->getMachineRentalId()
+            ? $machineRentalRepository->find($worksheet->getMachineRentalId())
             : null;
+        $partnerProject = $worksheetMachineRental
+            ? $worksheetMachineRental->getProject()
+            : ($partner ? $machineRentalRepository->findLatestByPartner($partner)?->getProject() : null);
         $partnerContact = null;
 
         if ($partner) {
@@ -1230,6 +1365,60 @@ class WorksheetsController extends BaseController
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param array{operating_hours?: mixed, kilometer?: mixed} $readings
+     * @return array{operating_hours: int|float, kilometer: int|float}
+     */
+    private function normalizeOperationalReadings(array $readings): array
+    {
+        return [
+            'operating_hours' => $this->normalizeOperationalReading($readings['operating_hours'] ?? null),
+            'kilometer' => $this->normalizeOperationalReading($readings['kilometer'] ?? null),
+        ];
+    }
+
+    private function normalizeOperationalReading(mixed $value): int|float
+    {
+        if (!is_numeric($value)) {
+            return 1;
+        }
+
+        $number = (float) $value;
+        if (!is_finite($number) || $number < 1) {
+            return 1;
+        }
+
+        return floor($number) === $number ? (int) $number : $number;
+    }
+
+    /**
+     * @param array{operating_hours: int|float, kilometer: int|float} $operationalReadings
+     */
+    private function serializeMachineWorksheetContext(
+        Machine $machine,
+        ?MachineRental $openMachineRental,
+        array $operationalReadings,
+    ): array {
+        $partner = $openMachineRental?->getPartner();
+
+        return [
+            'machine' => [
+                'id' => $machine->getId(),
+                'name' => $machine->getTitle(),
+                'code' => $machine->getCode(),
+            ],
+            'has_open_rental' => $openMachineRental !== null,
+            'rental_id' => $openMachineRental?->getId(),
+            'partner' => $partner ? [
+                'id' => $partner->getId(),
+                'name' => $partner->getName(),
+                'code' => $partner->getCode(),
+            ] : null,
+            'project' => $this->serializePartnerProject($openMachineRental?->getProject()),
+            'operational_readings' => $operationalReadings,
+        ];
     }
 
     private function serializeWorksheet(Worksheet $worksheet): array

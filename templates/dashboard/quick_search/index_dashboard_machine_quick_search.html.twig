@@ -121,6 +121,7 @@
             var formData = new FormData();
             formData.set('machine_id', machineId);
 
+
             new Ajax({
                 url: '{{ path('index_dashboard_quick_search_machine_info') }}',
                 name: 'index_dashboard_quick_search_machine_info',
@@ -134,6 +135,7 @@
                         this.target.html(result.content);
 
 
+                        //store machine_data
 
                         new Ajax({
                             url: '{{ path('index_dashboard_quick_search_actions') }}',

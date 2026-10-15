@@ -31,7 +31,7 @@
     <div class="container-fluid p-0 mt-3">
         <div class="card panel-card p-3">
             <div class="row g-2 align-items-end">
-                <div class="col-xl-5 col-md-6 col-12">
+                <div class="col-xl-4 col-md-6 col-12">
                     <label class="text-xs" for="worksheet_list_search">Keresés</label>
                     <div class="input-group">
                         <input type="text" class="form-control" id="worksheet_list_search" data-name="search_worksheets_list" placeholder="Kód, cím, partner...">
@@ -40,15 +40,25 @@
                         </button>
                     </div>
                 </div>
-                <div class="col-xl-3 col-md-3 col-6">
+                <div class="col-xl-2 col-md-3 col-6">
                     <label class="text-xs" for="worksheet_list_type">Típus</label>
                     <select class="form-control" id="worksheet_list_type" data-name="filter_worksheets_type">
                         <option value="">Minden típus</option>
                         {% for worksheetType in worksheetTypes %}
-                            <option value="{{ worksheetType.id }}">{{ worksheetType.title }}</option>
+                            <option value="{{ worksheetType.id }}" data-code="{{ worksheetType.code }}">{{ worksheetType.title }}</option>
                         {% endfor %}
                     </select>
                 </div>
+
+                <div class="col-xl-2 col-md-3 col-6 d-none" data-name="filter_worksheets_source_wrapper">
+                    <label class="text-xs" for="worksheet_list_source">Forrás</label>
+                    <select class="form-control" id="worksheet_list_source" data-name="filter_worksheets_source" disabled>
+                        <option value="">Minden forrás</option>
+                        <option value="external">Hibabejelentés</option>
+                        <option value="internal">Belső munkalap</option>
+                    </select>
+                </div>
+
                 <div class="col-xl-2 col-md-3 col-6">
                     <label class="text-xs" for="worksheet_list_status">Státusz</label>
                     <select class="form-control" id="worksheet_list_status" data-name="filter_worksheets_status">
@@ -173,11 +183,25 @@
                 }
             }
 
+            function updateSourceFilter() {
+                const typeCode = String($('[data-name="filter_worksheets_type"] option:selected').attr('data-code') || '').toUpperCase();
+                const sourceWrapper = $('[data-name="filter_worksheets_source_wrapper"]');
+                const source = $('[data-name="filter_worksheets_source"]');
+                const isErrorReport = typeCode === 'ERROR_REPORT';
+
+                sourceWrapper.toggleClass('d-none', !isErrorReport);
+                source.prop('disabled', !isErrorReport);
+                if (!isErrorReport) {
+                    source.val('');
+                }
+            }
+
             function applyFilters() {
                 const filters = {
                     search: String($('[data-name="search_worksheets_list"]').val() || '').trim(),
                     worksheet_type_id: $('[data-name="filter_worksheets_type"]').val() || '',
-                    worksheet_status_type_code: $('[data-name="filter_worksheets_status"]').val() || ''
+                    worksheet_status_type_code: $('[data-name="filter_worksheets_status"]').val() || '',
+                    worksheet_source: $('[data-name="filter_worksheets_source"]').val() || ''
                 };
                 listRequest.url = listUrl;
                 listRequest.formData.set('filters', JSON.stringify(filters));
@@ -194,6 +218,7 @@
                     const typeId = String($(this).attr('data-worksheet-type-id') || '');
                     $('[data-name="filter_worksheets_type"]').val(typeId);
                     updateStatusFilter();
+                    updateSourceFilter();
                     applyFilters();
                 });
             $('[data-name="btnSearchWorksheets"]')
@@ -211,13 +236,18 @@
                 .off('change.worksheets')
                 .on('change.worksheets', function () {
                     updateStatusFilter();
+                    updateSourceFilter();
                     applyFilters();
                 });
             $('[data-name="filter_worksheets_status"]')
                 .off('change.worksheets')
                 .on('change.worksheets', applyFilters);
+            $('[data-name="filter_worksheets_source"]')
+                .off('change.worksheets')
+                .on('change.worksheets', applyFilters);
 
             updateStatusFilter();
+            updateSourceFilter();
             listRequest.send();
         });
     </script>

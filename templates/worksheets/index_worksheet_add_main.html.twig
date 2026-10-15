@@ -6,6 +6,14 @@
 {% set isMachineMove = selectedTypeCode == 'MACHINE_MOVE_BETWEEN_LOCATIONS' %}
 {% set isExistingHandoverOrReturn = item and item.id and selectedTypeCode in ['MACHINE_HANDOVER', 'MACHINE_RETURN'] %}
 {% set requiresOperationalDetails = true %}
+{% set isNewErrorReport = isNewErrorReport|default(false) %}
+{% set hasOpenMachineRental = hasOpenMachineRental|default(false) %}
+{% set worksheetContextFieldsLocked = worksheetContextFieldsLocked|default(false) %}
+{% set requiresTravelDetails = not isNewErrorReport or hasOpenMachineRental %}
+{% set initialOperatingHours = item ? itemData.operating_hours|default(1) : operationalReadings.operating_hours|default(1) %}
+{% set initialKilometer = item ? itemData.kilometer|default(1) : operationalReadings.kilometer|default(1) %}
+{% set minimumOperatingHours = item ? 1 : operationalReadings.operating_hours|default(1) %}
+{% set minimumKilometer = item ? 1 : operationalReadings.kilometer|default(1) %}
 {% set conditionTypes = ['Elölről', 'Hátulról', 'Jobbról', 'Balról', 'Üzem / KM óra'] %}
 
 <style>
@@ -146,9 +154,15 @@
 </style>
 
 <div class="container-fluid worksheet-editor" data-name="worksheet_editor">
-    <form data-name="worksheet" novalidate>
+    <form
+        data-name="worksheet"
+        data-is-new-worksheet="{{ item ? '0' : '1' }}"
+        data-has-open-machine-rental="{{ hasOpenMachineRental ? '1' : '0' }}"
+        novalidate
+    >
         <input type="hidden" name="id" value="{{ item ? item.id : '' }}">
         <input type="hidden" name="machine_rental_id" value="{{ item and item.machineRentalId ? item.machineRentalId : rentalId|default('') }}">
+        <input type="hidden" name="source" value="{{ itemData.source|default('internal') }}">
 
         <div class="row">
             <div class="col-lg-8 col-12">
@@ -183,28 +197,28 @@
                                     </select>
                                 </div>
 
-                                <div class="col-md-6 col-12">
+                                <div class="col-12">
                                     <label class="text-s" for="worksheet_title">Munkalap címe</label>
                                     <input
                                         type="text"
                                         class="form-control"
                                         id="worksheet_title"
                                         name="title"
-                                        value="{{ item ? item.title : '' }}"
+                                        value="{{ initialWorksheetTitle|default(item ? item.title : '') }}"
                                         maxlength="255"
                                         required
                                     >
                                 </div>
 
-                                <div class="col-md-6 col-12">
+                                <div class="col-md-6 col-12" data-name="data_block" data-type="partner">
                                     <label class="text-s" for="worksheet_partner_search">Partner</label>
-                                    <div class="ajax-combobox" data-worksheet-combobox="partner">
+                                    <div class="ajax-combobox" data-worksheet-combobox="partner" data-worksheet-locked="{{ worksheetContextFieldsLocked ? '1' : '0' }}">
                                         <div class="input-group">
                                             <input
                                                 type="text"
                                                 class="form-control"
                                                 id="worksheet_partner_search"
-                                                value="{{ item and item.partner ? item.partner.name : '' }}"
+                                                value="{{ selectedPartner ? selectedPartner.name : '' }}"
                                                 placeholder="Partner keresése név, kód vagy adószám alapján..."
                                                 autocomplete="off"
                                                 role="combobox"
@@ -212,22 +226,23 @@
                                                 aria-controls="worksheet_partner_results"
                                                 aria-expanded="false"
                                                 data-ajax-combobox-search
+                                                {{ worksheetContextFieldsLocked ? 'disabled' }}
                                             >
-                                            <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Partner kiválasztásának törlése">
+                                            <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Partner kiválasztásának törlése" {{ worksheetContextFieldsLocked ? 'disabled' }}>
                                                 <i class="bi bi-x-lg"></i>
                                             </button>
                                         </div>
-                                        <input type="hidden" name="partner_id" id="worksheet_partner_id" value="{{ item and item.partner ? item.partner.id : '' }}" data-ajax-combobox-value>
+                                        <input type="hidden" name="partner_id" id="worksheet_partner_id" value="{{ selectedPartner ? selectedPartner.id : '' }}" data-ajax-combobox-value>
                                         <div id="worksheet_partner_results" class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
                                     </div>
-                                    {% if item and item.partner and item.partner.status != '1' %}
+                                    {% if selectedPartner and selectedPartner.status != '1' %}
                                         <div class="form-text text-warning"><i class="bi bi-exclamation-triangle"></i> A jelenlegi partner inaktív. Másik értékre cserélhető, újból nem választható ki.</div>
                                     {% endif %}
                                 </div>
 
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_machine_search">Gép</label>
-                                    <div class="ajax-combobox" data-worksheet-combobox="machine">
+                                    <div class="ajax-combobox" data-worksheet-combobox="machine" data-worksheet-locked="{{ worksheetContextFieldsLocked ? '1' : '0' }}">
                                         <div class="input-group">
                                             <input
                                                 type="text"
@@ -242,8 +257,9 @@
                                                 aria-controls="worksheet_machine_results"
                                                 aria-expanded="false"
                                                 data-ajax-combobox-search
+                                                {{ worksheetContextFieldsLocked ? 'disabled' }}
                                             >
-                                            <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Gép kiválasztásának törlése">
+                                            <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear aria-label="Gép kiválasztásának törlése" {{ worksheetContextFieldsLocked ? 'disabled' }}>
                                                 <i class="bi bi-x-lg"></i>
                                             </button>
                                         </div>
@@ -330,7 +346,7 @@
                     </div>
                 {% endif %}
 
-                <div class="row mb-2">
+                <div class="row mb-2"  data-name="data_block" data-type="error_and_work"  >
                     <div class="col-12">
                         <div class="panel-card p-3">
                             <div class="text-s fw-600 mb-2">Hiba és munkavégzés</div>
@@ -359,40 +375,44 @@
                                 </div>
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_operating_hours">Üzemóra <span class="text-danger">*</span></label>
-                                    <input type="number" inputmode="decimal" min="1" class="form-control" id="worksheet_operating_hours" name="operating_hours" value="{{ itemData.operating_hours|default(requiresOperationalDetails ? '1' : '') }}" {{ requiresOperationalDetails ? 'required' }} data-worksheet-operational-input>
+                                    <input type="number" inputmode="decimal" min="{{ minimumOperatingHours }}" step="any" class="form-control" id="worksheet_operating_hours" name="operating_hours" value="{{ initialOperatingHours }}" {{ requiresOperationalDetails ? 'required' }} data-worksheet-operational-input>
                                 </div>
                                 <div class="col-md-6 col-12">
                                     <label class="text-s" for="worksheet_kilometer">KM óra állás <span class="text-danger">*</span></label>
-                                    <input type="number" inputmode="decimal" min="1" class="form-control" id="worksheet_kilometer" name="kilometer" value="{{ itemData.kilometer|default(requiresOperationalDetails ? '1' : '') }}" {{ requiresOperationalDetails ? 'required' }} data-worksheet-operational-input>
+                                    <input type="number" inputmode="decimal" min="{{ minimumKilometer }}" step="any" class="form-control" id="worksheet_kilometer" name="kilometer" value="{{ initialKilometer }}" {{ requiresOperationalDetails ? 'required' }} data-worksheet-operational-input>
                                 </div>
 
 
-                                <div class="col-md-6 col-12" data-name="data_block" data-type="worksheet_work_and_travel_time" >
+                                <div class="col-md-6 col-12" data-name="data_block" data-type="worksheet_work_and_travel_time"{% if not requiresTravelDetails %} style="display: none;"{% endif %}>
                                     <label class="text-s" for="worksheet_work_and_travel_time">Munka és útidő (óra) <span class="text-danger">*</span></label>
                                     <input
                                         type="number"
                                         inputmode="decimal"
                                         min="1"
+                                        step="any"
                                         class="form-control"
                                         id="worksheet_work_and_travel_time"
                                         name="work_and_travel_time"
-                                        value="{{ itemData.work_and_travel_time|default(requiresOperationalDetails ? '1' : '') }}"
-                                        {{ requiresOperationalDetails ? 'required' }}
+                                        value="{{ itemData.work_and_travel_time|default(requiresTravelDetails ? '1' : '') }}"
+                                        {{ requiresTravelDetails ? 'required' : 'disabled' }}
                                         data-worksheet-operational-input
+                                        data-worksheet-rental-input
                                     >
                                 </div>
-                                <div class="col-md-6 col-12" data-name="data_block" data-type="worksheet_distance_to_site">
+                                <div class="col-md-6 col-12" data-name="data_block" data-type="worksheet_distance_to_site"{% if not requiresTravelDetails %} style="display: none;"{% endif %}>
                                     <label class="text-s" for="worksheet_distance_to_site">Kiszállás (km) <span class="text-danger">*</span></label>
                                     <input
                                         type="number"
                                         inputmode="decimal"
                                         min="1"
+                                        step="any"
                                         class="form-control"
                                         id="worksheet_distance_to_site"
                                         name="distance_to_site"
-                                        value="{{ itemData.distance_to_site|default(requiresOperationalDetails ? '1' : '') }}"
-                                        {{ requiresOperationalDetails ? 'required' }}
+                                        value="{{ itemData.distance_to_site|default(requiresTravelDetails ? '1' : '') }}"
+                                        {{ requiresTravelDetails ? 'required' : 'disabled' }}
                                         data-worksheet-operational-input
+                                        data-worksheet-rental-input
                                     >
                                 </div>
 
@@ -518,7 +538,7 @@
                 </div>
 
                 {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
-                <div class="row mb-2">
+                <div class="row mb-2" data-name="data_block" data-type="alertings">
                     <div class="col-12">
                         <div class="panel-card p-3">
                             <div class="text-s fw-600 mb-1"><i class="bi bi-bell"></i> Értesítések</div>
@@ -595,30 +615,48 @@
 
 
 <script>
-    fieldSetup = function(){
-        if( $("select[id='worksheet_type_id'] option:selected").attr("data-code") == "MACHINE_HANDOVER" ){
-            $("[data-name='data_block'][data-type='worksheet_work_and_travel_time']").css("display","none");
-            $("[data-name='data_block'][data-type='worksheet_distance_to_site']").css("display","none");
+    fieldSetup = function () {
+        const form = $("form[data-name='worksheet']");
+        const typeCode = String($("#worksheet_type_id option:selected").attr("data-code") || '');
+        const rentalOnlyBlocks = $(
+            "[data-name='data_block'][data-type='worksheet_work_and_travel_time'], " +
+            "[data-name='data_block'][data-type='worksheet_distance_to_site']"
+        );
+        const rentalOnlyInputs = rentalOnlyBlocks.find('[data-worksheet-rental-input]');
 
-            $("[data-name='data_block'][data-type='materials_used']").css("display","none");
+        $("[data-name='data_block']").css('display', '');
+        rentalOnlyInputs.prop('disabled', false).prop('required', true);
+
+        if (typeCode === 'MACHINE_HANDOVER') {
+            rentalOnlyBlocks.css('display', 'none');
+            $("[data-name='data_block'][data-type='materials_used']").css('display', 'none');
 
             $("#worksheet_description_template")
                 .find("option[data-code='ATADASI']")
                 .prop("selected", true)
                 .end()
                 .trigger("change");
-
-        }
-        if( $("select[id='worksheet_type_id'] option:selected").attr("data-code") == "MACHINE_RETURN" ){
-            $("[data-name='data_block'][data-type='worksheet_work_and_travel_time']").css("display","none");
-            $("[data-name='data_block'][data-type='worksheet_distance_to_site']").css("display","none");
         }
 
-    }
+        if (typeCode === 'MACHINE_MOVE_BETWEEN_LOCATIONS') {
+            $("[data-name='data_block'][data-type='error_and_work']").css('display', 'none');
+            $("[data-name='data_block'][data-type='materials_used']").css('display', 'none');
+            $("[data-name='data_block'][data-type='alertings']").css('display', 'none');
+            $("[data-name='data_block'][data-type='partner']").css('display', 'none');
+        }
 
-    $("select[id='worksheet_type_id']").unbind("change").change(function(){
-        fieldSetup();
-    });
+        if (typeCode === 'MACHINE_RETURN') {
+            rentalOnlyBlocks.css('display', 'none');
+        }
+
+        const isNewErrorReport = form.attr('data-is-new-worksheet') === '1'
+            && ['ERROR_REPORT', 'ERROR_REPORTING'].includes(typeCode);
+        if (isNewErrorReport && form.attr('data-has-open-machine-rental') !== '1') {
+            rentalOnlyBlocks.css('display', 'none');
+            rentalOnlyInputs.prop('required', false).prop('disabled', true);
+        }
+    };
+
     fieldSetup();
 
 </script>

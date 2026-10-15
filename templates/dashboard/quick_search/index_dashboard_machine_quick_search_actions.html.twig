@@ -53,19 +53,21 @@
         <div class="col col-lg-6 col-12">
             <button type="button" class="btn dashboard-machine-action is-error" data-dashboard-machine-worksheet data-machine-id="{{ machine.id }}" data-worksheet-type="ERROR_REPORT">
                 <span class="dashboard-machine-action__icon"><i class="bi bi-wrench-adjustable"></i></span>
-                Hibajegy létrehozás
+                Munkalap létrehozás
                 <i class="bi bi-chevron-right dashboard-machine-action__chevron"></i>
             </button>
         </div>
 
         {% if hasActiveMachineRental %}
-            <div class="col col-lg-6 col-12">
-                <button type="button" class="btn dashboard-machine-action is-handover" data-dashboard-machine-worksheet data-worksheet-id="{{ handoverWorksheetId|default('') }}" data-worksheet-type="MACHINE_HANDOVER" {{ handoverWorksheetId ? '' : 'disabled' }}>
-                    <span class="dashboard-machine-action__icon"><i class="bi bi-box-arrow-up-right"></i></span>
-                    Átadási
-                    <i class="bi bi-chevron-right dashboard-machine-action__chevron"></i>
-                </button>
-            </div>
+            {% if handoverWorksheetId %}
+                <div class="col col-lg-6 col-12">
+                    <button type="button" class="btn dashboard-machine-action is-handover" data-dashboard-machine-worksheet data-worksheet-id="{{ handoverWorksheetId }}" data-worksheet-type="MACHINE_HANDOVER">
+                        <span class="dashboard-machine-action__icon"><i class="bi bi-box-arrow-up-right"></i></span>
+                        Átadási
+                        <i class="bi bi-chevron-right dashboard-machine-action__chevron"></i>
+                    </button>
+                </div>
+            {% endif %}
             <div class="col col-lg-6 col-12">
                 <button type="button" class="btn dashboard-machine-action is-return" data-dashboard-machine-worksheet data-worksheet-id="{{ returnWorksheetId|default('') }}" data-worksheet-type="MACHINE_RETURN" {{ returnWorksheetId ? '' : 'disabled' }}>
                     <span class="dashboard-machine-action__icon"><i class="bi bi-box-arrow-in-left"></i></span>
