@@ -96,6 +96,14 @@
             {% endif %}
 
             {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
+                <a href="{{ path('index_quote_maker') }}" class="{{ app.request.attributes.get('_route') == 'index_quote_maker' ? 'active' : '' }}">
+                    <i class="bi bi-file-check-fill"></i>
+                    <span class="menu-text">Árajánlat készítés</span>
+                </a>
+            {% endif %}
+
+
+            {% if is_granted('ROLE_MASTER') or is_granted('ROLE_PROJECTMANAGER')  %}
             <a href="{{ path('index_settings') }}" class="{{ app.request.attributes.get('_route') == 'index_settings' ? 'active' : '' }}">
                 <i class="bi bi-gear"></i>
                 <span class="menu-text">Beállítások</span>
