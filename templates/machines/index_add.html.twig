@@ -4,6 +4,18 @@
     <input type="hidden" name="id" data-name="id" value="{{ item ? item.id : '' }}">
 
     <div class="mb-3">
+        <label for="" class="form-label">Gép kategória</label>
+        <select class="form-control" name="machine_category_id" data-name="machine_category_id" required>
+            <option value="">Válassz kategóriát</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {{ item and item.machineCategory and item.machineCategory.id == category.id ? 'selected' }}>
+                    {{ category.title }} ({{ category.code }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
         <label for="" class="form-label">Név</label>
         <input type="text" class="form-control" name="name" data-name="name" value="{{ item ? item.title : '' }}" placeholder="Add meg a gep nevet">
     </div>
@@ -43,18 +55,6 @@
     </div>
 
     <div class="mb-3">
-        <label for="" class="form-label">Gép kategória</label>
-        <select class="form-control" name="machine_category_id" data-name="machine_category_id" required>
-            <option value="">Válassz kategóriát</option>
-            {% for category in categories %}
-                <option value="{{ category.id }}" {{ item and item.machineCategory and item.machineCategory.id == category.id ? 'selected' }}>
-                    {{ category.title }} ({{ category.code }})
-                </option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div class="mb-3">
         <label for="machine-company-site" class="form-label">Telephely</label>
         <select id="machine-company-site" class="form-control" name="company_site_id" data-name="company_site_id" required>
             <option value="">Válassz telephelyet</option>
@@ -72,5 +72,14 @@
             <option value="1" {{ item is null or item.status == '1' ? 'selected' }}>Aktív</option>
             <option value="0" {{ item and item.status == '0' ? 'selected' }}>Inaktív</option>
         </select>
+    </div>
+
+    <div class="mb-3" data-name="extra_fields">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12"><strong>Extra adatok</strong></div>
+
+            </div>
+        </div>
     </div>
 </form>

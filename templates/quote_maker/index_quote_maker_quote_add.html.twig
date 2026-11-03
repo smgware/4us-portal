@@ -1,0 +1,218 @@
+<div class="container-fluid" data-name="quoteAddForm">
+    <div class="row">
+
+        <!--left side-->
+        <div class="col col-lg-8 col-12">
+
+            <div class="card panel-card p-2">
+                <div class="row">
+                    <div class="col-12"><strong>Alapadatok</strong></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="col-12">Partner / kapcsolattartó</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <select name="" id="" class="form-control form-select"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="col-12">Projekt / helyszín</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <select name="" id="" class="form-control form-select"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card panel-card p-2 mt-2">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="btn  btn-sm btn-warning" data-name="btnMachineAdd"><i class="bi bi-plus-circle-fill"></i> Gép hozzáadása</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card panel-card p-2 mt-2" data-name="machineAddList">
+                <span>Nincsenek hozzáadott gépek</span>
+
+                <div class="row mt-2">
+                    <div class="col-12"><strong>1. daru</strong></div>
+                    <div class="col col-lg-8 col-12">
+                        <div class="row">
+                            <div class="col-12">Daru kiválasztása</div>
+                            <div class="col-12">
+                                <select name="" id="" class="form-control form-select"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col col-lg-4 col-12">
+                        <div class="row">
+                            <div class="col-12">Daru kiválasztása</div>
+                            <div class="col-12">
+                                <select name="" id="" class="form-control form-select">
+                                    <option value="">Igen</option>
+                                    <option value="">Nem</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+
+                    <div class="col col-lg-4 col-12">
+                        <div class="row">
+                            <div class="col-12">Gémhossz</div>
+                            <div class="col-12">
+                                <input type="text" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col col-lg-4 col-12">
+                        <div class="row">
+                            <div class="col-12">Házmagasság</div>
+                            <div class="col-12">
+                                <input type="text" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col col-lg-4 col-12">
+                        <div class="row">
+                            <div class="col-12">Telepítési szint (m)</div>
+                            <div class="col-12">
+                                <input type="text" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <!--left side end-->
+
+        <!--right side-->
+        <div class="col col-lg-4 col-12">
+            <div class="card panel-card p-2">
+                <div class="row">
+                    <div class="col-12"><strong>Automatikusan kitöltött adatok</strong></div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12">Ajánlat dátuma</div>
+                    <div class="col-12">
+                        <input type="date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12">Számított horogmagasság</div>
+                    <div class="col-12">
+                        <input type="number" class="form-control">
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12">Gépszolgáltatás havidíja (Ft)</div>
+                    <div class="col-12">
+                        <input type="number" class="form-control">
+                    </div>
+                </div>
+
+
+                <div class="row mt-2">
+                    <div class="col-12">Kapcsolószekrény havidíja (Ft)</div>
+                    <div class="col-12">
+                        <input type="number" class="form-control">
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12 text-end">
+                        <div class="btn btn-default"><i class="bi bi-file-pdf-fill"></i> PDF előnézet</div>
+                    </div>
+                </div>
+
+            </div>
+
+
+        </div>
+        <!--right side end-->
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card panel-card p-2">
+                <div class="col-12">Státusz</div>
+                <div class="col-12">
+                    <select name="" class="form-control form-select">
+                        <option value="">Piszkozat</option>
+                        <option value="">Lezárt</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+<script>
+
+
+
+
+
+    $(document).ready(function() {
+        var footer = `
+            <div class="container-fluid p-0" data-box="quoteAdd">
+                <div class="row">
+                    <div class="col-12 text-end">
+                        <button type="button" class="btn btn-default btn-sm btn-success" data-name="btnSave">
+                            <i class="bi bi-floppy2-fill"></i> Mentés
+                        </button>
+
+                        <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="btnCancel">
+                            <i class="bi bi-x-circle"></i> Bezárás
+                        </button>
+                    </div>
+                </div>
+         </div>`;
+
+        alertify.sheet("Árajánlat készítése", $("[data-name='quoteAddForm']").html())
+            .set('movable', false)
+            .set('resizable', false)
+            .set('closable', false)
+            .set('closableByEscape', false)
+            .maximize()
+            .set({transition: 'zoom'})
+            .setFooter(footer);
+
+        $("[data-box='quoteAdd'] [data-name='btnSave']").unbind("click").click(function () {
+            alertify.confirm("Megerősítés","Mented az adatokat?", ()=>{
+                alertify.sheet().close();
+            }, ()=>{});
+        });
+
+        $("[data-box='quoteAdd'] [data-name='btnCancel']").unbind("click").click(function () {
+            alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
+                alertify.sheet().close();
+            }, ()=>{});
+
+        });
+
+    });
+
+</script>

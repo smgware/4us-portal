@@ -21,15 +21,41 @@ class QuoteMakerController extends BaseController
         return $this->render('quote_maker/index.html.twig');
     }
 
-    #[Route('/quote-maker/add', name: 'index_quote_maker_add', methods: ['GET'])]
-    public function indexAdd(
+    #[Route('/quote-maker/quote/add', name: 'index_quote_maker_quote_add', methods: ['POST'])]
+    public function indexQuoteMakerQuoteAdd(
         Request $request,
-        PartnerRepository $partnerRepository): Response
+        PartnerRepository $partnerRepository,
+        ProjectRepository $projectRepository
+    ): Response
     {
         return $this->response('true',[
-                'template' => 'quote_maker/index.html.twig'
-        ]
-        );
+                'template' => 'quote_maker/index_quote_maker_quote_add.html.twig',
+                'templateData' => []
+
+        ]);
+    }
+
+
+    #[Route('/quote-maker/quotes/list-index', name: 'index_quote_maker_quotes_list_index', methods: ['POST'])]
+    public function indexQuoteMakerQuotesListIndex(
+        Request $request,
+    ): Response
+    {
+        return $this->response('true',[
+            'template' => 'quote_maker/index_quote_maker_quotes_list_index.html.twig',
+            'templateData' => []
+        ]);
+    }
+
+    #[Route('/quote-maker/quotes/list', name: 'index_quote_maker_quotes_list', methods: ['POST'])]
+    public function indexQuoteMakerQuotesList(
+        Request $request,
+    ): Response
+    {
+        return $this->response('true',[
+            'template' => 'quote_maker/index_quote_maker_quotes_list.html.twig',
+            'templateData' => []
+        ]);
     }
 
 }
