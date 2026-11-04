@@ -50,8 +50,8 @@
     //add query
     var formData = new FormData();
     new Ajax({
-        url: '{{ path('index_quote_maker_quote_add') }}',
-        name: 'index_quote_maker_quote_add',
+        url: '{{ path('index_quote_maker_quotes_add') }}',
+        name: 'index_quote_maker_quotes_add',
         type: 'POST',
         dataType: 'json',
         formData: formData,
@@ -60,17 +60,17 @@
                 alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalapot.');
                 return;
             }
-            $('#index_quote_maker_quote_add').remove();
+            $('#'+this.name).remove();
             $('<div>', {
-                id: 'index_quote_maker_quote_add',
+                id: this.name,
                 html: result.content
             }).appendTo('body');
         }
     });
 
     $("[data-name='btnQuoteMakerQuoteAdd']").unbind("click").click(function () {
-        ajaxquery['index_quote_maker_quote_add'].formData.set("id", null);
-        ajaxquery['index_quote_maker_quote_add'].send();
+        ajaxquery['index_quote_maker_quotes_add'].formData.set("id", null);
+        ajaxquery['index_quote_maker_quotes_add'].send();
     });
 
 

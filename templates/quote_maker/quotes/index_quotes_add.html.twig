@@ -1,0 +1,291 @@
+<div class="container-fluid" data-name="quoteAddForm">
+    <div class="row">
+
+        <!--left side-->
+        <div class="col col-lg-8 col-12 mb-2">
+
+            <div class="card panel-card p-2">
+                <div class="row">
+                    <div class="col-12"><strong>Alapadatok</strong></div>
+                </div>
+
+                <div class="row">
+                    <div class="col col-lg-6 col-12">
+                        <div class="row">
+                            <div class="col-12">Partner / kapcsolattartó</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <select name="" id="" class="form-control form-select"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col col-lg-6 col-12">
+                        <div class="row">
+                            <div class="col-12">Projekt / helyszín</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <select name="" id="" class="form-control form-select"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="card panel-card p-2 mt-2">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="btn  btn-sm btn-warning" data-name="btnMachineAdd"><i class="bi bi-plus-circle-fill"></i> Gép hozzáadása</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card panel-card p-2 mt-2" data-name="machineAddList"></div>
+
+        </div>
+        <!--left side end-->
+
+        <!--right side-->
+        <div class="col col-lg-4 col-12 mb-2">
+            <div class="card panel-card p-2">
+                <div class="row">
+                    <div class="col-12"><strong>Automatikusan kitöltött adatok</strong></div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12">Ajánlat dátuma</div>
+                    <div class="col-12">
+                        <input type="date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12">Számított horogmagasság</div>
+                    <div class="col-12">
+                        <input type="number" class="form-control">
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12">Gépszolgáltatás havidíja (Ft)</div>
+                    <div class="col-12">
+                        <input type="number" class="form-control">
+                    </div>
+                </div>
+
+
+                <div class="row mt-2">
+                    <div class="col-12">Kapcsolószekrény havidíja (Ft)</div>
+                    <div class="col-12">
+                        <input type="number" class="form-control">
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12 text-end">
+                        <div class="btn btn-default" data-name="btnPdfPreview"><i class="bi bi-file-pdf-fill"></i> PDF előnézet</div>
+                    </div>
+                </div>
+
+            </div>
+
+
+        </div>
+        <!--right side end-->
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card panel-card p-2">
+                <div class="col-12">Státusz</div>
+                <div class="col-12">
+                    <select name="" class="form-control form-select">
+                        <option value="">Piszkozat</option>
+                        <option value="">Lezárt</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+</div>
+
+<script>
+
+    $(document).ready(function() {
+
+        const machinesList = [];
+        let machineListTarget = $();
+
+
+
+
+        //ADD FORM TO POPUP
+        var popupId = alerty.popup("Hozzáadás", $("[data-name='quoteAddForm']").html())
+            .resizeTo("100%","100%")
+            .setButtons('buttonsSaveCancel')
+            .onSave(function(data) {
+
+                //save ajax
+                var formData = new FormData();
+                new Ajax({
+                    url: '{{ path('save_quote_maker_quotes_add') }}',
+                    name: 'save_quote_maker_quotes_add',
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    target: null,
+                    function_success: function (result) {
+                        if (result.success) {
+                            alerty.message("Sikeres mentés","success");
+                        }else{
+                            alerty.message("Hiba a mentésnél","error");
+                        }
+                    }
+                }).send();
+
+
+                alerty.message("Sikeres mentés","success");
+                this.close();
+            })
+            .onCancel(function(data) {
+                alerty.confirm("Megerősítés","Biztosan bezárod az ablakot?", ()=>{
+                    alerty.get(popupId).close();
+                },()=>{})
+            })
+            .getid();
+
+        const quotePopup = alerty.get(popupId);
+
+        /////////////////////////////////////////////////////////////////////////
+
+
+        function renderMachinesList() {
+            if (machinesList.length === 0) {
+                machineListTarget.html("<span>Nincsenek hozzáadott gépek</span>");
+                return;
+            }
+
+            const itemsHtml = machinesList.map(function (machine, index) {
+                return `
+                    <div class="card panel-card p-2 mt-2" data-name="list-item" data-list-id="${index}">
+                        <div class="row">
+                            <div class="col-6"><strong>${index + 1}. daru</strong></div>
+                            <div class="col-6 text-end">
+                                <button type="button" class="btn btn-sm" data-name="btnMachineCancel">
+                                    <i class="bi bi-trash-fill text-danger"></i> Eltávolítás
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row mt-2">
+                            <div class="col col-lg-8 col-12">
+                                <div class="row">
+                                    <div class="col-12">Daru kiválasztása</div>
+                                    <div class="col-12">
+
+                                                <input
+                                                    type="text"
+                                                    id="machineSelect${index}"
+                                                    name="machineSelect${index}"
+                                                    list="machineList${index}"
+                                                    class="form-control form-select"
+                                                    placeholder="Válassz"
+                                                >
+
+                                                <datalist id="machineList${index}${machine.gemhossz}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col col-lg-4 col-12">
+                                <div class="row">
+                                    <div class="col-12">Házmagasság</div>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" value="${machine.hazmagassag}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col col-lg-4 col-12">
+                                <div class="row">
+                                    <div class="col-12">Telepítési szint (m)</div>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" value="${machine.telepitesi_szint}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            machineListTarget.html(itemsHtml);
+        }
+
+
+
+        //PDF preview
+        $(document)
+            .off("click.btnPdfPreview", "[data-name='btnPdfPreview']")
+            .on("click.btnPdfPreview", "[data-name='btnPdfPreview']", function () {
+
+                alerty.popup("PDF előnézet", "PDF előkészítése folyamatban").setButtons('buttonsOk') ;
+            });
+
+
+
+        //machine add
+        $(document)
+            .off("click.btnMachineAdd", "[data-name='btnMachineAdd']")
+            .on("click.btnMachineAdd", "[data-name='btnMachineAdd']", function () {
+
+                machineListTarget = $("[data-name='machineAddList']");
+
+                if(machinesList.length == 3) {
+                    alerty.alert(`<i class="bi bi-exclamation-triangle-fill text-warning"></i> Hiba`,"Legfeljebb 3 gép szerepelhez az ajánlatban!");
+                    return false;
+                }
+                    machinesList.push({
+                        gemhossz: 0,
+                        hazmagassag: 0,
+                        telepitesi_szint: 0
+                    });
+
+                    renderMachinesList();
+
+            });
+
+
+        //machine remove
+        $(document)
+            .off("click.btnMachineCancel", "[data-name='btnMachineCancel']")
+            .on("click.btnMachineCancel", "[data-name='btnMachineCancel']", function () {
+                const listId = Number(
+                    $(this).closest("[data-name='list-item']").attr("data-list-id")
+                );
+
+                if (!Number.isInteger(listId) || listId < 0 || listId >= machinesList.length) {
+                    return;
+                }
+
+                alerty.confirm("Megerősítés", "Eltávolítod az elemet?", function () {
+                    machinesList.splice(listId, 1);
+                    renderMachinesList();
+                });
+
+            });
+
+
+        renderMachinesList();
+
+
+
+    });
+
+</script>

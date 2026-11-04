@@ -30,7 +30,7 @@ class QuoteMakerController extends BaseController
         ]);
     }
 
-    #[Route('/quote-maker/quote/add', name: 'index_quote_maker_quote_add', methods: ['POST'])]
+    #[Route('/quote-maker/quotes/add', name: 'index_quote_maker_quotes_add', methods: ['POST'])]
     public function indexQuoteMakerQuoteAdd(
         Request $request,
         PartnerRepository $partnerRepository,
@@ -38,9 +38,19 @@ class QuoteMakerController extends BaseController
     ): Response
     {
         return $this->response('true',[
-                'template' => 'quote_maker/quotes/index_quote_add.html.twig',
+                'template' => 'quote_maker/quotes/index_quotes_add.html.twig',
                 'templateData' => []
 
+        ]);
+    }
+
+    #[Route('/quote-maker/quotes/save-add', name: 'save_quote_maker_quotes_add', methods: ['POST'])]
+    public function saveQuoteMakerQuotesAdd(
+        Request $request
+    ): Response
+    {
+        return $this->response('true',[
+            'data' => []
         ]);
     }
 
@@ -109,6 +119,16 @@ class QuoteMakerController extends BaseController
             'template' => 'quote_maker/machines/index_quote_maker_machines_add.html.twig',
             'templateData' => []
 
+        ]);
+    }
+
+    #[Route('/quote-maker/machines/save-add', name: 'save_quote_maker_machines_add', methods: ['POST'])]
+    public function saveQuoteMakerMachinesAdd(
+        Request $request
+    ): Response
+    {
+        return $this->response('true',[
+            'data' => []
         ]);
     }
 

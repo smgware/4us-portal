@@ -1,0 +1,30 @@
+:root { font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif; }
+body { margin: 0; min-height: 100vh; background: #f3f6fb; color: #182438; transition: background .15s, color .15s; }
+body.dark-mode { background: #0d1420; color: #eff4ff; }
+.demo-wrap { max-width: 1080px; margin: auto; padding: 48px 24px 80px; }
+.demo-head { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 800; letter-spacing: -.05em; }
+.brand-icon { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg,#497eff,#8d68ec); display: grid; place-items: center; color: #fff; }
+.demo-eyebrow { color: #5a87f3; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; margin-top: 64px; }
+h1 { font-size: clamp(34px,5vw,56px); line-height: 1.1; letter-spacing: -.06em; max-width: 720px; margin: 13px 0 14px; }
+.lead { color: #74829a; font-size: 17px; line-height: 1.7; max-width: 750px; }
+.dark-mode .lead { color: #abb8cc; }
+.demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 35px; }
+.demo-card { padding: 24px; border: 1px solid #e4e9f0; border-radius: 16px; background: #fff; }
+.dark-mode .demo-card { background: #192231; border-color: #2d394b; }
+.demo-card h3 { margin: 13px 0 8px; font-size: 17px; }
+.demo-card p { margin: 0 0 20px; font-size: 13px; color: #7e8ba1; min-height: 44px; line-height: 1.5; }
+.dark-mode .demo-card p { color: #a2b0c5; }
+.demo-card .card-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: #edf3ff; color: #5c80db; font-size: 21px; }
+.demo-btn { border: 1px solid #d5dfed; background: #fff; color: #23344e; font: inherit; font-size: 13px; font-weight: 700; padding: 10px 15px; border-radius: 9px; cursor: pointer; }
+.dark-mode .demo-btn { background: #24324a; color: #ecf3ff; border-color: #354863; }
+.demo-btn.primary { background: #527af0; color: #fff; border-color: #527af0; }
+.demo-btn:hover { filter: brightness(.95); }
+.demo-card .demo-btn { width: 100%; }
+.demo-console { margin-top: 30px; padding: 25px; border: 1px solid #dce4f0; border-radius: 15px; background: #fff; }
+.dark-mode .demo-console { background: #192231; border-color: #2d394b; }
+.demo-console h2 { margin: 0 0 14px; font-size: 17px; }
+.log { background: #111b2c; color: #b9e6cf; padding: 20px; border-radius: 11px; min-height: 72px; line-height: 1.8; font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; overflow: auto; }
+code { font-family: Consolas, monospace; }
+.demo-footer { margin-top: 26px; font-size: 12px; color: #8492a8; }
+@media(max-width:760px) { .demo-grid { grid-template-columns: 1fr; } .demo-eyebrow { margin-top: 40px; } .demo-wrap { padding: 30px 16px; } }

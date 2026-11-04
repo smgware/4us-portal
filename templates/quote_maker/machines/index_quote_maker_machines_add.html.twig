@@ -1,4 +1,4 @@
-<div class="container-fluid" data-name="addForm">
+<div class="container-fluid w-100 p-0" data-name="addMachineForm">
     <div class="row">
 
         <!--left side-->
@@ -17,41 +17,44 @@
 
     $(document).ready(function() {
 
-        var footer = `
-            <div class="container-fluid p-0" data-box="quoteAdd">
-                <div class="row">
-                    <div class="col-12 text-end">
-                        <button type="button" class="btn btn-default btn-sm btn-success" data-name="btnSave">
-                            <i class="bi bi-floppy2-fill"></i> Mentés
-                        </button>
+    var popupId = alerty.popup("Hozzáadás", $("[data-name='addMachineForm']").html())
+        //.resizeTo("50%","50%")
+        .setButtons('buttonsSaveCancel')
+        .onSave(function(data) {
 
-                        <button type="button" class="btn btn-default btn-sm btn-secondary" data-name="btnCancel">
-                            <i class="bi bi-x-circle"></i> Bezárás
-                        </button>
-                    </div>
-                </div>
-         </div>`;
+            //save ajax
+            var formData = new FormData();
+            new Ajax({
+                url: '{{ path('save_quote_maker_machines_add') }}',
+                name: 'save_quote_maker_machines_add',
+                type: 'POST',
+                dataType: 'json',
+                formData: formData,
+                target: null,
+                function_success: function (result) {
+                    if (result.success) {
+                        alerty.message("Sikeres mentés","success");
+                    }else{
+                        alerty.message("Hiba a mentésnél","error");
+                    }
+                }
+            }).send();
 
-        alertify.add("Hozzáadás", $("[data-name='quoteAddForm']").html())
-            .set('movable', false)
-            .set('resizable', false)
-            .set('closable', false)
-            .set('closableByEscape', false)
-            .maximize()
-            .set({transition: 'zoom'})
-            .setFooter(footer);
 
-        $("[data-box='quoteAdd'] [data-name='btnSave']").unbind("click").click(function () {
-            alertify.confirm("Megerősítés","Mented az adatokat?", ()=>{
-                alertify.add().close();
-            }, ()=>{});
-        });
+            alerty.message("Sikeres mentés","success");
+            this.close();
+        })
+        .onCancel(function(data) {
+            alerty.confirm("Megerősítés","Biztosan bezárod az ablakot?", ()=>{
+                alerty.get(popupId).close();
+            },()=>{})
+        })
+        .getid();
 
-        $("[data-box='quoteAdd'] [data-name='btnCancel']").unbind("click").click(function () {
-            alertify.confirm("Megerősítés","Bezárod az ablakot?", ()=>{
-                alertify.add().close();
-            }, ()=>{});
-        });
+
+
+
+
     });
 
 </script>

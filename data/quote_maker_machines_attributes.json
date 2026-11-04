@@ -1,4 +1,4 @@
-const fieldoptions = [
+[
     { field_name: "Megnevezés", field_code: "megnevezes", field_calculated: null },
     { field_name: "Típus", field_code: "tipus", field_calculated: false },
     { field_name: "Évjárat", field_code: "evjarat", field_calculated: false },
@@ -32,4 +32,4 @@ const fieldoptions = [
     { field_name: "ÁR (EUR)", field_code: "ar_eur", field_calculated: true },
     { field_name: "ÁR (HUF)", field_code: "ar_huf", field_calculated: true },
     { field_name: "Legnagyobb súly", field_code: "legnagyobb_suly", field_calculated: true }
-];
+]
