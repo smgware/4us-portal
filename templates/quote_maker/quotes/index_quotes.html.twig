@@ -1,0 +1,79 @@
+<div class="container-fluid p-0">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title"><i class="bi bi-file-check-fill"></i> Árajánlatok </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card panel-card p-2">
+                <div class="row">
+                    <div class="col-12 text-start">
+                        <button type="button" class="btn btn-default btn-sm" data-name="btnQuoteMakerQuoteAdd">
+                            <i class="bi bi-plus-circle-fill"></i> Új hozzáadása
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col-12" data-name="ajax-content" data-key="index_quote_maker_quotes_content"></div>
+    </div>
+
+</div>
+
+
+<script>
+
+    var formData = new FormData();
+    new Ajax({
+        url: '{{ path('index_quote_maker_quotes_list_index') }}',
+        name: 'index_quote_maker_quotes_list_index',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        target: $("[data-key='index_quote_maker_quotes_content']"),
+        function_success: function (result) {
+            if (!result.success) {
+                alertify.error(result.data?.error || 'Nem sikerült betölteni a projekteket.');
+                return;
+            }
+            this.target.html(result.content);
+        }
+    }).send();
+
+
+
+    //add query
+    var formData = new FormData();
+    new Ajax({
+        url: '{{ path('index_quote_maker_quote_add') }}',
+        name: 'index_quote_maker_quote_add',
+        type: 'POST',
+        dataType: 'json',
+        formData: formData,
+        function_success: function (result) {
+            if (!result.success) {
+                alertify.error(result.data?.error || 'Nem sikerült betölteni a munkalapot.');
+                return;
+            }
+            $('#index_quote_maker_quote_add').remove();
+            $('<div>', {
+                id: 'index_quote_maker_quote_add',
+                html: result.content
+            }).appendTo('body');
+        }
+    });
+
+    $("[data-name='btnQuoteMakerQuoteAdd']").unbind("click").click(function () {
+        ajaxquery['index_quote_maker_quote_add'].formData.set("id", null);
+        ajaxquery['index_quote_maker_quote_add'].send();
+    });
+
+
+
+
+</script>

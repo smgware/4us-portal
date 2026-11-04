@@ -21,6 +21,15 @@ class QuoteMakerController extends BaseController
         return $this->render('quote_maker/index.html.twig');
     }
 
+    #[Route('/quote-maker/quotes', name: 'index_quote_maker_quotes')]
+    public function indexQuoteMakerQuotes(): Response
+    {
+        return $this->response('true',[
+            'template' => 'quote_maker/quotes/index_quotes.html.twig',
+            'templateData' => []
+        ]);
+    }
+
     #[Route('/quote-maker/quote/add', name: 'index_quote_maker_quote_add', methods: ['POST'])]
     public function indexQuoteMakerQuoteAdd(
         Request $request,
@@ -29,7 +38,7 @@ class QuoteMakerController extends BaseController
     ): Response
     {
         return $this->response('true',[
-                'template' => 'quote_maker/index_quote_maker_quote_add.html.twig',
+                'template' => 'quote_maker/quotes/index_quote_add.html.twig',
                 'templateData' => []
 
         ]);
@@ -42,7 +51,7 @@ class QuoteMakerController extends BaseController
     ): Response
     {
         return $this->response('true',[
-            'template' => 'quote_maker/index_quote_maker_quotes_list_index.html.twig',
+            'template' => 'quote_maker/quotes/index_quotes_list_index.html.twig',
             'templateData' => []
         ]);
     }
@@ -53,9 +62,57 @@ class QuoteMakerController extends BaseController
     ): Response
     {
         return $this->response('true',[
-            'template' => 'quote_maker/index_quote_maker_quotes_list.html.twig',
+            'template' => 'quote_maker/quotes/index_quotes_list.html.twig',
             'templateData' => []
         ]);
     }
+
+    #[Route('/quote-maker/machines', name: 'index_quote_maker_machines')]
+    public function indexQuoteMakerMachines(): Response
+    {
+        return $this->response('true',[
+            'template' => 'quote_maker/machines/index_quote_maker_machines.html.twig',
+            'templateData' => []
+        ]);
+    }
+
+
+
+    #[Route('/quote-maker/machines/list-index', name: 'index_quote_maker_machines_list_index', methods: ['POST'])]
+    public function indexQuoteMakerMachinesListIndex(
+        Request $request,
+    ): Response
+    {
+        return $this->response('true',[
+            'template' => 'quote_maker/machines/index_quote_maker_machines_list_index.html.twig',
+            'templateData' => []
+        ]);
+    }
+
+    #[Route('/quote-maker/machines/list', name: 'index_quote_maker_machines_list', methods: ['POST'])]
+    public function indexQuoteMakerMachinesList(
+        Request $request,
+    ): Response
+    {
+        return $this->response('true',[
+            'template' => 'quote_maker/machines/index_quote_maker_machines_list.html.twig',
+            'templateData' => []
+        ]);
+    }
+
+    #[Route('/quote-maker/machines/add', name: 'index_quote_maker_machine_add', methods: ['POST'])]
+    public function indexQuoteMakerMachineAdd(
+        Request $request
+    ): Response
+    {
+        return $this->response('true',[
+            'template' => 'quote_maker/machines/index_quote_maker_machines_add.html.twig',
+            'templateData' => []
+
+        ]);
+    }
+
+
+
 
 }
