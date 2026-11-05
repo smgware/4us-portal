@@ -126,7 +126,10 @@
 
 
         //ADD FORM TO POPUP
-        var popupId = alerty.popup("Hozzáadás", $("[data-name='quoteAddForm']").html())
+        phtml = $("[data-name='quoteAddForm']").html();
+        $("[data-name='quoteAddForm']").html("");
+
+        var popupId = alerty.popup("Hozzáadás", phtml)
             .resizeTo("100%","100%")
             .setButtons('buttonsSaveCancel')
             .onSave(function(data) {
@@ -189,16 +192,48 @@
                                     <div class="col-12">Daru kiválasztása</div>
                                     <div class="col-12">
 
-                                                <input
-                                                    type="text"
-                                                    id="machineSelect${index}"
-                                                    name="machineSelect${index}"
-                                                    list="machineList${index}"
-                                                    class="form-control form-select"
-                                                    placeholder="Válassz"
-                                                >
+                                            <input
+                                                type="text"
+                                                id="machineSelect${index}"
+                                                name="machineSelect${index}"
+                                                list="machineList${index}"
+                                                class="form-control form-select"
+                                                placeholder="Válassz"
+                                            >
 
-                                                <datalist id="machineList${index}${machine.gemhossz}">
+                                            <datalist id="machineList${index}">
+                                                <option value="ctt-91-5-2007">Terex Comedil CTT 91-5 (2007)</option>
+                                                <option value="ctt-91-5-2021">Terex Comedil CTT 91-5 (2021)</option>
+                                                <option value="ctt-132-6-2019">Terex Comedil CTT 132-6 (2019)</option>
+                                                <option value="ctt-132-6-2020">Terex Comedil CTT 132-6 (2020)</option>
+                                                <option value="ctt-162-8">Terex Comedil CTT 162-8 (2017)</option>
+                                                <option value="ctt-182-8">Terex Comedil CTT 182-8</option>
+                                                <option value="ctt-231-12">Terex Comedil CTT 231-12</option>
+                                                <option value="ctt-332-16">Terex Comedil CTT 332-16</option>
+                                                <option value="ctt-472-20">Terex Comedil CTT 472-20</option>
+                                            </datalist>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="col col-lg-4 col-12">
+                                <div class="row">
+                                    <div class="col-12">Ankeres</div>
+                                    <div class="col-12">
+                                       <select name="" class="form-control">
+                                            <option value="0">Igen</option>
+                                            <option value="1">Nem</option>
+                                       </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col col-lg-4 col-12">
+                                <div class="row">
+                                    <div class="col-12">Gémhossz</div>
+                                    <div class="col-12">
+                                        <input type="text" class="form-control" value="${machine.gemhossz}">
                                     </div>
                                 </div>
                             </div>
@@ -220,6 +255,7 @@
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 `;
@@ -234,7 +270,6 @@
         $(document)
             .off("click.btnPdfPreview", "[data-name='btnPdfPreview']")
             .on("click.btnPdfPreview", "[data-name='btnPdfPreview']", function () {
-
                 alerty.popup("PDF előnézet", "PDF előkészítése folyamatban").setButtons('buttonsOk') ;
             });
 
@@ -245,22 +280,28 @@
             .off("click.btnMachineAdd", "[data-name='btnMachineAdd']")
             .on("click.btnMachineAdd", "[data-name='btnMachineAdd']", function () {
 
+                console.log(Date.now());
                 machineListTarget = $("[data-name='machineAddList']");
 
                 if(machinesList.length == 3) {
                     alerty.alert(`<i class="bi bi-exclamation-triangle-fill text-warning"></i> Hiba`,"Legfeljebb 3 gép szerepelhez az ajánlatban!");
                     return false;
                 }
-                    machinesList.push({
-                        gemhossz: 0,
-                        hazmagassag: 0,
-                        telepitesi_szint: 0
-                    });
 
-                    renderMachinesList();
+                machinesList.push({
+                    gemhossz: 0,
+                    hazmagassag: 0,
+                    telepitesi_szint: 0
+                });
+
+                renderMachinesList();
 
             });
 
+        if(machinesList.length == 0){
+            console.log(Date.now());
+            //$("[data-name='btnMachineAdd']").trigger("click");
+        }
 
         //machine remove
         $(document)
@@ -284,6 +325,7 @@
 
         renderMachinesList();
 
+        $("[data-name='btnMachineAdd']").trigger("click");
 
 
     });
