@@ -1,17 +1,15 @@
 <div class="container-fluid p-0">
-
     <div class="row mt-2">
         <div class="col-12">
-
             <div class="card panel-card p-2">
-                <div class="row">
-                    <div class="col-5">
-                        <input type="text" class="form-control" placeholder="Keresés..." data-name="search_projects_list">
+                <div class="row g-2">
+                    <div class="col-12 col-md-5">
+                        <input type="text" class="form-control" placeholder="Keresés kódra, partnerre vagy projektre..." data-name="searchQuoteMakerQuotes">
                     </div>
-                    <div class="col-7 text-end">
-                            <button type="button" class="btn btn-default" data-name="btnQuoteMakerQuotesSearch">
-                                <i class="bi bi-search"></i> Keresés
-                            </button>
+                    <div class="col-12 col-md-7 text-end">
+                        <button type="button" class="btn btn-default" data-name="btnQuoteMakerQuotesSearch">
+                            <i class="bi bi-search"></i> Keresés
+                        </button>
                     </div>
                 </div>
             </div>
@@ -21,33 +19,46 @@
     <div class="row mt-2">
         <div class="col-12">
             <div class="card panel-card p-2">
-                <div class="row">
-                    <div class="col-12" data-name="ajax-content" data-key="index_quote_maker_quotes_list"></div>
-                </div>
+                <div data-name="ajax-content" data-key="index_quote_maker_quotes_list"></div>
             </div>
         </div>
     </div>
-
 </div>
 
-
 <script>
+(() => {
+    const formData = new FormData();
+    formData.set('filters', '{}');
+    formData.set('page', '1');
 
-    var formData = new FormData();
     new Ajax({
-        url: '{{ path('index_quote_maker_quotes_list') }}',
+        url: {{ path('index_quote_maker_quotes_list')|json_encode|raw }},
         name: 'index_quote_maker_quotes_list',
         type: 'POST',
         dataType: 'json',
         formData: formData,
-        target: $("[data-key='index_quote_maker_quotes_list']"),
+        target: $('[data-key="index_quote_maker_quotes_list"]'),
         function_success: function (result) {
             if (!result.success) {
-                alertify.error(result.data?.error || 'Nem sikerült betölteni a projekteket.');
+                alertify.error(result.data?.error || 'Nem sikerült betölteni az árajánlatokat.');
                 return;
             }
             this.target.html(result.content);
         }
     }).send();
 
+    function refreshQuoteList() {
+        const request = ajaxquery['index_quote_maker_quotes_list'];
+        const filters = JSON.parse(request.formData.get('filters') || '{}');
+        filters.search = $('[data-name="searchQuoteMakerQuotes"]').val() || '';
+        request.formData.set('filters', JSON.stringify(filters));
+        request.formData.set('page', '1');
+        request.send();
+    }
+
+    $('[data-name="btnQuoteMakerQuotesSearch"]').off('click.quoteMaker').on('click.quoteMaker', refreshQuoteList);
+    $('[data-name="searchQuoteMakerQuotes"]').off('keyup.quoteMaker').on('keyup.quoteMaker', function (event) {
+        if (event.key === 'Enter') refreshQuoteList();
+    });
+})();
 </script>

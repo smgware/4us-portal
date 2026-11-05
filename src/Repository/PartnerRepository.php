@@ -44,9 +44,16 @@ class PartnerRepository extends ServiceEntityRepository
                 'partner.id AS id',
                 'partner.code AS code',
                 'partner.name AS name',
+                'partner.type AS type',
                 'partner.taxNumber AS tax_number',
+                'partner.email AS email',
+                'partner.phone AS phone',
+                'partner.website AS website',
+                'partner.country AS country',
+                'partner.zip AS zip',
                 'partner.city AS city',
                 'partner.address AS address',
+                'partner.description AS description',
                 'partner.status AS status',
             ]);
 

@@ -1,5 +1,86 @@
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">Nincsenek rögzített adatok</div>
-    </div>
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+        <tr class="pt-2 pb-2">
+            <th class="p-2">Gép</th>
+            <th class="p-2">Adatok</th>
+            <th class="p-2">Rögzítve</th>
+            <th class="p-2">Módosítva</th>
+            <th class="p-2">#</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for record in records %}
+            <tr data-name="list_item" data-key="{{ record.id }}">
+                {% set machineData = record.data|default({}) %}
+                {% set machineTitle = record.title|default('') %}
+                {% if not machineTitle %}
+                    {% set machineTitle = machineData.megnevezes|default('#' ~ record.id) %}
+                {% endif %}
+                <td class="p-2 text-nowrap">
+                    <strong>{{ machineTitle }}</strong>
+                    {% if record.code %}
+                        <div class="text-xs">{{ record.code }}</div>
+                    {% endif %}
+                </td>
+                <td class="p-2">
+                    <div class="row g-2">
+                        {% for fieldCode, fieldValue in machineData %}
+                            {% set fieldOption = fieldOptionsByCode[fieldCode]|default({}) %}
+                            <div class="col-xl-4 col-md-6 col-12">
+                                <span class="text-xs text-muted-custom">{{ fieldOption.field_title|default(fieldCode) }}:</span>
+                                <span>
+                                    {% if fieldValue is iterable %}
+                                        {{ fieldValue|json_encode }}
+                                    {% elseif fieldValue is same as(null) or fieldValue is same as('') %}
+                                        -
+                                    {% else %}
+                                        {{ fieldValue }}
+                                    {% endif %}
+                                    {% if fieldOption.field_unit|default('') %} {{ fieldOption.field_unit }}{% endif %}
+                                </span>
+                            </div>
+                        {% else %}
+                            <div class="col-12">-</div>
+                        {% endfor %}
+                    </div>
+                </td>
+                <td class="p-2 text-nowrap">{{ record.datetimeAdd ? record.datetimeAdd|date('Y-m-d H:i') : '-' }}</td>
+                <td class="p-2 text-nowrap">{{ record.datetimeLast ? record.datetimeLast|date('Y-m-d H:i') : '-' }}</td>
+                <td class="p-2 text-nowrap">
+                    <button type="button" class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit" title="Szerkesztés"><i class="bi bi-pencil-square"></i></button>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="5" class="text-center py-4">Nincs megjeleníthető adat.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
+
+<div class="text-xs mt-2">Találatok: {{ totalRecords }}</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'index_quote_maker_machines_list',
+    queryParams: app.request.query.all
+} %}
+<script>
+    $("[data-name='list_item_btn']").unbind("click").click(function () {
+        var mode = $(this).attr("data-mode");
+
+        if(mode === "edit") {
+            var id = $(this).closest("[data-name='list_item']").attr("data-key");
+
+            if(ajaxquery['index_quote_maker_machine_add'] !== undefined) {
+                ajaxquery['index_quote_maker_machine_add'].formData.set("id", id);
+                ajaxquery['index_quote_maker_machine_add'].send();
+            }
+
+        }
+    });
+
+</script>

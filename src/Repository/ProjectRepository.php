@@ -32,7 +32,7 @@ class ProjectRepository extends ServiceEntityRepository
     public function findForWorksheetSelect(string $search, int $limit = 20): array
     {
         $qb = $this->createQueryBuilder('project')
-            ->select('project.id, project.code, project.name, project.status')
+            ->select('project.id, project.code, project.name, project.description, project.status')
             ->orderBy('project.name', 'ASC')
             ->addOrderBy('project.code', 'ASC')
             ->setMaxResults(max(1, $limit));

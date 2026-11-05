@@ -1,5 +1,76 @@
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">Nincsenek rögzített adatok</div>
-    </div>
+<div class="table-responsive w-100 overflow-auto">
+    <table class="table-default w-100">
+        <thead>
+        <tr>
+            <th class="p-2">Ajánlat kódja</th>
+            <th class="p-2">Partner</th>
+            <th class="p-2">Projekt</th>
+            <th class="p-2">Státusz</th>
+            <th class="p-2">Létrehozva</th>
+            <th class="p-2">Módosítva</th>
+            <th class="p-2">Létrehozta</th>
+            <th class="p-2">Módosította</th>
+            <th class="p-2">#</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for record in records %}
+            {% set quoteData = record.data|default({}) %}
+            <tr data-name="quote_list_item" data-key="{{ record.id }}">
+                <td class="p-2 text-nowrap"><strong>{{ record.code|default('-') }}</strong></td>
+                <td class="p-2">{{ quoteData.partner.name|default('-') }}</td>
+                <td class="p-2">{{ quoteData.project.name|default('-') }}</td>
+                <td class="p-2">
+                    <span class="badge {{ quoteData.status|default('draft') == 'closed' ? 'bg-success' : 'bg-secondary' }}">
+                        {{ quoteData.status_title|default(quoteData.status|default('draft') == 'closed' ? 'Lezárt' : 'Piszkozat') }}
+                    </span>
+                </td>
+                <td class="p-2 text-nowrap">{{ record.datetime_add ? record.datetime_add|date('Y.m.d H:i') : '-' }}</td>
+                <td class="p-2 text-nowrap">{{ record.datetime_last ? record.datetime_last|date('Y.m.d H:i') : '-' }}</td>
+                <td class="p-2">{{ record.creator_name|default(record.creator_username|default(record.uid_add ? '#' ~ record.uid_add : '-')) }}</td>
+                <td class="p-2">{{ record.editor_name|default(record.editor_username|default(record.uid_last ? '#' ~ record.uid_last : '-')) }}</td>
+                <td class="p-2 text-nowrap">
+                    <button type="button" class="btn btn-default btn-sm" data-name="list_item_btn" data-mode="edit" title="Szerkesztés">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="9" class="text-center py-4">Nincs megjeleníthető árajánlat.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
+
+<div class="text-xs mt-2">Találatok: {{ totalRecords }}</div>
+
+{% include 'partials/_pagination.html.twig' with {
+    currentPage: page,
+    totalPages: totalPages,
+    routeName: 'index_quote_maker_quotes_list',
+    queryParams: app.request.query.all
+} %}
+
+<script>
+(() => {
+    $('[data-name="quote_list_item"] [data-name="list_item_btn"]').off('click.quoteMaker').on('click.quoteMaker', function () {
+        if ($(this).attr('data-mode') !== 'edit') return;
+        const id = $(this).closest('[data-name="quote_list_item"]').attr('data-key');
+        if (ajaxquery['index_quote_maker_quotes_add'] !== undefined) {
+            ajaxquery['index_quote_maker_quotes_add'].formData.set('id', id);
+            ajaxquery['index_quote_maker_quotes_add'].send();
+        }
+    });
+
+    $('[data-key="index_quote_maker_quotes_list"] .pagination a').off('click.quoteMaker').on('click.quoteMaker', function (event) {
+        event.preventDefault();
+        const url = new URL(this.href, window.location.origin);
+        const page = url.searchParams.get('page') || '1';
+        const request = ajaxquery['index_quote_maker_quotes_list'];
+        if (request) {
+            request.formData.set('page', page);
+            request.send();
+        }
+    });
+})();
+</script>

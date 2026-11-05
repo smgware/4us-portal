@@ -1,48 +1,79 @@
 <div class="container-fluid w-100 p-0" data-name="addMachineForm">
+    {% set itemData = item ? item.data|default({}) : {} %}
     <div class="row">
-
-        <!--left side-->
-        <div class="col col-lg-8 col-12">
-
-            <div class="card panel-card p-2">
-                <div class="row">
-                    <div class="col-12"><strong>Alapadatok</strong></div>
+        <input type="hidden" value="{{ item.id ?? '' }}" data-name="id">
+        <div class="card panel-card p-2">
+            {% for fieldOption in fieldOptions %}
+            <div class="row">
+                <div class="col-8">
+                    <span class="text-xs">{{ fieldOption.field_title }}</span>
+                    <input type="{{ fieldOption.field_type }}" data-name="{{ fieldOption.field_code }}" data-type="subdata" class="form-control" value="{{ itemData[fieldOption.field_code]|default('') }}">
+                </div>
+                <div class="col-4 pt-4">
+                    <span class="text-xs">{{ fieldOption.field_unit }}</span>
                 </div>
             </div>
+            {% endfor %}
         </div>
+
     </div>
 </div>
 
 <script>
 
     $(document).ready(function() {
+    var data = {};
 
-    var popupId = alerty.popup("Hozzáadás", $("[data-name='addMachineForm']").html())
+    phtml = `<div class="container-fluid w-100 p-0" data-name="addMachineForm">` + $("[data-name='addMachineForm']").html() +`</div>`
+    $("[data-name='addMachineForm']").html("");
+
+    var popupId = alerty.popup({{ (item ? 'Módosítás' : 'Hozzáadás')|json_encode|raw }}, phtml)
         //.resizeTo("50%","50%")
         .setButtons('buttonsSaveCancel')
         .onSave(function(data) {
 
-            //save ajax
-            var formData = new FormData();
-            new Ajax({
-                url: '{{ path('save_quote_maker_machines_add') }}',
-                name: 'save_quote_maker_machines_add',
-                type: 'POST',
-                dataType: 'json',
-                formData: formData,
-                target: null,
-                function_success: function (result) {
-                    if (result.success) {
-                        alerty.message("Sikeres mentés","success");
-                    }else{
-                        alerty.message("Hiba a mentésnél","error");
+            alerty.confirm("Megerősítés","Rögzíted az adatokat?", ()=>{
+
+
+                var form = $("[data-name='addMachineForm']");
+
+                form.find("input[data-type='subdata']").each(function() {
+                    key         = $(this).attr("data-name");
+                    val         = $(this).val();
+                    data[ key ] = val;
+                });
+
+                delete data['id'];
+
+                var id = form.find("input[type='hidden']").val();
+
+                //save ajax
+                var formData = new FormData();
+                formData.append("id", id);
+                formData.append("data", JSON.stringify(data));
+
+                new Ajax({
+                    url: '{{ path('save_quote_maker_machines_add') }}',
+                    name: 'save_quote_maker_machines_add',
+                    type: 'POST',
+                    dataType: 'json',
+                    formData: formData,
+                    target: null,
+                    function_success: function (result) {
+                        if (result.success) {
+                            alerty.message("Sikeres mentés","success");
+
+                            alerty.get(popupId).close();
+                            if (ajaxquery['index_quote_maker_machines_list'] !== undefined) {
+                                ajaxquery['index_quote_maker_machines_list'].send();
+                            }
+                        }else{
+                            alerty.message("Hiba a mentésnél","error");
+                        }
                     }
-                }
-            }).send();
+                }).send();
 
-
-            alerty.message("Sikeres mentés","success");
-            this.close();
+            },()=>{});
         })
         .onCancel(function(data) {
             alerty.confirm("Megerősítés","Biztosan bezárod az ablakot?", ()=>{

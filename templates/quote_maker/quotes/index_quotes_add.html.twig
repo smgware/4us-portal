@@ -1,333 +1,425 @@
-<div class="container-fluid" data-name="quoteAddForm">
-    <div class="row">
+<div class="container-fluid w-100 p-0" data-name="quoteMakerQuoteFormSource">
+    <input type="hidden" data-name="id" value="{{ item ? item.id : '' }}">
 
-        <!--left side-->
-        <div class="col col-lg-8 col-12 mb-2">
-
-            <div class="card panel-card p-2">
-                <div class="row">
-                    <div class="col-12"><strong>Alapadatok</strong></div>
-                </div>
-
-                <div class="row">
-                    <div class="col col-lg-6 col-12">
-                        <div class="row">
-                            <div class="col-12">Partner / kapcsolattartó</div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12">
-                                <select name="" id="" class="form-control form-select"></select>
+    <div class="row g-2">
+        <div class="col-12 col-xl-8">
+            <div class="card panel-card p-3">
+                <strong>Alapadatok</strong>
+                <div class="row g-2 mt-1">
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label text-xs mb-1">Partner / kapcsolattartó</label>
+                        <div class="ajax-combobox position-relative" data-quote-combobox="partner">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Partner keresése..." autocomplete="off"
+                                       value="{{ itemData.partner.name|default('') }}" data-ajax-combobox-search>
+                                <button type="button" class="btn btn-outline-secondary" aria-label="Partner törlése" data-ajax-combobox-clear>
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
                             </div>
+                            <input type="hidden" value="{{ itemData.partner.id|default('') }}" data-ajax-combobox-value>
+                            <div class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
                         </div>
                     </div>
-
-                    <div class="col col-lg-6 col-12">
-                        <div class="row">
-                            <div class="col-12">Projekt / helyszín</div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12">
-                                <select name="" id="" class="form-control form-select"></select>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label text-xs mb-1">Projekt</label>
+                        <div class="ajax-combobox position-relative" data-quote-combobox="project">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Projekt keresése..." autocomplete="off"
+                                       value="{{ itemData.project.name|default('') }}" data-ajax-combobox-search>
+                                <button type="button" class="btn btn-outline-secondary" aria-label="Projekt törlése" data-ajax-combobox-clear>
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
                             </div>
+                            <input type="hidden" value="{{ itemData.project.id|default('') }}" data-ajax-combobox-value>
+                            <div class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
                         </div>
                     </div>
-
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label text-xs mb-1">Kapcsolattartó neve</label>
+                        <input type="text" class="form-control" data-name="contact_name" value="{{ itemData.contact_name|default(itemData.partner.name|default('')) }}">
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label text-xs mb-1">Kapcsolattartó e-mail címe</label>
+                        <input type="email" class="form-control" data-name="contact_email" value="{{ itemData.contact_email|default(itemData.partner.email|default('')) }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-xs mb-1">Projekt helyszíne</label>
+                        <input type="text" class="form-control" data-name="project_location" value="{{ itemData.project_location|default(itemData.project.description|default('')) }}">
+                    </div>
                 </div>
             </div>
 
             <div class="card panel-card p-2 mt-2">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="btn  btn-sm btn-warning" data-name="btnMachineAdd"><i class="bi bi-plus-circle-fill"></i> Gép hozzáadása</div>
-                    </div>
+                <div class="d-flex align-items-center justify-content-between">
+                    <strong>Kiválasztott daruk</strong>
+                    <button type="button" class="btn btn-warning btn-sm" data-name="btnMachineAdd">
+                        <i class="bi bi-plus-circle-fill"></i> Gép hozzáadása
+                    </button>
                 </div>
             </div>
 
-            <div class="card panel-card p-2 mt-2" data-name="machineAddList"></div>
-
+            <div data-name="machineAddList"></div>
         </div>
-        <!--left side end-->
 
-        <!--right side-->
-        <div class="col col-lg-4 col-12 mb-2">
-            <div class="card panel-card p-2">
-                <div class="row">
-                    <div class="col-12"><strong>Automatikusan kitöltött adatok</strong></div>
+        <div class="col-12 col-xl-4">
+            <div class="card panel-card p-3">
+                <strong>Ajánlat adatai</strong>
+                <div class="mt-2">
+                    <label class="form-label text-xs mb-1">Ajánlat dátuma</label>
+                    <input type="date" class="form-control" data-name="quote_date" value="{{ itemData.quote_date|default('now'|date('Y-m-d')) }}">
                 </div>
-
-                <div class="row mt-2">
-                    <div class="col-12">Ajánlat dátuma</div>
-                    <div class="col-12">
-                        <input type="date" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row mt-2">
-                    <div class="col-12">Számított horogmagasság</div>
-                    <div class="col-12">
-                        <input type="number" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row mt-2">
-                    <div class="col-12">Gépszolgáltatás havidíja (Ft)</div>
-                    <div class="col-12">
-                        <input type="number" class="form-control">
-                    </div>
-                </div>
-
-
-                <div class="row mt-2">
-                    <div class="col-12">Kapcsolószekrény havidíja (Ft)</div>
-                    <div class="col-12">
-                        <input type="number" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-12 text-end">
-                        <div class="btn btn-default" data-name="btnPdfPreview"><i class="bi bi-file-pdf-fill"></i> PDF előnézet</div>
-                    </div>
-                </div>
-
-            </div>
-
-
-        </div>
-        <!--right side end-->
-    </div>
-
-    <div class="row mt-2">
-        <div class="col-12">
-            <div class="card panel-card p-2">
-                <div class="col-12">Státusz</div>
-                <div class="col-12">
-                    <select name="" class="form-control form-select">
-                        <option value="">Piszkozat</option>
-                        <option value="">Lezárt</option>
+                <div class="mt-2">
+                    <label class="form-label text-xs mb-1">Státusz</label>
+                    <select class="form-control form-select" data-name="status">
+                        <option value="draft" {{ itemData.status|default('draft') == 'draft' ? 'selected' }}>Piszkozat</option>
+                        <option value="closed" {{ itemData.status|default('draft') == 'closed' ? 'selected' }}>Lezárt</option>
                     </select>
                 </div>
+                <div class="mt-2">
+                    <label class="form-label text-xs mb-1">Megjegyzés</label>
+                    <textarea class="form-control" rows="5" data-name="notes">{{ itemData.notes|default('') }}</textarea>
+                </div>
+                {% if item %}
+                    <div class="small text-muted mt-3">Ajánlatkód: <strong>{{ item.code }}</strong></div>
+                {% endif %}
+                <div class="text-end mt-3">
+                    <button type="button" class="btn btn-default" data-name="btnPdfPreview">
+                        <i class="bi bi-file-pdf-fill"></i> PDF előnézet
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-
-
-
 </div>
 
 <script>
+(() => {
+    const initialQuote = JSON.parse({{ ({
+        id: item ? item.id : null,
+        code: item ? item.code : null,
+        data: itemData
+    }|json_encode)|json_encode|raw }});
+    const fieldOptions = JSON.parse({{ (fieldOptions|json_encode)|json_encode|raw }});
+    const editorId = 'quote-maker-editor-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+    const $source = $('[data-name="quoteMakerQuoteFormSource"]').last();
+    $source.attr('id', editorId);
+    const popupHtml = $source.prop('outerHTML');
+    $source.remove();
 
-    $(document).ready(function() {
+    const machineEndpoint = {{ path('list_quote_maker_machine_select')|json_encode|raw }};
+    let machineComboboxes = [];
+    let machines = Array.isArray(initialQuote.data?.machines)
+        ? JSON.parse(JSON.stringify(initialQuote.data.machines))
+        : [];
 
-        const machinesList = [];
-        let machineListTarget = $();
+    function blankMachine() {
+        return {
+            id: null,
+            title: '',
+            code: '',
+            data: {},
+            anchored: false,
+            installation_date: '',
+            rental_interval: '',
+            installation_location: 'budapest',
+            distance_km: 0,
+            installation_days: 2
+        };
+    }
 
+    if (!machines.length) {
+        machines.push(blankMachine());
+    }
 
+    const popupId = alerty.popup(initialQuote.id ? 'Árajánlat módosítása' : 'Árajánlat hozzáadása', popupHtml)
+        .resizeTo('100%', '100%')
+        .setButtons('buttonsSaveCancel')
+        .onSave(() => {
+            const payload = collectQuoteData(true);
+            if (!payload) return;
 
+            alerty.confirm('Megerősítés', 'Rögzíted az adatokat?', () => {
+                const formData = new FormData();
+                formData.set('id', initialQuote.id || '');
+                formData.set('data', JSON.stringify(payload));
 
-        //ADD FORM TO POPUP
-        phtml = $("[data-name='quoteAddForm']").html();
-        $("[data-name='quoteAddForm']").html("");
-
-        var popupId = alerty.popup("Hozzáadás", phtml)
-            .resizeTo("100%","100%")
-            .setButtons('buttonsSaveCancel')
-            .onSave(function(data) {
-
-                //save ajax
-                var formData = new FormData();
                 new Ajax({
-                    url: '{{ path('save_quote_maker_quotes_add') }}',
-                    name: 'save_quote_maker_quotes_add',
+                    url: {{ path('save_quote_maker_quotes_add')|json_encode|raw }},
+                    name: 'save_quote_maker_quotes_add_' + Date.now(),
                     type: 'POST',
                     dataType: 'json',
                     formData: formData,
-                    target: null,
                     function_success: function (result) {
-                        if (result.success) {
-                            alerty.message("Sikeres mentés","success");
-                        }else{
-                            alerty.message("Hiba a mentésnél","error");
+                        if (!result.success) {
+                            alerty.message(result.data?.error || 'Hiba történt a mentésnél.', 'error');
+                            return;
+                        }
+                        alerty.message('Sikeres mentés (' + result.data.code + ')', 'success');
+                        destroyComboboxes();
+                        alerty.get(popupId).close();
+                        if (ajaxquery['index_quote_maker_quotes_list'] !== undefined) {
+                            ajaxquery['index_quote_maker_quotes_list'].send();
                         }
                     }
                 }).send();
+            }, () => {});
+        })
+        .onCancel(() => {
+            alerty.confirm('Megerősítés', 'Biztosan bezárod az ablakot?', () => {
+                destroyComboboxes();
+                alerty.get(popupId).close();
+            }, () => {});
+        })
+        .getid();
 
-
-                alerty.message("Sikeres mentés","success");
-                this.close();
-            })
-            .onCancel(function(data) {
-                alerty.confirm("Megerősítés","Biztosan bezárod az ablakot?", ()=>{
-                    alerty.get(popupId).close();
-                },()=>{})
-            })
-            .getid();
-
-        const quotePopup = alerty.get(popupId);
-
-        /////////////////////////////////////////////////////////////////////////
-
-
-        function renderMachinesList() {
-            if (machinesList.length === 0) {
-                machineListTarget.html("<span>Nincsenek hozzáadott gépek</span>");
-                return;
-            }
-
-            const itemsHtml = machinesList.map(function (machine, index) {
-                return `
-                    <div class="card panel-card p-2 mt-2" data-name="list-item" data-list-id="${index}">
-                        <div class="row">
-                            <div class="col-6"><strong>${index + 1}. daru</strong></div>
-                            <div class="col-6 text-end">
-                                <button type="button" class="btn btn-sm" data-name="btnMachineCancel">
-                                    <i class="bi bi-trash-fill text-danger"></i> Eltávolítás
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="row mt-2">
-                            <div class="col col-lg-8 col-12">
-                                <div class="row">
-                                    <div class="col-12">Daru kiválasztása</div>
-                                    <div class="col-12">
-
-                                            <input
-                                                type="text"
-                                                id="machineSelect${index}"
-                                                name="machineSelect${index}"
-                                                list="machineList${index}"
-                                                class="form-control form-select"
-                                                placeholder="Válassz"
-                                            >
-
-                                            <datalist id="machineList${index}">
-                                                <option value="ctt-91-5-2007">Terex Comedil CTT 91-5 (2007)</option>
-                                                <option value="ctt-91-5-2021">Terex Comedil CTT 91-5 (2021)</option>
-                                                <option value="ctt-132-6-2019">Terex Comedil CTT 132-6 (2019)</option>
-                                                <option value="ctt-132-6-2020">Terex Comedil CTT 132-6 (2020)</option>
-                                                <option value="ctt-162-8">Terex Comedil CTT 162-8 (2017)</option>
-                                                <option value="ctt-182-8">Terex Comedil CTT 182-8</option>
-                                                <option value="ctt-231-12">Terex Comedil CTT 231-12</option>
-                                                <option value="ctt-332-16">Terex Comedil CTT 332-16</option>
-                                                <option value="ctt-472-20">Terex Comedil CTT 472-20</option>
-                                            </datalist>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            <div class="col col-lg-4 col-12">
-                                <div class="row">
-                                    <div class="col-12">Ankeres</div>
-                                    <div class="col-12">
-                                       <select name="" class="form-control">
-                                            <option value="0">Igen</option>
-                                            <option value="1">Nem</option>
-                                       </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col col-lg-4 col-12">
-                                <div class="row">
-                                    <div class="col-12">Gémhossz</div>
-                                    <div class="col-12">
-                                        <input type="text" class="form-control" value="${machine.gemhossz}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col col-lg-4 col-12">
-                                <div class="row">
-                                    <div class="col-12">Házmagasság</div>
-                                    <div class="col-12">
-                                        <input type="text" class="form-control" value="${machine.hazmagassag}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col col-lg-4 col-12">
-                                <div class="row">
-                                    <div class="col-12">Telepítési szint (m)</div>
-                                    <div class="col-12">
-                                        <input type="text" class="form-control" value="${machine.telepitesi_szint}">
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                `;
-            }).join("");
-
-            machineListTarget.html(itemsHtml);
+    const $form = $('#' + editorId);
+    const partnerCombobox = new AjaxCombobox($form.find('[data-quote-combobox="partner"]'), {
+        endpoint: {{ path('list_quote_maker_partner_select')|json_encode|raw }},
+        requestName: 'quote_partner_' + Date.now(),
+        emptyText: 'Nincs a keresésnek megfelelő partner.',
+        onSelect: function (selected) {
+            $form.find('[data-name="contact_name"]').val(selected.partner?.name || selected.label || '');
+            $form.find('[data-name="contact_email"]').val(selected.partner?.email || '');
         }
-
-
-
-        //PDF preview
-        $(document)
-            .off("click.btnPdfPreview", "[data-name='btnPdfPreview']")
-            .on("click.btnPdfPreview", "[data-name='btnPdfPreview']", function () {
-                alerty.popup("PDF előnézet", "PDF előkészítése folyamatban").setButtons('buttonsOk') ;
-            });
-
-
-
-        //machine add
-        $(document)
-            .off("click.btnMachineAdd", "[data-name='btnMachineAdd']")
-            .on("click.btnMachineAdd", "[data-name='btnMachineAdd']", function () {
-
-                console.log(Date.now());
-                machineListTarget = $("[data-name='machineAddList']");
-
-                if(machinesList.length == 3) {
-                    alerty.alert(`<i class="bi bi-exclamation-triangle-fill text-warning"></i> Hiba`,"Legfeljebb 3 gép szerepelhez az ajánlatban!");
-                    return false;
-                }
-
-                machinesList.push({
-                    gemhossz: 0,
-                    hazmagassag: 0,
-                    telepitesi_szint: 0
-                });
-
-                renderMachinesList();
-
-            });
-
-        if(machinesList.length == 0){
-            console.log(Date.now());
-            //$("[data-name='btnMachineAdd']").trigger("click");
+    });
+    const projectCombobox = new AjaxCombobox($form.find('[data-quote-combobox="project"]'), {
+        endpoint: {{ path('list_quote_maker_project_select')|json_encode|raw }},
+        requestName: 'quote_project_' + Date.now(),
+        emptyText: 'Nincs a keresésnek megfelelő projekt.',
+        onSelect: function (selected) {
+            $form.find('[data-name="project_location"]').val(selected.project?.description || '');
         }
-
-        //machine remove
-        $(document)
-            .off("click.btnMachineCancel", "[data-name='btnMachineCancel']")
-            .on("click.btnMachineCancel", "[data-name='btnMachineCancel']", function () {
-                const listId = Number(
-                    $(this).closest("[data-name='list-item']").attr("data-list-id")
-                );
-
-                if (!Number.isInteger(listId) || listId < 0 || listId >= machinesList.length) {
-                    return;
-                }
-
-                alerty.confirm("Megerősítés", "Eltávolítod az elemet?", function () {
-                    machinesList.splice(listId, 1);
-                    renderMachinesList();
-                });
-
-            });
-
-
-        renderMachinesList();
-
-        $("[data-name='btnMachineAdd']").trigger("click");
-
-
     });
 
+    function escapeHtml(value) {
+        return $('<div>').text(value == null ? '' : String(value)).html();
+    }
+
+    function machineLabel(machine, index) {
+        return machine.title || machine.data?.megnevezes || machine.data?.tipus || ((index + 1) + '. daru');
+    }
+
+    function destroyMachineComboboxes() {
+        machineComboboxes.forEach((combobox) => combobox.destroy());
+        machineComboboxes = [];
+    }
+
+    function destroyComboboxes() {
+        destroyMachineComboboxes();
+        partnerCombobox.destroy();
+        projectCombobox.destroy();
+    }
+
+    function syncMachineState() {
+        $form.find('[data-machine-index]').each(function () {
+            const index = Number($(this).attr('data-machine-index'));
+            const machine = machines[index];
+            if (!machine) return;
+            const $item = $(this);
+            machine.id = Number($item.find('[data-ajax-combobox-value]').val()) || null;
+            machine.anchored = $item.find('[data-machine-setting="anchored"]').val() === '1';
+            machine.installation_date = $item.find('[data-machine-setting="installation_date"]').val() || '';
+            machine.rental_interval = $item.find('[data-machine-setting="rental_interval"]').val() || '';
+            machine.installation_location = $item.find('[data-machine-setting="installation_location"]').val() || 'budapest';
+            machine.distance_km = $item.find('[data-machine-setting="distance_km"]').val() || 0;
+            machine.installation_days = $item.find('[data-machine-setting="installation_days"]').val() || 2;
+            machine.data = machine.data || {};
+            $item.find('[data-machine-field]').each(function () {
+                machine.data[$(this).attr('data-machine-field')] = $(this).val();
+            });
+        });
+    }
+
+    function renderMachines(shouldSync = true) {
+        if (shouldSync) syncMachineState();
+        destroyMachineComboboxes();
+        const $target = $form.find('[data-name="machineAddList"]');
+        if (!machines.length) {
+            $target.html('<div class="card panel-card p-3 mt-2 text-muted">Nincsenek hozzáadott gépek.</div>');
+            return;
+        }
+
+        $target.html(machines.map((machine, index) => {
+            const fields = fieldOptions.map((field) => {
+                const value = machine.data?.[field.field_code] ?? '';
+                return `
+                    <div class="col-12 col-md-6 col-xl-4">
+                        <label class="form-label text-xs mb-1">${escapeHtml(field.field_title)}${field.field_unit ? ' (' + escapeHtml(field.field_unit) + ')' : ''}</label>
+                        <input type="${escapeHtml(field.field_type || 'text')}" class="form-control form-control-sm"
+                               value="${escapeHtml(value)}" data-machine-field="${escapeHtml(field.field_code)}"
+                               ${field.field_calculated ? 'readonly title="Számított mező"' : ''}>
+                    </div>`;
+            }).join('');
+
+            return `
+                <div class="card panel-card p-3 mt-2" data-machine-index="${index}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>${index + 1}. daru — ${escapeHtml(machineLabel(machine, index))}</strong>
+                        <button type="button" class="btn btn-sm" data-name="btnMachineRemove" title="Eltávolítás">
+                            <i class="bi bi-trash-fill text-danger"></i>
+                        </button>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-12 col-lg-8">
+                            <label class="form-label text-xs mb-1">Daru kiválasztása</label>
+                            <div class="ajax-combobox position-relative" data-machine-combobox>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" autocomplete="off" placeholder="Daru keresése..."
+                                           value="${escapeHtml(machine.id ? machineLabel(machine, index) : '')}" data-ajax-combobox-search>
+                                    <button type="button" class="btn btn-outline-secondary" data-ajax-combobox-clear><i class="bi bi-x-lg"></i></button>
+                                </div>
+                                <input type="hidden" value="${escapeHtml(machine.id || '')}" data-ajax-combobox-value>
+                                <div class="ajax-combobox__results list-group shadow-sm d-none" role="listbox" data-ajax-combobox-results></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label text-xs mb-1">Ankeres telepítés</label>
+                            <select class="form-control form-select" data-machine-setting="anchored">
+                                <option value="0" ${machine.anchored ? '' : 'selected'}>Nem</option>
+                                <option value="1" ${machine.anchored ? 'selected' : ''}>Igen</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label text-xs mb-1">Telepítés időpontja</label>
+                            <input type="date" class="form-control" value="${escapeHtml(machine.installation_date || '')}" data-machine-setting="installation_date">
+                        </div>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label text-xs mb-1">Bérleti intervallum</label>
+                            <input type="text" class="form-control" value="${escapeHtml(machine.rental_interval || '')}" placeholder="pl. 6 hónap" data-machine-setting="rental_interval">
+                        </div>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label text-xs mb-1">Autódaru kiszállás</label>
+                            <select class="form-control form-select" data-machine-setting="installation_location">
+                                <option value="budapest" ${machine.installation_location !== 'videk' ? 'selected' : ''}>Budapest</option>
+                                <option value="videk" ${machine.installation_location === 'videk' ? 'selected' : ''}>Vidék</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label text-xs mb-1">Távolság (km, vidék)</label>
+                            <input type="number" min="0" step="1" class="form-control" value="${escapeHtml(machine.distance_km ?? 0)}" data-machine-setting="distance_km">
+                        </div>
+                        <div class="col-6 col-lg-4">
+                            <label class="form-label text-xs mb-1">Autódaru napok</label>
+                            <input type="number" min="1" max="10" step="1" class="form-control" value="${escapeHtml(machine.installation_days || 2)}" data-machine-setting="installation_days">
+                        </div>
+                    </div>
+                    <details class="mt-3" ${machine.id ? '' : 'style="display:none"'}>
+                        <summary class="fw-semibold cursor-pointer">Gép paraméterei és árai</summary>
+                        <div class="row g-2 mt-1">${fields}</div>
+                    </details>
+                </div>`;
+        }).join(''));
+
+        $target.find('[data-machine-index]').each(function () {
+            const index = Number($(this).attr('data-machine-index'));
+            const $item = $(this);
+            machineComboboxes.push(new AjaxCombobox($item.find('[data-machine-combobox]'), {
+                endpoint: machineEndpoint,
+                requestName: 'quote_machine_' + index + '_' + Date.now(),
+                emptyText: 'Nincs a keresésnek megfelelő árajánlat-gép.',
+                onSelect: function (selected) {
+                    syncMachineState();
+                    const machineData = selected.machine || {};
+                    machines[index] = Object.assign({}, machines[index], {
+                        id: Number(selected.id),
+                        title: machineData.title || selected.label || '',
+                        code: machineData.code || '',
+                        data: Object.assign({}, machineData.data || {})
+                    });
+                    renderMachines(false);
+                },
+                onClear: function () {
+                    machines[index] = Object.assign(blankMachine(), {
+                        anchored: machines[index]?.anchored || false,
+                        installation_date: machines[index]?.installation_date || '',
+                        rental_interval: machines[index]?.rental_interval || ''
+                    });
+                    window.setTimeout(() => renderMachines(false), 0);
+                }
+            }));
+        });
+    }
+
+    function collectQuoteData(showErrors) {
+        syncMachineState();
+        const partnerId = Number($form.find('[data-quote-combobox="partner"] [data-ajax-combobox-value]').val()) || null;
+        const projectId = Number($form.find('[data-quote-combobox="project"] [data-ajax-combobox-value]').val()) || null;
+        const errors = [];
+        if (!partnerId) errors.push('A partner kiválasztása kötelező.');
+        if (!projectId) errors.push('A projekt kiválasztása kötelező.');
+        if (!machines.length) errors.push('Legalább egy darut hozzá kell adni.');
+        machines.forEach((machine, index) => {
+            if (!machine.id) errors.push((index + 1) + '. daru kiválasztása kötelező.');
+        });
+        const quoteDate = $form.find('[data-name="quote_date"]').val() || '';
+        if (!quoteDate) errors.push('Az ajánlat dátuma kötelező.');
+
+        if (errors.length) {
+            if (showErrors) alerty.alert('Hiányzó adatok', errors.join('<br>'));
+            return null;
+        }
+
+        return {
+            id: initialQuote.id,
+            quote_code: initialQuote.code,
+            partner: {id: partnerId},
+            project: {id: projectId},
+            contact_name: $form.find('[data-name="contact_name"]').val() || '',
+            contact_email: $form.find('[data-name="contact_email"]').val() || '',
+            project_location: $form.find('[data-name="project_location"]').val() || '',
+            quote_date: quoteDate,
+            status: $form.find('[data-name="status"]').val() || 'draft',
+            notes: $form.find('[data-name="notes"]').val() || '',
+            machines: machines
+        };
+    }
+
+    $form.on('click.quoteMaker', '[data-name="btnMachineAdd"]', function () {
+        syncMachineState();
+        if (machines.length >= 3) {
+            alerty.alert('<i class="bi bi-exclamation-triangle-fill text-warning"></i> Hiba', 'Legfeljebb 3 gép szerepelhet az ajánlatban!');
+            return;
+        }
+        machines.push(blankMachine());
+        renderMachines(false);
+    });
+
+    $form.on('click.quoteMaker', '[data-name="btnMachineRemove"]', function () {
+        syncMachineState();
+        const index = Number($(this).closest('[data-machine-index]').attr('data-machine-index'));
+        if (!Number.isInteger(index) || !machines[index]) return;
+        alerty.confirm('Megerősítés', 'Eltávolítod a darut?', () => {
+            machines.splice(index, 1);
+            renderMachines(false);
+        }, () => {});
+    });
+
+    $form.on('click.quoteMaker', '[data-name="btnPdfPreview"]', async function () {
+        const payload = collectQuoteData(true);
+        if (!payload) return;
+        const $button = $(this).prop('disabled', true);
+        const formData = new FormData();
+        formData.set('id', initialQuote.id || '');
+        formData.set('data', JSON.stringify(payload));
+
+        try {
+            const response = await fetch({{ path('index_quote_maker_pdf_preview')|json_encode|raw }}, {method: 'POST', body: formData});
+            if (!response.ok || !(response.headers.get('content-type') || '').includes('application/pdf')) {
+                const errorResult = await response.json().catch(() => null);
+                throw new Error(errorResult?.data?.error || 'A PDF előnézet nem készíthető el.');
+            }
+            const blobUrl = URL.createObjectURL(await response.blob());
+            alerty.popup('PDF előnézet', `<iframe src="${blobUrl}" style="display:block;width:100%;height:calc(100vh - 130px);border:0"></iframe>`)
+                .resizeTo('95%', '95%')
+                .setButtons('buttonsOk');
+            window.setTimeout(() => URL.revokeObjectURL(blobUrl), 10 * 60 * 1000);
+        } catch (error) {
+            alerty.alert('PDF előnézet', escapeHtml(error.message || 'A PDF előnézet nem készíthető el.'));
+        } finally {
+            $button.prop('disabled', false);
+        }
+    });
+
+    renderMachines(false);
+})();
 </script>
