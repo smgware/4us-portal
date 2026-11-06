@@ -1,153 +1,683 @@
-{% macro raw_value(machine, key, unit) %}
-    {% set value = attribute(machine.data|default({}), key)|default('') %}
-    {{ value is same as('') or value is null ? '-' : value }}{{ value is same as('') or value is null or unit is empty ? '' : ' ' ~ unit }}
-{% endmacro %}
-
-{% macro money_value(machine, key) %}
-    {% set value = attribute(machine.data|default({}), key)|default('') %}
-    {{ value is same as('') or value is null ? '-' : value|number_format(0, ',', ' ') ~ ' Ft' }}
-{% endmacro %}
-
-{% import _self as pdf %}
-<!doctype html>
+{% macro raw_value(machine, key, unit) %} {% set value =
+attribute(machine.data|default({}), key)|default('') %} {{ value is same as('')
+or value is null ? '-' : value }}{{ value is same as('') or value is null or
+unit is empty ? '' : ' ' ~ unit }} {% endmacro %} {% macro money_value(machine,
+key) %} {% set value = attribute(machine.data|default({}), key)|default('') %}
+{{ value is same as('') or value is null ? '-' : value|number_format(0, ',', '
+') ~ ' Ft' }} {% endmacro %} {% import _self as pdf %} <!doctype html>
 <html lang="hu">
-<head>
-    <meta charset="UTF-8">
-    <style>
-        @page { margin: 0; }
-        * { box-sizing: border-box; }
-        body { margin: 0; color: #333; font-family: DejaVu Sans, sans-serif; font-size: 9px; }
-        .page { position: relative; width: 180mm; height: 268mm; padding: 13mm 15mm 15mm; overflow: hidden; }
-        .page-break { page-break-after: always; }
-        .top-shape { position: absolute; z-index: -1; top: 0; right: 0; width: 93mm; height: 28mm; background: #ededed; }
-        .top-shape:before { content: ''; position: absolute; left: -28mm; top: 0; width: 0; height: 0; border-top: 28mm solid #ededed; border-left: 28mm solid transparent; }
-        .tagline { color: #d20a11; font-size: 9px; font-weight: bold; letter-spacing: .35px; line-height: 1.25; }
-        .tagline small { color: #777; display: block; font-size: 7px; letter-spacing: .7px; }
-        .logo { position: absolute; top: 8mm; right: 14mm; width: 47mm; max-height: 18mm; object-fit: contain; }
-        h1 { margin: 20mm 0 1mm; text-align: center; color: #303030; font-size: 24px; font-weight: 700; }
-        .subtitle { text-align: center; color: #d20a11; font-size: 11px; text-transform: uppercase; margin-bottom: 8mm; }
-        .summary { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 6mm; }
-        .summary td { width: 50%; vertical-align: top; padding: 0 3mm 0 0; }
-        .summary td + td { padding: 0 0 0 3mm; }
-        .box { border-top: 2px solid #d20a11; background: #f3f3f3; padding: 3mm; min-height: 32mm; }
-        .box-title { color: #d20a11; font-weight: bold; font-size: 10px; margin-bottom: 2mm; }
-        .info { width: 100%; border-collapse: collapse; }
-        .info td { padding: 1.1mm 0; vertical-align: top; border-bottom: .25mm solid #ddd; }
-        .info td:first-child { width: 36%; font-weight: bold; color: #555; }
-        .machine-list { margin: 0; padding-left: 4mm; }
-        .machine-list li { margin-bottom: 1.2mm; }
-        .lead { font-weight: bold; margin: 4mm 0 3mm; }
-        p { margin: 0 0 3mm; line-height: 1.45; text-align: justify; }
-        .project-row { width: 100%; border-collapse: collapse; margin: 3mm 0; }
-        .project-row td { padding: 1.7mm 2mm; border-bottom: .3mm solid #ccc; }
-        .project-row td:first-child { width: 39%; font-weight: bold; background: #f3f3f3; }
-        .note { margin-top: 3mm; border-left: 2px solid #d20a11; padding: 2mm 3mm; background: #f7f7f7; font-size: 8px; line-height: 1.4; }
-        .signature { margin-top: 5mm; text-align: right; }
-        .footer { position: absolute; left: 15mm; right: 15mm; bottom: 7mm; border-top: .35mm solid #bbb; padding-top: 2mm; color: #666; font-size: 6.8px; }
-        .footer .right { float: right; text-align: right; }
-        .analysis-title { margin: 15mm 0 0; font-size: 18px; font-weight: bold; color: #333; }
-        .analysis-location { color: #d20a11; font-size: 10px; font-weight: bold; margin: 1mm 0 3mm; }
-        .price-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 6.7px; }
-        .price-table th, .price-table td { border: .2mm solid #c8c8c8; padding: .75mm .9mm; vertical-align: middle; overflow-wrap: anywhere; }
-        .price-table th { background: #dadada; font-weight: bold; text-align: center; }
-        .price-table th:first-child, .price-table td:first-child { width: 35%; text-align: left; }
-        .price-table .section td { background: #d20a11; color: #fff; font-weight: bold; font-size: 7.3px; padding: .9mm; }
-        .price-table .subsection td { background: #666; color: #fff; font-weight: bold; }
-        .price-table tr:nth-child(even):not(.section):not(.subsection) td { background: #f5f5f5; }
-        .muted { color: #777; }
-    </style>
-</head>
-<body>
-<section class="page page-break">
-    <div class="top-shape"></div>
-    <div class="tagline">BÉRELJEN OKOSAN, ÉPÍTSEN BIZTOSAN!<small>RENT SMART, BUILD STRONG!</small></div>
-    {% if logoDataUri %}<img class="logo" src="{{ logoDataUri }}" alt="4US logo">{% endif %}
-
-    <h1>Toronydaru árajánlat</h1>
-    <div class="subtitle">bérbeadás</div>
-
-    <table class="summary"><tr>
-        <td><div class="box">
-            <div class="box-title">Ajánlat adatai</div>
-            <table class="info">
-                {% if quote.quote_code|default('') %}<tr><td>Ajánlatkód:</td><td>{{ quote.quote_code }}</td></tr>{% endif %}
-                <tr><td>Ajánlat dátuma:</td><td>{{ quote.quote_date|date('Y.m.d.') }}</td></tr>
-                <tr><td>Teljes név:</td><td>{{ quote.contact_name|default(quote.partner.name|default('-')) }}</td></tr>
-                <tr><td>E-mail:</td><td>{{ quote.contact_email|default(quote.partner.email|default('-')) }}</td></tr>
-                <tr><td>Projekt neve:</td><td>{{ quote.project.name|default('-') }}</td></tr>
-                <tr><td>Helyszín:</td><td>{{ quote.project_location|default('-') }}</td></tr>
+    <head>
+        <meta charset="UTF-8" />
+        <style>
+            @page {
+                margin: 15mm;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                color: #252f3d;
+                font-family:
+                    DejaVu Sans,
+                    sans-serif;
+                font-size: 8.2px;
+                line-height: 1.28;
+            }
+            .page {
+                position: relative;
+                width: 210mm;
+                height: 297mm;
+                padding: 6mm 7mm 8mm;
+                overflow: hidden;
+            }
+            .page-break {
+                page-break-after: always;
+            }
+            .top-corner {
+                position: absolute;
+                z-index: -1;
+                top: 8mm;
+                right: 0;
+                width: 7mm;
+                height: 44mm;
+                background: #b7b9bb;
+            }
+            .top-corner:before {
+                content: "";
+                position: absolute;
+                top: 0;
+                right: 7mm;
+                width: 0;
+                height: 0;
+                border-top: 44mm solid #b7b9bb;
+                border-left: 68mm solid transparent;
+            }
+            .bottom-corner {
+                position: absolute;
+                z-index: -1;
+                left: 0;
+                bottom: 0;
+                width: 0;
+                height: 0;
+                border-bottom: 44mm solid #b7b9bb;
+                border-right: 68mm solid transparent;
+            }
+            .tagline {
+                margin-top: 15mm;
+                color: #252f3d;
+                font-size: 12px;
+                font-weight: bold;
+                line-height: 1.1;
+            }
+            .tagline small {
+                display: block;
+                margin-top: 2mm;
+                color: #e30613;
+                font-size: 9px;
+                font-weight: normal;
+            }
+            .logo {
+                position: absolute;
+                top: 17mm;
+                right: 8mm;
+                width: 31mm;
+                max-height: 15mm;
+                object-fit: contain;
+            }
+            h1 {
+                margin: 6mm 0 1mm;
+                text-align: center;
+                font-size: 12px;
+                line-height: 1.15;
+            }
+            .subtitle {
+                margin-bottom: 6mm;
+                color: #9ca3aa;
+                font-size: 9px;
+                font-weight: bold;
+                text-align: center;
+            }
+            .summary {
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 6mm 0;
+                margin: 0 -3mm 10mm;
+                table-layout: fixed;
+            }
+            .summary td {
+                width: 50%;
+                padding: 0;
+                vertical-align: top;
+            }
+            .summary-title {
+                padding: 1.15mm;
+                border: 0.25mm solid #b7c0cb;
+                background: #e1e5e9;
+                font-size: 8.4px;
+                font-weight: bold;
+                text-align: center;
+            }
+            .summary-data {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .summary-data td {
+                padding: 0.55mm 0.75mm;
+                border-bottom: 0.25mm solid #b7c0cb;
+                vertical-align: top;
+            }
+            .summary-data tr:last-child td {
+                border-bottom: 0;
+            }
+            .summary-data td:first-child {
+                width: 38%;
+                font-weight: bold;
+            }
+            .summary-data td:last-child {
+                text-align: right;
+            }
+            .machine-number {
+                width: 19% !important;
+                text-align: left !important;
+            }
+            .machine-name {
+                text-align: center !important;
+            }
+            .greeting {
+                margin: 0 0 7mm;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            p {
+                margin: 0 0 5mm;
+                line-height: 1.42;
+            }
+            .project-data {
+                width: 100%;
+                margin: 0 0 6mm;
+                border-collapse: collapse;
+            }
+            .project-data td {
+                padding: 0.35mm 0;
+                vertical-align: top;
+            }
+            .project-data td:first-child {
+                width: 45%;
+                font-weight: bold;
+            }
+            .note {
+                margin: 0 0 8mm;
+                padding: 1.4mm 0.75mm;
+                border: 0.25mm solid #b7c0cb;
+                font-size: 7.5px;
+                line-height: 1.35;
+            }
+            .requirements {
+                margin: 0 0 6mm;
+                font-size: 7.55px;
+                line-height: 1.38;
+            }
+            .requirements strong {
+                display: block;
+                margin-bottom: 1.2mm;
+            }
+            .requirements div {
+                margin-bottom: 0.65mm;
+            }
+            .conditions {
+                margin: 0 0 4mm;
+                font-size: 7.65px;
+                line-height: 1.4;
+            }
+            .mobile-crane {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 1mm;
+            }
+            .mobile-crane td {
+                padding: 0;
+            }
+            .mobile-crane td:nth-child(2) {
+                text-align: center;
+            }
+            .mobile-crane td:last-child {
+                text-align: right;
+            }
+            .page-footer {
+                position: absolute;
+                right: 7mm;
+                bottom: 4mm;
+                left: 7mm;
+                color: #7d8085;
+                font-size: 7.4px;
+                line-height: 1.25;
+                text-align: center;
+            }
+            .page-footer strong {
+                color: #252f3d;
+            }
+            .analysis-title {
+                margin: 8mm 0 1mm;
+                font-size: 14px;
+                font-weight: bold;
+                line-height: 1.2;
+            }
+            .analysis-location {
+                margin-bottom: 20mm;
+                color: #e30613;
+                font-size: 10px;
+            }
+            .price-table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                font-size: 7.5px;
+                line-height: 1.22;
+            }
+            .price-table th,
+            .price-table td {
+                padding: 0.65mm 0.7mm;
+                border: 0.25mm solid #b7c0cb;
+                vertical-align: middle;
+                overflow-wrap: break-word;
+            }
+            .price-table th {
+                font-size: 7.8px;
+                font-weight: bold;
+                text-align: center;
+            }
+            .price-table th:first-child,
+            .price-table td:first-child {
+                width: 19%;
+                text-align: left;
+            }
+            .price-table td:not(:first-child) {
+                text-align: center;
+            }
+            .price-table .section td,
+            .price-table .subsection td {
+                padding: 1mm;
+                background: #e1e5e9;
+                font-size: 9px;
+                font-weight: bold;
+                text-align: center;
+            }
+            .price-table .subsection td {
+                font-size: 8.6px;
+            }
+            .page-2-footer {
+                position: absolute;
+                right: 8mm;
+                bottom: 3mm;
+                font-size: 7.5px;
+            }
+            /* Dompdf needs a page box slightly shorter than the physical paper, otherwise its
+   absolutely positioned footer is emitted onto a separate blank page. */
+            .page {
+                height: 281mm;
+            }
+            body {
+                font-size: 10px;
+            }
+            .summary-title {
+                font-size: 10px;
+            }
+            .note {
+                font-size: 9px;
+            }
+            .requirements {
+                font-size: 9px;
+            }
+            .conditions {
+                font-size: 9px;
+            }
+            .page-footer {
+                bottom: 0;
+                font-size: 8px;
+            }
+            .price-table {
+                font-size: 8.5px;
+            }
+            .price-table th,
+            .price-table td {
+                padding: 0.8mm 0.7mm;
+            }
+            .price-table th {
+                font-size: 8.8px;
+            }
+            .price-table .section td,
+            .price-table .subsection td {
+                font-size: 10px;
+            }
+            .price-table .subsection td {
+                font-size: 9.5px;
+            }
+            /* The logo is centred on the visible grey triangle, not on the page edge. */
+            .top-corner:before {
+                border-left-width: 78mm;
+            }
+            .logo {
+                top: 16mm;
+                right: 17.5mm;
+            }
+            /* A4 printable area with a 15 mm margin on every side. */
+            .page {
+                width: 180mm;
+                height: 265mm;
+                padding: 0;
+                overflow: visible;
+            }
+            .summary {
+                width: 100%;
+                margin: 0 0 10mm;
+            }
+            .summary-data,
+            .project-data,
+            .mobile-crane,
+            .price-table {
+                max-width: 100%;
+            }
+            .summary-data td,
+            .project-data td,
+            .mobile-crane td,
+            .price-table th,
+            .price-table td,
+            .note,
+            p {
+                white-space: normal;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+            .note {
+                width: 100%;
+                max-width: 100%;
+            }
+            .mobile-crane td:first-child {
+                width: 38%;
+            }
+            .mobile-crane td:nth-child(2) {
+                width: 24%;
+            }
+            .mobile-crane td:last-child {
+                width: 38%;
+            }
+            .page-footer {
+                right: 0;
+                left: 0;
+            }
+            .page-2-footer {
+                right: 0;
+                bottom: 7mm;
+            }
+            /* Reserve a small safety gutter for long Hungarian copy. */
+            .requirements,
+            .conditions,
+            .note,
+            .project-data,
+            p {
+                width: 100%;
+                padding-right: 3mm;
+                overflow: visible;
+            }
+        </style>
+    </head>
+    <body>
+        <section class="page page-break">
+            <div class="top-corner"></div>
+            <div class="bottom-corner"></div>
+            <div class="tagline">
+                BÉRELJEN OKOSAN, ÉPÍTSEN BIZTOSAN!<small
+                    >RENT SMART, BUILD STRONG!</small
+                >
+            </div>
+            {% if logoDataUri %}<img
+                class="logo"
+                src="{{ logoDataUri }}"
+                alt="4US logo"
+            />{% endif %}
+            <h1>Toronydaru árajánlat</h1>
+            <div class="subtitle">bérbeadás</div>
+            <table class="summary">
+                <tr>
+                    <td>
+                        <div class="summary-title">Ajánlat adatai</div>
+                        <table class="summary-data">
+                            <tr>
+                                <td>Ajánlat dátuma:</td>
+                                <td>{{ quote.quote_date|date('Y-m-d') }}</td>
+                            </tr>
+                            <tr>
+                                <td>Teljes név:</td>
+                                <td>
+                                    {{
+                                    quote.contact_name|default(quote.partner.name|default('-'))
+                                    }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>E-mail:</td>
+                                <td>
+                                    {{
+                                    quote.contact_email|default(quote.partner.email|default('-'))
+                                    }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Projekt neve:</td>
+                                <td>{{ quote.project.name|default('-') }}</td>
+                            </tr>
+                            <tr>
+                                <td>Helyszín:</td>
+                                <td>
+                                    {{ quote.project_location|default('-') }}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td>
+                        <div class="summary-title">Kiválasztott daruk</div>
+                        <table class="summary-data">
+                            <tr>
+                                <td>Daruk száma:</td>
+                                <td>{{ quote.machines|length }}</td>
+                            </tr>
+                            {% for machine in quote.machines %}
+                            <tr>
+                                <td class="machine-number">
+                                    {{ loop.index }}. daru
+                                </td>
+                                <td class="machine-name">
+                                    {{
+                                    machine.title|default(machine.data.megnevezes|default(machine.data.tipus|default('Daru')))
+                                    }}{% if machine.data.evjarat|default('') %}
+                                    ({{ machine.data.evjarat }}){% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </td>
+                </tr>
             </table>
-        </div></td>
-        <td><div class="box">
-            <div class="box-title">Kiválasztott daruk ({{ quote.machines|length }} db)</div>
-            <ol class="machine-list">
-                {% for machine in quote.machines %}
-                    <li><strong>{{ machine.title|default(machine.data.megnevezes|default(machine.data.tipus|default('Daru'))) }}</strong>
-                        {% if machine.data.evjarat|default('') %} ({{ machine.data.evjarat }}){% endif %}
-                        {% if machine.anchored %}<span class="muted"> — ankeres</span>{% endif %}</li>
-                {% endfor %}
-            </ol>
-        </div></td>
-    </tr></table>
-
-    <div class="lead">Tisztelt {{ quote.contact_name|default('Partner') }}!</div>
-    <p>Ajánlatkérésre hivatkozva a tárgyi helyszínen telepítendő toronydaruk telepítésére és üzemeltetésére az alábbi ajánlatot adjuk.</p>
-    <table class="project-row">
-        <tr><td>Projekt neve, helyszíne:</td><td>{{ quote.project.name|default('-') }}{% if quote.project_location|default('') %} | {{ quote.project_location }}{% endif %}</td></tr>
-        <tr><td>Tervezett toronydaruk száma:</td><td>{{ quote.machines|length }} db toronydaru</td></tr>
-    </table>
-    <p>A gépszolgáltatás havi díja 200 üzemóráig értendő. A gépkezelő díja a részletes táblázat szerint, időmegkötés nélkül kerül elszámolásra (napi minimum 8 óra, heti minimum 40 óra).</p>
-    <p>Daruinkat kapacitás függvényében tudjuk biztosítani. Az útzár, közterület-foglalási és egyéb engedélyek biztosítása a megrendelő feladata.</p>
-    <p><strong>Telepítési feltételek:</strong> a daru telepítése és bontása a munkaterületről autódaruval, az alaptól legfeljebb 10 méter távolságból történik. A szerelés tervezett ideje darunként {{ quote.machines[0].installation_days|default(2) }} nap.</p>
-    {% if quote.notes|default('') %}<div class="note"><strong>Megjegyzés:</strong><br>{{ quote.notes|nl2br }}</div>{% endif %}
-    <div class="signature">Budapest, {{ quote.quote_date|date('Y.m.d.') }}<br><br><strong>4US Group Kft.</strong></div>
-    <div class="footer"><span><strong>4US Group Kft.</strong> · Toronydaru bérbeadás és gépszolgáltatás</span><span class="right">www.4usgroup.hu · info@4usgroup.hu</span></div>
-</section>
-
-<section class="page">
-    <div class="top-shape"></div>
-    <div class="tagline">BÉRELJEN OKOSAN, ÉPÍTSEN BIZTOSAN!<small>RENT SMART, BUILD STRONG!</small></div>
-    {% if logoDataUri %}<img class="logo" src="{{ logoDataUri }}" alt="4US logo">{% endif %}
-    <div class="analysis-title">ÁRELEMZÉS ÉS TELEPÍTÉSI ADATOK</div>
-    <div class="analysis-location">{{ quote.project_location|default('Helyszín megadása szükséges') }}</div>
-
-    <table class="price-table">
-        <thead><tr><th>Megnevezés</th>{% for machine in quote.machines %}<th>{{ machine.title|default(machine.data.megnevezes|default(machine.data.tipus|default((loop.index) ~ '. daru'))) }}</th>{% endfor %}</tr></thead>
-        <tbody>
-        <tr class="section"><td colspan="{{ quote.machines|length + 1 }}">Műszaki adatok</td></tr>
-        {% set technicalRows = {
-            'Évjárat': ['evjarat', ''], 'Horogmagasság': ['horogmagassag', 'm'], 'Gémkinyúlás': ['gemkinyulas', 'm'],
-            'Maximális teherbírás': ['max_teherbiras', ''], 'Telepítési szint': ['telepitesi_szint', ''], 'Elektromos csatlakozás': ['elektromos_csatlakozas', '']
-        } %}
-        {% for label, row in technicalRows %}<tr><td>{{ label }}</td>{% for machine in quote.machines %}<td>{{ pdf.raw_value(machine, row[0], row[1]) }}</td>{% endfor %}</tr>{% endfor %}
-        <tr><td>Telepítési mód</td>{% for machine in quote.machines %}<td>{{ machine.anchored ? 'Ankeres' : machine.data.telepitesi_mod|default('-') }}</td>{% endfor %}</tr>
-        <tr><td>Telepíthető autódaru max. 10 m</td>{% for machine in quote.machines %}<td>{{ pdf.raw_value(machine, 'telepitheto_autodaru_max_10m', 't') }}</td>{% endfor %}</tr>
-
-        <tr class="section"><td colspan="{{ quote.machines|length + 1 }}">Telepítési időpontok és intervallumok</td></tr>
-        <tr><td>Telepítés időpontja</td>{% for machine in quote.machines %}<td>{{ machine.installation_date|default('-') }}</td>{% endfor %}</tr>
-        <tr><td>Bérleti intervallum</td>{% for machine in quote.machines %}<td>{{ machine.rental_interval|default('-') }}</td>{% endfor %}</tr>
-
-        <tr class="section"><td colspan="{{ quote.machines|length + 1 }}">Árajánlat</td></tr>
-        <tr><td>Gépszolgáltatás havidíj (200 üzemóráig)</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'havi_dij_200_uo_ig') }}</td>{% endfor %}</tr>
-        <tr><td>Gépszolgáltatás óradíj (200 üzemóra felett)</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, '200_uo_felett_ora') }}</td>{% endfor %}</tr>
-        <tr><td>Gépkezelő óradíja (7:00-17:00)</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'kezelo_7_17') }}</td>{% endfor %}</tr>
-        <tr><td>Gépkezelő óradíja (17:00-7:00)</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'kezelo_17_7') }}</td>{% endfor %}</tr>
-        <tr><td>Gépkezelő óradíja (vasárnap/ünnepnap)</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'kezelo_vasarnap_unnep') }}</td>{% endfor %}</tr>
-        <tr><td>Havidíj: elektromos kapcsolószekrény</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'kapcsoloszekreny_ho') }}</td>{% endfor %}</tr>
-
-        <tr class="subsection"><td colspan="{{ quote.machines|length + 1 }}">Egyszeri díjak</td></tr>
-        <tr><td>Telepítés</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'telepites_egyszeri_dij') }}</td>{% endfor %}</tr>
-        {% if quote.machines|filter(machine => machine.anchored)|length %}<tr><td>Anker elhelyezés díja</td>{% for machine in quote.machines %}<td>{{ machine.anchored ? pdf.money_value(machine, 'anker_elhelyezes_dija_huf') : '-' }}</td>{% endfor %}</tr>{% endif %}
-        <tr><td>Bontás</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'bontas_egyszeri_dij') }}</td>{% endfor %}</tr>
-        <tr><td>Veszélymentes tervirat</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'veszelymentes_tervirat_egyszeri_dij') }}</td>{% endfor %}</tr>
-        <tr><td>Üzembe helyezés + ÉV mérés</td>{% for machine in quote.machines %}<td>{{ pdf.money_value(machine, 'uzembe_helyezes_ev') }}</td>{% endfor %}</tr>
-
-        <tr class="section"><td colspan="{{ quote.machines|length + 1 }}">Magasságok</td></tr>
-        {% set heightRows = {'Ház magassága': 'haz_magassaga', 'Telepítési szint': 'telepitesi_szint_mag', 'Ház abszolút magassága': 'haz_absz_mag', 'Védőtávolság': 'vedotav', 'Tényleges magasság': 'tenyleges_mag', 'Abszolút darumagasság': 'absz_mag_daru'} %}
-        {% for label, key in heightRows %}<tr><td>{{ label }}</td>{% for machine in quote.machines %}<td>{{ pdf.raw_value(machine, key, 'm') }}</td>{% endfor %}</tr>{% endfor %}
-        </tbody>
-    </table>
-    <div class="footer"><span><strong>4US Group Kft.</strong> · Árajánlat dátuma: {{ quote.quote_date|date('Y.m.d.') }}</span><span class="right">Az árak nettó összegek, az ÁFA-t nem tartalmazzák.</span></div>
-</section>
-</body>
+            <div class="greeting">
+                Tisztelt {{ quote.contact_name|default('Partner') }}!
+            </div>
+            <p>
+                Ajánlatkérésre hivatkozva a tárgyi helyszínen telepítendő
+                toronydaruk telepítésére és üzemeltetésére az alábbi ajánlatot
+                adjuk.
+            </p>
+            <table class="project-data">
+                <tr>
+                    <td>Projekt neve, helyszíne:</td>
+                    <td>
+                        {{ quote.project.name|default('-') }}{% if
+                        quote.project_location|default('') %} | {{
+                        quote.project_location }}{% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Tervezett toronydaruk száma:</td>
+                    <td>{{ quote.machines|length }} db toronydaru</td>
+                </tr>
+            </table>
+            {% if quote.notes|default('') %}
+            <div class="note">
+                <strong>Megjegyzés:</strong><br />{{ quote.notes|nl2br }}
+            </div>
+            {% endif %}
+            <div class="requirements">
+                <strong>Megrendelő biztosítja:</strong>
+                <div>
+                    - a toronydaru szállításához és szereléséhez szükséges,
+                    egyéb anyagoktól mentes, 18 m hosszú tréler számára is
+                    alkalmas behajtási útvonalat, illetve a toronydaru és a
+                    szerelő autódaru méretének és terhelésének megfelelő
+                    szerelési területet, a toronydaru telepítéséhez szükséges, a
+                    megadott talperőnek megfelelő teherbírású, megtervezett és
+                    annak megfelelően kivitelezett alapépítményt,
+                </div>
+                <div>
+                    - a toronydaruk védő-távolsága az EBSZ szerint, magasságban
+                    6,5 m, illetve gém végétől 5 m,
+                </div>
+                <div>
+                    - a toronydaru telepítési helyénél elektromos energia
+                    vételezési helyet (5 m), a szereléshez és üzemeltetéshez
+                    szükséges elektromos energiát táblázat szerint,
+                </div>
+                <div>
+                    - a toronydaru villámvédelmi földelésének elkészítéséhez
+                    szükséges csatlakozási pontot,
+                </div>
+                <div>
+                    - a teheremelő eszközöket, a kötözőket és irányítókat, daruk
+                    számozásához a számokat.
+                </div>
+                <div>
+                    - a napi minimális 8 óra foglalkoztatási időt (heti min. 40
+                    óra)
+                </div>
+            </div>
+            <div class="conditions">
+                Kezelő díja táblázat szerint időmegkötés nélkül. (Napi min. 8
+                óra, heti min. 40 óra). Daruinkat kapacitás függvényében tudjuk
+                biztosítani. Az útzár, közterületfoglalási és egyéb engedélyek
+                biztosítása megrendelő feladata.
+            </div>
+            <div class="conditions">
+                <strong>Telepítési feltételek:</strong> Ajánlatunkat a
+                kiválasztott daruk egyidejű telepítésével kalkuláltuk.<br /><strong
+                    >1.-{{ quote.machines|length }}. sz.:</strong
+                >
+                Daru telepítése/bontása a munkaterületről autódaruval az alaptól
+                max. 10 m távolságból, szerelési ideje kb. {{
+                quote.machines[0].installation_days|default(2) }} nap.
+            </div>
+            <table class="mobile-crane">
+                <tr>
+                    <td>Telepíthető autódaru max. 10m:</td>
+                    <td>
+                        {{ pdf.raw_value(quote.machines[0],
+                        'telepitheto_autodaru_max_10m', 'tonna') }}
+                    </td>
+                    <td>Biatorbágy, {{ quote.quote_date|date('Y.m.d') }}</td>
+                </tr>
+            </table>
+            <div class="page-footer">
+                <strong>Iroda:</strong> 2051 Biatorbágy, Kőris utca 2/A.
+                <strong>Székhely:</strong> 2724 Újlengyel, Petőfi Sándor utca
+                48.<br /><strong>Adószám:</strong> 24653633-2-13&nbsp;&nbsp;
+                <strong>Telefonszám:</strong> +36 1 99 888 999&nbsp;&nbsp;
+                <strong>Email:</strong> office@4uszrt.hu
+            </div>
+        </section>
+        <section class="page">
+            <div class="top-corner"></div>
+            <div class="analysis-title">ÁRELEMZÉS ÉS TELEPÍTÉSI ADATOK</div>
+            <div class="analysis-location">
+                {{ quote.project_location|default('Helyszín megadása szükséges')
+                }}
+            </div>
+            <table class="price-table">
+                <tbody>
+                    <tr class="section">
+                        <td colspan="{{ quote.machines|length + 1 }}">
+                            Műszaki adatok
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>DARU</th>
+                        {% for machine in quote.machines %}
+                        <th>
+                            {{
+                            machine.title|default(machine.data.megnevezes|default(machine.data.tipus|default((loop.index)
+                            ~ '. daru'))) }}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                    {% set technicalRows =
+                    {'Évjárat':['evjarat',''],'Horogmagasság':['horogmagassag','m'],'Gémkinyúlás':['gemkinyulas','m'],'Maximális
+                    teherbírás':['max_teherbiras',''],'Telepítési
+                    szint':['telepitesi_szint',''],'Telepítési
+                    mód':['telepitesi_mod',''],'Elektromos
+                    csatlakozás':['elektromos_csatlakozas','']} %}{% for
+                    label,row in technicalRows %}
+                    <tr>
+                        <td>{{ label }}</td>
+                        {% for machine in quote.machines %}
+                        <td>
+                            {{ machine.anchored and row[0] == 'telepitesi_mod' ?
+                            'Ankeres' : pdf.raw_value(machine,row[0],row[1]) }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr class="section">
+                        <td colspan="{{ quote.machines|length + 1 }}">
+                            Telepítési időpontok és intervallumok
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Időpontok</td>
+                        {% for machine in quote.machines %}
+                        <td>{{ machine.installation_date|default('-') }}</td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td>Intervallum</td>
+                        {% for machine in quote.machines %}
+                        <td>{{ machine.rental_interval|default('-') }}</td>
+                        {% endfor %}
+                    </tr>
+                    <tr class="section">
+                        <td colspan="{{ quote.machines|length + 1 }}">
+                            Árajánlat
+                        </td>
+                    </tr>
+                    {% set priceRows = {'Gépszolgáltatás havidíj<br />(200
+                    üzemóráig)':'havi_dij_200_uo_ig','Gépszolgáltatás óradíj<br />(200
+                    üzemóra felett)':'200_uo_felett_ora','Gépkezelő óradíja
+                    (7:00-17:00)':'kezelo_7_17','Gépkezelő óradíja
+                    (17:00-7:00)':'kezelo_17_7','Gépkezelő óradíj<br />(vasárnap/ünnepnap)':'kezelo_vasarnap_unnep','Elektromos
+                    kapcsolószekrény<br />(havidíj)':'kapcsoloszekreny_ho'} %}{%
+                    for label,key in priceRows %}
+                    <tr>
+                        <td>{{ label|raw }}</td>
+                        {% for machine in quote.machines %}
+                        <td>{{ pdf.money_value(machine,key) }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr class="subsection">
+                        <td colspan="{{ quote.machines|length + 1 }}">
+                            Árajánlat - Egyszeri díjak
+                        </td>
+                    </tr>
+                    {% set oneTimeRows =
+                    {'Telepítés':'telepites_egyszeri_dij','Bontás':'bontas_egyszeri_dij','Veszélymentes
+                    tervirat':'veszelymentes_tervirat_egyszeri_dij','Toronydaru
+                    üzembe<br />helyezés + ÉV mérés':'uzembe_helyezes_ev'} %}{%
+                    for label,key in oneTimeRows %}
+                    <tr>
+                        <td>{{ label|raw }}</td>
+                        {% for machine in quote.machines %}
+                        <td>{{ pdf.money_value(machine,key) }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr class="section">
+                        <td colspan="{{ quote.machines|length + 1 }}">
+                            Magasságok
+                        </td>
+                    </tr>
+                    {% set heightRows = {'Ház
+                    magassága':'haz_magassaga','Telepítési
+                    szint':'telepitesi_szint_mag','Ház absz.
+                    magassága':'haz_absz_mag','Védőtávolság
+                    (6m)':'vedotav','Tényleges
+                    magasság':'tenyleges_mag','Abszolút
+                    darumagasság':'absz_mag_daru'} %}{% for label,key in
+                    heightRows %}
+                    <tr>
+                        <td>{{ label }}</td>
+                        {% for machine in quote.machines %}
+                        <td>{{ pdf.raw_value(machine,key,'m') }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="page-2-footer">
+                Biatorbágy, {{ quote.quote_date|date('Y.m.d') }}
+            </div>
+            <div class="page-footer">
+                <strong>Iroda:</strong> 2051 Biatorbágy, Kőris utca 2/A.
+                <strong>Székhely:</strong> 2724 Újlengyel, Petőfi Sándor utca 48.<br />
+                <strong>Adószám:</strong> 24653633-2-13&nbsp;&nbsp;
+                <strong>Telefonszám:</strong> +36 1 99 888 999&nbsp;&nbsp;
+                <strong>Email:</strong> office@4uszrt.hu
+            </div>
+        </section>
+    </body>
 </html>

@@ -28,7 +28,7 @@ body.alerty-has-modal { overflow: hidden; }
 .alerty-overlay { position: absolute; inset: 0; background: var(--alerty-backdrop); backdrop-filter: blur(4px); pointer-events: auto; }
 .alerty-nonmodal .alerty-overlay { background: transparent; backdrop-filter: none; pointer-events: none; }
 .alerty-dialog {
-  position: absolute; left: 50%; top: calc(50% + var(--alerty-stack-offset, 0px)); transform: translate(-50%, -50%);
+  position: absolute; left: 50%; top: calc(45% + var(--alerty-stack-offset, 0px)); transform: translate(-50%, -50%);
   width: min(560px, calc(100vw - 32px)); max-width: calc(100vw - 24px); max-height: calc(100vh - 30px);
   display: flex; flex-direction: column; min-height: 120px;
   background: var(--alerty-surface); color: var(--alerty-text); border: 1px solid var(--alerty-border);
